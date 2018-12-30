@@ -49,7 +49,7 @@ and blocking other tasks.
 The following will create 4 tasks:
 
 * LedFlasher - flashes LED given number of times with 100ms on/off time
-    and 250 ms at the end of string of flashes.
+    and 250 ms at the end of a string of flashes.
 * Counter1 - increments 8 bit counter with 2000 ms delay, flashes LED 1
     time when run
 * Counter2 - increments 8 bit counter with 3000 ms delay, flashes LED 2
@@ -178,7 +178,7 @@ void setup() {
 }
 
 void loop() {
-   scheduler.loop();    // execute all ready tasks or 100 ms is exceeded
+   scheduler.loop();    // execute all ready tasks once before returning
 }
 
 ```
