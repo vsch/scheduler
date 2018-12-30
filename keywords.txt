@@ -5,10 +5,18 @@
 #######################################
 # Datatypes (KEYWORD1)
 #######################################
+Task KEYWORD1  SchedulerLibrary
+Scheduler KEYWORD1  SchedulerLibrary
 
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
+loop KEWORD2
+begin KEWORD2
+delay KEWORD2
+suspend KEWORD2
+isSuspended KEWORD2
+resume KEWORD2
 
 ######################################
 # Instances (KEYWORD2)
