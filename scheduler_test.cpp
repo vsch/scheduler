@@ -28,6 +28,8 @@ Dht22 dht = Dht22(3);
 #define JOG_PWM     191
 #define JOG_TIME    250
 
+#define THERMISTOR_PIN 1  // analog 1
+
 //#define DEBUG_LED
 //#define DEBUG_PWM
 
@@ -196,6 +198,39 @@ public:
     float getHumidity() { return dht.getHumidity(); }
 } tempHumidity = TempHumidity();
 
+extern float thermistorTemp(int RawADC);
+
+class Thermistor : public Task {
+    int16_t temps[4];
+    uint8_t index;
+
+    void begin() {
+        resume(1000);
+    }
+
+    void loop() {
+        temps[index++] = static_cast<int16_t>(thermistorTemp(analogRead(THERMISTOR_PIN)) * 10);
+        index &= 3;
+
+        resume(1000);
+    }
+
+#ifdef SCHEDULER_TASK_IDS
+    const __FlashStringHelper *id() { return F("TempHumidity"); }
+#endif
+
+public:
+    Thermistor() {
+        temps[0] = temps[1] = temps[2] = temps[3] = 0;
+        index = 0;
+    };
+
+    float getTemperature(bool isFahrenheit = false) {
+        float temp = (temps[0] + temps[1] + temps[2] + temps[3]) / 40.0;
+        return isFahrenheit ? Dht22::convertCtoF(temp) : temp;
+    }
+} thermistor = Thermistor();
+
 #ifdef PWM
 //#define DEBUG_PWM_VALUES
 
@@ -295,9 +330,7 @@ class Updater : public Task {
     }
 
     void write(float value, const __FlashStringHelper *suffix) {
-        tft.write((int) value);
-        tft.write('.');
-        tft.write(((int) (value * 10)) % 10);
+        tft.write((long) (value * 10), 1, '.');
         if (suffix) {
             tft.write(suffix);
         }
@@ -305,10 +338,10 @@ class Updater : public Task {
 
     void loop() {
 #ifdef SHOW_TIMING
-        int totalLines = 6;
+        int totalLines = 7;
         unsigned long start = micros();
 #else
-        int totalLines = 5;
+        int totalLines = 6;
 #endif
 
         int totalColumns = 15;
@@ -361,6 +394,10 @@ class Updater : public Task {
 #endif
 
             tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.write(F(" Therm "));
+            write(thermistor.getTemperature(false), F(" C  "));
+
+            tft.gotoCharXY(col, line++);                                 // position text cursor
             tft.write(F("Counts "));
             tft.write(counter1.getCount());
             tft.write(' ');
@@ -401,6 +438,7 @@ Task *const taskTable[] PROGMEM = {
         &counter2,
         &counter3,
         &tempHumidity,
+        &thermistor,
         &ledFlasher,
 #ifdef PWM
         &motorPWM1,
