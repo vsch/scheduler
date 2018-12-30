@@ -1,67 +1,35 @@
 #ifndef _SCHEDULER_H_
 #define _SCHEDULER_H_
 
-#include <stdint-gcc.h>
-
-#define INFINITE_DELAY  0xffffffff
-#define NULL_TASK  0xff
-
-#define DEBUG_SCHEDULER
+//#define DEBUG_SCHEDULER_ERRORS
+//#define DEBUG_SCHEDULER
 //#define DEBUG_SCHEDULER_RUN
 //#define DEBUG_SCHEDULER_DELAYS           // trace delays
 
 class Task {
     friend class Scheduler;
     // main task broken into states at delay() boundaries
-protected:
-    virtual void run() = 0;             // run task
-    virtual void init() = 0;            // init task
-    virtual const char *id() = 0;       // printable id
 
-    // these must be called from within run of current task
-    void delay(uint16_t milliseconds); // run next state after delay, 0 yields and advances state
+protected:
+    virtual void loop() = 0;             // loop task
+    virtual void begin() = 0;            // begin task
+    virtual const __FlashStringHelper *id() = 0;       // printable id
+
+    // these must be called from within loop of this task
+    void delay(uint16_t milliseconds); // loop next state after delay, 0 yields and advances state
     void suspend();
 
-    // this can be called outside of current task
-    void resume(uint16_t milliseconds);
-};
-
-class PeriodicTask : public Task {
-    friend class Scheduler;
-    unsigned long expectedRun;
-    unsigned long lastRun;
-    int accumError;
-
-public:
-    PeriodicTask() {
-        lastRun = 0;
-        expectedRun = 0;
-        accumError = 0;
-    }
-
-    // main task broken into states at delay() boundaries
-protected:
-    virtual void run() = 0;
-    virtual void init() = 0;            // init task
-    virtual const char *id() = 0;       // printable id
-
-    void markRun();
-
-    // these must be called from within run of current task
-    void delay(uint16_t milliseconds); // run next state after delay, 0 yields and advances state
-    void suspend();
-
-    // this can be called outside of current task
+    // this can be called from anywhere
+    boolean isSuspended();
     void resume(uint16_t milliseconds);
 };
 
 class Scheduler {
     friend class Task;
-    friend class PeriodicTask;
 
     uint8_t taskCount;         // task count
-    uint32_t *delays;
-    Task **tasks;
+    uint16_t *delays;
+    PGM_P tasks;
 #ifdef DEBUG_SCHEDULER
     uint32_t iteration;
 #endif
@@ -70,22 +38,28 @@ class Scheduler {
     uint8_t currentTask;        // id of current task
     uint8_t nextTask;           // id of next task which was ready
 
+#ifdef DEBUG_SCHEDULER_RUN
+    void dumpDelays(const __FlashStringHelper *msg);
+#endif
+
+    uint8_t taskIndex(Task *task);     // task index or NULL_TASK
+    void setDelay(uint8_t index, uint16_t milliseconds);
+    Task *task(uint8_t id);
+
 public:
-    Scheduler(uint8_t taskCount, Task **tasks, uint32_t *delays);
+    Scheduler(uint8_t taskCount, PGM_P tasks, uint16_t *delays);
+    void begin();                       // start scheduler
+    void loop(uint16_t timeSlice = 0);  // loop tasks, return when all ready tasks have been loop once or time slice in ms exceeded
 
-    void start();      // start scheduler
-
-    void run(uint16_t timeSlice);        // run tasks, return when all ready tasks have been run at least once or time slice in ms exceeded
-
-    void dumpDelays(const char *msg);
-
-protected:
+private:
     // task scheduling interface
-    void delay(uint32_t microseconds);   // resched current task in milliseconds
+    void delay(uint16_t milliseconds);  // reschedule current task in milliseconds
     void suspend();                     // suspend rescheduling
-    void resume(Task *task, uint32_t microseconds);
+    void resume(Task *task, uint16_t milliseconds);
+    bool isSuspended(Task *task);
 };
 
+// this must be declared in the main sketch
 extern Scheduler scheduler;
 
 #endif //_SCHEDULER_H_
