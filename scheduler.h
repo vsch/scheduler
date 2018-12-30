@@ -6,22 +6,32 @@
 //#define DEBUG_SCHEDULER_RUN
 //#define DEBUG_SCHEDULER_DELAYS           // trace delays
 
+#if defined(DEBUG_SCHEDULER) || defined(DEBUG_SCHEDULER_RUN) || defined(DEBUG_SCHEDULER_ERRORS)
+#define SCHEDULER_TASK_IDS
+#endif
+
+class Scheduler;
+// this must be declared in the main sketch
+extern Scheduler scheduler;
+
 class Task {
     friend class Scheduler;
-    // main task broken into states at delay() boundaries
+    uint8_t index;         // task index in scheduler
 
 protected:
     virtual void loop() = 0;             // loop task
     virtual void begin() = 0;            // begin task
+#ifdef SCHEDULER_TASK_IDS
     virtual const __FlashStringHelper *id() = 0;       // printable id
+#endif
 
-    // these must be called from within loop of this task
-    void delay(uint16_t milliseconds); // loop next state after delay, 0 yields and advances state
+    Task();
+
+public:
     void suspend();
-
-    // this can be called from anywhere
     boolean isSuspended();
     void resume(uint16_t milliseconds);
+    uint8_t getIndex() { return index; }
 };
 
 class Scheduler {
@@ -35,31 +45,37 @@ class Scheduler {
 #endif
 
     unsigned long clockTick;    // clock tick for current delays (in micros)
-    uint8_t currentTask;        // id of current task
     uint8_t nextTask;           // id of next task which was ready
 
 #ifdef DEBUG_SCHEDULER_RUN
     void dumpDelays(const __FlashStringHelper *msg);
 #endif
 
-    uint8_t taskIndex(Task *task);     // task index or NULL_TASK
-    void setDelay(uint8_t index, uint16_t milliseconds);
     Task *task(uint8_t id);
 
 public:
-    Scheduler(uint8_t taskCount, PGM_P tasks, uint16_t *delays);
+    Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable);
     void begin();                       // start scheduler
     void loop(uint16_t timeSlice = 0);  // loop tasks, return when all ready tasks have been loop once or time slice in ms exceeded
 
 private:
-    // task scheduling interface
-    void delay(uint16_t milliseconds);  // reschedule current task in milliseconds
-    void suspend();                     // suspend rescheduling
+    // task scheduling interface intended to be used by Task
+    void suspend(Task *task);           // suspend rescheduling
     void resume(Task *task, uint16_t milliseconds);
     bool isSuspended(Task *task);
+    bool reduceDelays(uint16_t milliseconds);
 };
 
-// this must be declared in the main sketch
-extern Scheduler scheduler;
+inline void Task::resume(uint16_t milliseconds) {
+    scheduler.resume(this, milliseconds);
+}
+
+inline void Task::suspend() {
+    scheduler.suspend(this);
+}
+
+inline bool Task::isSuspended() {
+    return scheduler.isSuspended(this);
+}
 
 #endif //_SCHEDULER_H_

@@ -23,7 +23,7 @@ Dht22 dht = Dht22(3);
 #define SHOW_TIMING
 #define PWM
 
-#define MIN_PWM     25
+#define MIN_PWM     30
 #define MIN_JOG_PWM 115
 #define JOG_PWM     191
 #define JOG_TIME    250
@@ -70,13 +70,16 @@ class LedFlasher : public Task {
 #ifdef DEBUG_LED
             Serial.println(flashCount);
 #endif
-            delay(flashCount ? 100 : 250);
+            resume(flashCount ? 100 : 250);
         }
     }
 
+#ifdef SCHEDULER_TASK_IDS
+    const __FlashStringHelper *id() { return F("LedFlasher"); }
+#endif
+
 public:
     LedFlasher() { flashCount = 0; }
-    const __FlashStringHelper *id() { return F("LedFlasher"); }
 
     void flash(uint8_t count) {
 #ifdef DEBUG_LED
@@ -104,114 +107,130 @@ class Counter1 : public Task {
     uint8_t count;
 
     void begin() {
-        delay(1750);
+        resume(1750);
     }
 
     void loop() {
         count++;
         ledFlasher.flash(1);
-        delay(2000);
+        resume(2000);
     }
+
+#ifdef SCHEDULER_TASK_IDS
+    const __FlashStringHelper *id() { return F("Counter1"); }
+#endif
 
 public:
     Counter1() { count = 0; }
+
     uint8_t getCount() { return count; }
-    const __FlashStringHelper *id() { return F("Counter1"); }
 } counter1 = Counter1();
 
 class Counter2 : public Task {
     uint8_t count;
 
     void begin() {
-        delay(2750);
+        resume(2750);
     }
 
     void loop() {
         count++;
         ledFlasher.flash(2);
-        delay(3000);
+        resume(3000);
     }
+
+#ifdef SCHEDULER_TASK_IDS
+    const __FlashStringHelper *id() { return F("Counter2"); }
+#endif
 
 public:
     Counter2() { count = 0; }
+
     uint8_t getCount() { return count; }
-    const __FlashStringHelper *id() { return F("Counter2"); }
 } counter2 = Counter2();
 
 class Counter3 : public Task {
     uint8_t count;
 
     void begin() {
-        delay(4750);
+        resume(4750);
     }
 
     void loop() {
         count++;
         ledFlasher.flash(3);
-        delay(5000);
+        resume(5000);
     }
+
+#ifdef SCHEDULER_TASK_IDS
+    const __FlashStringHelper *id() { return F("Counter3"); }
+#endif
 
 public:
     Counter3() { count = 0; }
+
     uint8_t getCount() { return count; }
-    const __FlashStringHelper *id() { return F("Counter3"); }
+
 } counter3 = Counter3();
 
 class TempHumidity : public Task {
     void begin() {
         dht.begin();
-        delay(1000);
+        resume(1000);
     }
 
     void loop() {
         dht.read();
-        delay(2000);
+        resume(2000);
     }
+
+#ifdef SCHEDULER_TASK_IDS
+    const __FlashStringHelper *id() { return F("TempHumidity"); }
+#endif
 
 public:
     TempHumidity() = default;
-    const __FlashStringHelper *id() { return F("TempHumidity"); }
 
     float getTemperature(bool isFahrenheit = false) { return dht.getTemperature(isFahrenheit); }
+
     float getHumidity() { return dht.getHumidity(); }
 } tempHumidity = TempHumidity();
 
 #ifdef PWM
+//#define DEBUG_PWM_VALUES
 
 class MotorPWM : public Task {
+    uint8_t port;
     uint8_t pwm;
     uint8_t nextPwm;
 
+    inline void setPwmReg(uint8_t value) {
+#ifdef DEBUG_PWM_VALUES
+        Serial.print(F("PWM "));
+        Serial.print(port, HEX);
+        Serial.print(F(" "));
+        Serial.println(value);
+#endif
+        _MMIO_BYTE(port) = value;
+    }
+
     void begin() {
-        cli();
-
-        // set compare match register to 0, no output
-        OCR0A = 0;
-
-        // set fast PWM mode 3 so as not to affect 1ms timer, gives 488Hz PWM cycle
-        setBit(TCCR0A, WGM00);
-        setBit(TCCR0A, WGM01);
-
-        // clear OC0A on match, set at bottom, non-inverting mode
-        clearBit(TCCR0A, COM0A0);
-        setBit(TCCR0A, COM0A1);
-
-        sei();
-
-        pwm = 0;
-        nextPwm = 0;
         suspend();
     }
 
     void loop() {
         if (pwm == nextPwm) {
-#ifdef DEBUG_PWM
-            Serial.println(F("PWM suspended"));
-#endif
             suspend();
+#ifdef DEBUG_PWM
+            Serial.print(F("PWM "));
+            Serial.print(port, HEX);
+            Serial.println(F(" suspended"));
+#endif
         } else {
 #ifdef DEBUG_PWM
-            Serial.print(F("PWM running "));
+            Serial.print(F("PWM "));
+            Serial.print(port, HEX);
+            Serial.print(F(" running "));
             Serial.print(pwm);
             Serial.print(F("->"));
             Serial.println(nextPwm);
@@ -219,39 +238,50 @@ class MotorPWM : public Task {
 
             if (!pwm && nextPwm && nextPwm < MIN_JOG_PWM) {
                 pwm = JOG_PWM;
-                OCR0A = pwm;
-                delay(JOG_TIME);
+                setPwmReg(pwm);
+                resume(JOG_TIME);
             } else {
-                OCR0A = nextPwm;
                 pwm = nextPwm;
+                setPwmReg(pwm);
+                suspend();
 #ifdef DEBUG_PWM
-                Serial.println(F("PWM suspended"));
+                Serial.print(F("PWM "));
+                Serial.print(port, HEX);
+                Serial.println(F(" suspended"));
 #endif
-                suspend();            // wait 10ms
             }
         }
     }
 
-public:
-    MotorPWM() { pwm = 0; nextPwm = 0; }
+#ifdef SCHEDULER_TASK_IDS
     const __FlashStringHelper *id() { return F("MotorPWM"); }
+#endif
+
+public:
+    MotorPWM(volatile uint8_t &portReg) {
+        port = static_cast<uint8_t>(&portReg - (volatile unsigned char *) 0);
+        pwm = 0;
+        nextPwm = 0;
+    }
 
     uint8_t getPWM() { return pwm; }
 
     void setPwm(uint8_t pwmValue) {
-        bool suspended = isSuspended();
-
         nextPwm = pwmValue < MIN_PWM ? 0 : pwmValue;
 
-        if (nextPwm != pwm && suspended) {
+        if (nextPwm != pwm && isSuspended()) {
 #ifdef DEBUG_PWM
-            Serial.println(F("PWM resumed"));
+            Serial.print(F("PWM "));
+            Serial.print(port, HEX);
+            Serial.println(F(" resumed"));
 #endif
             resume(10);
         }
     }
+};
 
-} motorPWM = MotorPWM();
+MotorPWM motorPWM1 = MotorPWM(OCR0A);
+MotorPWM motorPWM2 = MotorPWM(OCR0B);
 
 #endif
 
@@ -264,17 +294,26 @@ class Updater : public Task {
         tft.clearScreen();
     }
 
+    void write(float value, const __FlashStringHelper *suffix) {
+        tft.write((int) value);
+        tft.write('.');
+        tft.write(((int) (value * 10)) % 10);
+        if (suffix) {
+            tft.write(suffix);
+        }
+    }
+
     void loop() {
 #ifdef SHOW_TIMING
-        int totalLines = 8;
+        int totalLines = 6;
         unsigned long start = micros();
 #else
-        int totalLines = 7;
+        int totalLines = 5;
 #endif
 
         int totalColumns = 15;
         int col0 = (tft.maxCols - totalColumns) / 2;
-        int line0 = (tft.maxRows - totalLines + 1) / 2;
+        int line0 = (tft.maxRows - totalLines) / 2;
 
 //        Serial.print(F("maxCols: "));
 //        Serial.print(tft.maxCols);
@@ -282,7 +321,8 @@ class Updater : public Task {
 //        Serial.println(tft.maxRows);
 
 #ifdef PWM
-        motorPWM.setPwm(iter * 5);
+        motorPWM1.setPwm(iter * 5);
+        motorPWM2.setPwm(iter * 1);
 #endif
 
         float temp = tempHumidity.getTemperature();
@@ -297,54 +337,42 @@ class Updater : public Task {
             int line = line0;
             int col = col0;
 
-#ifdef PWM
-            tft.gotoCharXY(col, line++);                                 // position text cursor
-            tft.write(F("   PWM "));
-            float pwmP = motorPWM.getPWM() * 100.0 / 255.0;
-            tft.write((int) pwmP);
-            tft.write('.');
-            tft.write(((int) (pwmP * 10)) % 10);
-            tft.write(F("%  "));
-#endif
-
 #ifdef SHOW_TIMING
             tft.gotoCharXY(col, line++);                                 // position text cursor
             tft.write(F("  Time "));
-            tft.write(lastTime);
+            tft.write(lastTime, 3, '.');
 #endif
             tft.gotoCharXY(col, line++);                                 // position text cursor
             tft.write(F("  Temp "));
-            tft.write((int) (temp));
-            tft.write('.');
-            tft.write((int) (temp * 10) % 10);
-            tft.write(F(" C  "));
+            write(temp, F(" C  "));
 
             tft.gotoCharXY(col, line++);                                 // position text cursor
             tft.write(F(" Humid "));
-            tft.write((int) (humidity));
-            tft.write('.');
-            tft.write((int) (humidity * 10) % 10);
-            tft.write(F("%  "));
+            write(humidity, F("%  "));
+
+#ifdef PWM
+            tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.write(F("  PWM1 "));
+            write(motorPWM1.getPWM() * 100.0 / 255.0, F("%  "));
 
             tft.gotoCharXY(col, line++);                                 // position text cursor
-            tft.write(F("Count1 "));
+            tft.write(F("  PWM2 "));
+            write(motorPWM2.getPWM() * 100.0 / 255.0, F("%  "));
+#endif
+
+            tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.write(F("Counts "));
             tft.write(counter1.getCount());
-            tft.write(F("  "));
-
-            tft.gotoCharXY(col, line++);                                 // position text cursor
-            tft.write(F("Count2 "));
+            tft.write(' ');
             tft.write(counter2.getCount());
-            tft.write(F("  "));
-
-            tft.gotoCharXY(col, line++);                                 // position text cursor
-            tft.write(F("Count3 "));
+            tft.write(' ');
             tft.write(counter3.getCount());
-            tft.write(F(" "));
+            tft.write(' ');
             tft.write(millis() / 5000);
-            tft.write(F("  "));
+            tft.write(' ', 2);
 
-            tft.gotoCharXY(col, line++);                                 // position text cursor
-            tft.write(F("---------------"));
+//            tft.gotoCharXY(col, line++);                                 // position text cursor
+//            tft.write(F("---------------"));
         }
 
         iter++;
@@ -352,37 +380,64 @@ class Updater : public Task {
 #ifdef SHOW_TIMING
         lastTime = micros() - start;
 #endif
-        delay(1000);
+        resume(1000);
     }
 
-public:
-    Updater() { iter = 0; lastTime = 0; }
+#ifdef SCHEDULER_TASK_IDS
     const __FlashStringHelper *id() { return F("Updater"); }
+#endif
+
+public:
+    Updater() {
+        iter = 0;
+        lastTime = 0;
+    }
+
 } updater = Updater();
 
-Task *const tasks[] PROGMEM = {
+Task *const taskTable[] PROGMEM = {
         &updater,
         &counter1,
         &counter2,
         &counter3,
-        &ledFlasher,
         &tempHumidity,
+        &ledFlasher,
 #ifdef PWM
-        &motorPWM,
+        &motorPWM1,
+        &motorPWM2,
 #endif
 };
 
-uint16_t delays[sizeof(tasks) / sizeof(*tasks)];
-Scheduler scheduler = Scheduler(sizeof(tasks) / sizeof(*tasks), reinterpret_cast<PGM_P>(tasks), delays);
+uint16_t delayTable[sizeof(taskTable) / sizeof(*taskTable)];
+Scheduler scheduler = Scheduler(sizeof(taskTable) / sizeof(*taskTable), reinterpret_cast<PGM_P>(taskTable), delayTable);
 
 void setup() {
 //    Serial.begin(57600);
     Serial.begin(256000);
 
     DDRB = PORTB_OUT; // 0010.1110; set B1, B2-B3, B5 as outputs
-    DDRC = 0x00; // 0000.0000; set PORTC as inputs
+    DDRC = 0x01; // 0000.0001; set PORTC as inputs, B0 as output
     DDRD = 0xF0; // 0111.0000; set PORTD 4,5,6,7 as output
+    PORTC = 0;
     PORTD = 0;
+
+    cli();
+
+    // set compare match register to 0, no output
+    OCR0A = 0;
+    OCR0B = 0;
+
+    // set fast PWM mode 3 so as not to affect 1ms timer, gives 488Hz PWM cycle
+    setBit(TCCR0A, WGM00);
+    setBit(TCCR0A, WGM01);
+
+    // clear OCR0A and OCR0B on match, set at bottom, non-inverting mode
+    clearBit(TCCR0A, COM0A0);
+    setBit(TCCR0A, COM0A1);
+    clearBit(TCCR0A, COM0B0);
+    setBit(TCCR0A, COM0B1);
+
+    sei();
 
 //    setBit(SSD1306_RST_PORT, SSD1306_RST_BIT); // start with TFT reset line inactive high
 //    setBit(SSD1306_CS_PORT, SSD1306_CS_BIT);  // deselect TFT CS
@@ -391,23 +446,45 @@ void setup() {
     setBit(ST7735_CS_PORT, ST7735_CS_BIT);  // deselect TFT CS
     clearBit(ST7735_SCK_PORT, ST7735_SCK_BIT);  // TFT SCK Low
 
-
-    Serial.println(F("Setup ports"));
+    Serial.println(F("Setup"));
     tft.openSPI();                              // start communication to TFT
     Serial.println(F("Started SPI"));
-    Serial.print(F("sizeof(long) "));
-    Serial.println(sizeof(long));
+/*
+    Serial.print(F("sizeof(St7735) "));
+    Serial.println(sizeof(St7735));
+    Serial.print(F("sizeof(Dht22) "));
+    Serial.println(sizeof(Dht22));
     Serial.print(F("sizeof(Task) "));
     Serial.println(sizeof(Task));
+    Serial.print(F("sizeof(Updater) "));
+    Serial.println(sizeof(Updater));
+    Serial.print(F("sizeof(Counter1) "));
+    Serial.println(sizeof(Counter1));
+    Serial.print(F("sizeof(Counter2) "));
+    Serial.println(sizeof(Counter2));
+    Serial.print(F("sizeof(Counter3) "));
+    Serial.println(sizeof(Counter3));
+    Serial.print(F("sizeof(TempHumidity) "));
+    Serial.println(sizeof(TempHumidity));
+    Serial.print(F("sizeof(LedFlasher) "));
+    Serial.println(sizeof(LedFlasher));
+    Serial.print(F("sizeof(MotorPWM) "));
+    Serial.println(sizeof(MotorPWM));
     Serial.print(F("sizeof(Scheduler) "));
     Serial.println(sizeof(Scheduler));
+*/
+
+    Serial.print(F("OCR0A "));
+    Serial.println(&OCR0A - (volatile unsigned char *) 0);
 
     scheduler.begin();
 
-//    tft.initDisplay(ST7735_ROT_0);                              // initialize TFT controller
+//    tft.initDisplay(ST7735_ROT_0);                             // initialize TFT controller
     tft.initDisplay(ST7735_ROT_90);                              // initialize TFT controller
     tft.foreground = YELLOW;
     Serial.println(F("Initialized display"));
+
+    tft.clearScreen();
 }
 
 void loop() {
