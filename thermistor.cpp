@@ -36,7 +36,7 @@
 
 // balance/pad resistor value, set this to the measured resistance of your pad resistor
 #define PAD_RESISTANCE 20000
-#define THERMISTOR_VCC 3.3
+//#define THERMISTOR_VCC 3.3
 
 float thermistorTemp(int RawADC) {
     long res = (long)(PAD_RESISTANCE * ((1024.0 / RawADC) - 1));
@@ -47,13 +47,14 @@ float thermistorTemp(int RawADC) {
 #ifdef DEBUG_THERMISTOR
     Serial.print("ADC: ");
     Serial.print(RawADC);
-    Serial.print("/1024");                           // Print out RAW ADC Number
-    Serial.print(", vcc: ");
-    Serial.print((float) THERMISTOR_VCC, 2);
+    Serial.print("/1024");
+//    Serial.print(", vcc: ");
+//    Serial.print((float) THERMISTOR_VCC, 2);
     Serial.print(", pad res: ");
     Serial.print((float) PAD_RESISTANCE / 1000, 3);
-    Serial.print(" kOhm, v: ");
-    Serial.print(((RawADC * THERMISTOR_VCC) / 1024.0), 3);
+    Serial.print(" kOhm,");
+//    Serial.print(" v: ");
+//    Serial.print(((RawADC * THERMISTOR_VCC) / 1024.0), 3);
     Serial.print(", therm. res: ");
     Serial.print((float) res / 1000, 3);
     Serial.println(" kOhm, ");
