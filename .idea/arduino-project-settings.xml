@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Arduino Project Settings">
+    <option name="afterSuccessfulBuild" value="false" />
+    <option name="baudRate" value="256000" />
+    <option name="port" value="/dev/cu.usbserial-00000000" />
+    <option name="showSendOptions" value="false" />
+  </component>
+</project>

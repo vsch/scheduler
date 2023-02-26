@@ -19,8 +19,8 @@ class Task {
     uint8_t index;         // task index in scheduler
 
 protected:
-    virtual void loop() = 0;             // loop task
     virtual void begin() = 0;            // begin task
+    virtual void loop() = 0;             // loop task
 #ifdef SCHEDULER_TASK_IDS
     virtual const __FlashStringHelper *id() = 0;       // printable id
 #endif
@@ -29,7 +29,7 @@ protected:
 
 public:
     void suspend();
-    boolean isSuspended();
+    bool isSuspended();
     void resume(uint16_t milliseconds);
     uint8_t getIndex() { return index; }
 };

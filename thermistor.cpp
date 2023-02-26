@@ -16,10 +16,10 @@
  *                                          Analog Pin 0
  *
  * In case it isn't obvious (as it wasn't to me until I thought about it), the analog ports
- * measure the voltage between 0v -> Vcc which for an Arduino is a nominal 5v, but for (say)
+ * measure the milliVolts between 0v -> Vcc which for an Arduino is a nominal 5v, but for (say)
  * a JeeNode, is a nominal 3.3v.
  *
- * The resistance calculation uses the ratio of the two resistors, so the voltage
+ * The resistance calculation uses the ratio of the two resistors, so the milliVolts
  * specified above is really only required for the debugging that is commented out below
  *
  * Resistance = PadResistor * (1024/ADC -1)
@@ -45,19 +45,19 @@ float thermistorTemp(int RawADC) {
     temp = temp - 273.15;  // Convert Kelvin to Celsius
 
 #ifdef DEBUG_THERMISTOR
-    Serial.print("ADC: ");
+    Serial.print(F("ADC: "));
     Serial.print(RawADC);
-    Serial.print("/1024");
-//    Serial.print(", vcc: ");
+    Serial.print(F("/1024"));
+//    Serial.print(F(", vcc: "));
 //    Serial.print((float) THERMISTOR_VCC, 2);
-    Serial.print(", pad res: ");
+    Serial.print(F(", pad res: "));
     Serial.print((float) PAD_RESISTANCE / 1000, 3);
-    Serial.print(" kOhm,");
-//    Serial.print(" v: ");
+    Serial.print(F(" kOhm,"));
+//    Serial.print(F(" v: "));
 //    Serial.print(((RawADC * THERMISTOR_VCC) / 1024.0), 3);
-    Serial.print(", therm. res: ");
+    Serial.print(F(", therm. res: "));
     Serial.print((float) res / 1000, 3);
-    Serial.println(" kOhm, ");
+    Serial.println(F(" kOhm, "));
 #endif
 
     // Uncomment this line for the function to return Fahrenheit instead.

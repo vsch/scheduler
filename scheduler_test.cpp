@@ -66,7 +66,7 @@ class LedFlasher : public Task {
             Serial.print(flashCount);
 #endif
 
-            digitalWrite(LED, !(flashCount & 1));
+            digitalWrite(LED, static_cast<uint8_t>(flashCount & 1));
             flashCount--;
 
 #ifdef DEBUG_LED
@@ -344,7 +344,7 @@ class Updater : public Task {
         int totalLines = 6;
 #endif
 
-        int totalColumns = 15;
+        int totalColumns = 20;
         int col0 = (tft.maxCols - totalColumns) / 2;
         int line0 = (tft.maxRows - totalLines) / 2;
 
@@ -372,17 +372,21 @@ class Updater : public Task {
 
 #ifdef SHOW_TIMING
             tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.foreground = WHITE;
             tft.write(F("  Time "));
             tft.write(lastTime, 3, '.');
 #endif
             tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.foreground = ROSE;
             tft.write(F("  Temp "));
             write(temp, F(" C  "));
 
             tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.foreground = CYAN;
             tft.write(F(" Humid "));
             write(humidity, F("%  "));
 
+            tft.foreground = YELLOW;
 #ifdef PWM
             tft.gotoCharXY(col, line++);                                 // position text cursor
             tft.write(F("  PWM1 "));
@@ -430,10 +434,10 @@ public:
         lastTime = 0;
     }
 
-} updater = Updater();
+} mainScreen = Updater();
 
 Task *const taskTable[] PROGMEM = {
-        &updater,
+        &mainScreen,
         &counter1,
         &counter2,
         &counter3,
@@ -450,7 +454,7 @@ uint16_t delayTable[sizeof(taskTable) / sizeof(*taskTable)];
 Scheduler scheduler = Scheduler(sizeof(taskTable) / sizeof(*taskTable), reinterpret_cast<PGM_P>(taskTable), delayTable);
 
 void setup() {
-//    Serial.begin(57600);
+//    Serial.before(57600);
     Serial.begin(256000);
 
     DDRB = PORTB_OUT; // 0010.1110; set B1, B2-B3, B5 as outputs

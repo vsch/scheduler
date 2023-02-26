@@ -58,15 +58,16 @@ void Scheduler::dumpDelays(const __FlashStringHelper *msg) {
     Serial.print(msg);
 
     for (uint8_t i = 0; i < taskCount; i++) {
-        Serial.print(" ");
+        Serial.print(' ');
         Task *pTask = task(i);
         Serial.print(pTask->id());
         Serial.print('[');
         Serial.print(pTask->taskId);
         Serial.print(']');
-        Serial.print("{");
+        Serial.print('{');
         Serial.print(delays[i]);
-        Serial.print("} ");
+        Serial.print('}');
+        Serial.print(' ');
     }
 
     Serial.println();
@@ -130,9 +131,9 @@ void Scheduler::loop(uint16_t timeSlice) {
 #endif
 
 #ifdef DEBUG_SCHEDULER_RUN
-    Serial.print("Scheduler run ");
+    Serial.print(F("Scheduler run "));
     Serial.print(tick);
-    Serial.print(" slice ");
+    Serial.print(F(" slice "));
     Serial.println(timeSlice);
 #endif
 
@@ -182,12 +183,12 @@ void Scheduler::loop(uint16_t timeSlice) {
             }
 
 #ifdef DEBUG_SCHEDULER_RUN
-            Serial.print("Scheduler task ");
+            Serial.print(F("Scheduler task "));
             Serial.print(pTask->id());
             Serial.print('[');
             Serial.print(pTask->taskId);
             Serial.print(']');
-            Serial.print(" done in ");
+            Serial.print(F(" done in "));
             Serial.println(end - start);
 #endif
         }
@@ -197,7 +198,7 @@ void Scheduler::loop(uint16_t timeSlice) {
 
 #ifdef DEBUG_SCHEDULER_RUN
     unsigned long time = micros();
-    Serial.print("Scheduler end run ");
+    Serial.print(F("Scheduler end run "));
     Serial.println(time - tick);
 #endif
 }

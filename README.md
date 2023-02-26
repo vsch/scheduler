@@ -8,7 +8,7 @@ Cooperative round-robin scheduler using a simple task model with
 ## Table of Contents
 - [Overview](#overview)
 - [Example](#example)
-    - [PWM Motor Controller](#pwm-motor-controller)
+  - [PWM Motor Controller](#pwm-motor-controller)
 
 
 ## Overview
@@ -87,12 +87,12 @@ completion exceeds the allotted time.
 class LedFlasher : public Task {
     uint8_t flashCount;
 
-    void init() {
+    void begin() {
         pinMode(LED, OUTPUT);
         suspend();
     }
 
-    void run() {
+    void loop() {
         if (flashCount == 0) {
             digitalWrite(LED, 0);
             suspend();
