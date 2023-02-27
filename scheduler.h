@@ -1,5 +1,6 @@
 #ifndef _SCHEDULER_H_
 #define _SCHEDULER_H_
+#include <avr/pgmspace.h>
 
 //#define DEBUG_SCHEDULER_ERRORS
 //#define DEBUG_SCHEDULER
