@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 // GLOBAL DEFINES
 #define F_CPU       (16000000L/2)       // loop CPU at 8 MHz or 16 MHz
-#define LED         4                   // LED on pin 4
+#define LED         4                   // LED on id 4
 #define PORTB_OUT 0x2E
 
 // ---------------------------------------------------------------------------
@@ -9,7 +9,7 @@
 #include <Arduino.h>
 #include <st7735.h>
 #include <dht22.h>
-#include <scheduler.h>
+#include <Scheduler.h>
 
 #define DISPLAY_TYPE ST7735_TYPE_OLED_096 /*| SSD1306_INVERTED*/ /*| SSD1306_EXTERNALVCC*/
 
@@ -371,37 +371,37 @@ class Updater : public Task {
             int col = col0;
 
 #ifdef SHOW_TIMING
-            tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.gotoCharXY(col, line++);                                 // startPosition text cursor
             tft.foreground = WHITE;
             tft.write(F("  Time "));
             tft.write(lastTime, 3, '.');
 #endif
-            tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.gotoCharXY(col, line++);                                 // startPosition text cursor
             tft.foreground = ROSE;
             tft.write(F("  Temp "));
             write(temp, F(" C  "));
 
-            tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.gotoCharXY(col, line++);                                 // startPosition text cursor
             tft.foreground = CYAN;
             tft.write(F(" Humid "));
             write(humidity, F("%  "));
 
             tft.foreground = YELLOW;
 #ifdef PWM
-            tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.gotoCharXY(col, line++);                                 // startPosition text cursor
             tft.write(F("  PWM1 "));
             write(motorPWM1.getPWM() * 100.0 / 255.0, F("%  "));
 
-            tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.gotoCharXY(col, line++);                                 // startPosition text cursor
             tft.write(F("  PWM2 "));
             write(motorPWM2.getPWM() * 100.0 / 255.0, F("%  "));
 #endif
 
-            tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.gotoCharXY(col, line++);                                 // startPosition text cursor
             tft.write(F(" Therm "));
             write(thermistor.getTemperature(false), F(" C  "));
 
-            tft.gotoCharXY(col, line++);                                 // position text cursor
+            tft.gotoCharXY(col, line++);                                 // startPosition text cursor
             tft.write(F("Counts "));
             tft.write(counter1.getCount());
             tft.write(' ');
@@ -412,7 +412,7 @@ class Updater : public Task {
             tft.write(millis() / 5000);
             tft.write(' ', 2);
 
-//            tft.gotoCharXY(col, line++);                                 // position text cursor
+//            tft.gotoCharXY(col, line++);                                 // startPosition text cursor
 //            tft.write(F("---------------"));
         }
 
@@ -473,7 +473,7 @@ void setup() {
     setBit(TCCR0A, WGM00);
     setBit(TCCR0A, WGM01);
 
-    // clear OCR0A and OCR0B on match, set at bottom, non-inverting mode
+    // reset OCR0A and OCR0B on match, set at bottom, non-inverting mode
     clearBit(TCCR0A, COM0A0);
     setBit(TCCR0A, COM0A1);
     clearBit(TCCR0A, COM0B0);

@@ -8,8 +8,8 @@ set(ARDUINO_CPU 8MHzatmega328)
 project(${PROJECT_NAME})
 
 # Define additional source and header files or default arduino sketch files
-set(${PROJECT_NAME}_SRCS scheduler_test.cpp scheduler.cpp thermistor.cpp)
-set(${PROJECT_NAME}_HDRS scheduler.h)
+set(${PROJECT_NAME}_SRCS scheduler_test.cpp Scheduler.cpp thermistor.cpp)
+set(${PROJECT_NAME}_HDRS Scheduler.h)
 
 ### Additional static libraries to include in the target.
 # set(${PROJECT_NAME}_LIBS)
@@ -31,7 +31,7 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
 #### Additional settings for programmer. From programmers.txt
 set(${PROJECT_NAME}_PROGRAMMER avrispmkii)
 set(${PROJECT_NAME}_PORT /dev/cu.usbserial-00000000)
-# set(pro.upload.speed 9600)
+set(pro.upload.speed 57600)
 
 ## Verbose build process
 set(${PROJECT_NAME}_AFLAGS -v)

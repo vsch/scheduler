@@ -1,5 +1,5 @@
 #include "Arduino.h"
-#include "scheduler.h"
+#include "Scheduler.h"
 
 #define INFINITE_DELAY  0xffff
 #define NULL_TASK  0xff
@@ -20,7 +20,7 @@ Scheduler::Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable) {
 }
 
 Task *Scheduler::task(uint8_t id) {
-    return reinterpret_cast<Task *>(pgm_read_dword(tasks + sizeof(Task *) * id));
+    return reinterpret_cast<Task *>(pgm_read_ptr(tasks + sizeof(Task *) * id));
 }
 
 void Scheduler::begin() {
@@ -54,7 +54,7 @@ void Scheduler::begin() {
 }
 
 #ifdef DEBUG_SCHEDULER_RUN
-void Scheduler::dumpDelays(const __FlashStringHelper *msg) {
+void Scheduler::dumpDelays(PGM_STR msg) {
     Serial.print(msg);
 
     for (uint8_t i = 0; i < taskCount; i++) {

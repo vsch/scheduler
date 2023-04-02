@@ -1,5 +1,6 @@
 #ifndef _SCHEDULER_H_
 #define _SCHEDULER_H_
+
 #include <avr/pgmspace.h>
 
 //#define DEBUG_SCHEDULER_ERRORS
@@ -7,7 +8,7 @@
 //#define DEBUG_SCHEDULER_RUN
 //#define DEBUG_SCHEDULER_DELAYS           // trace delays
 
-#if defined(DEBUG_SCHEDULER) || defined(DEBUG_SCHEDULER_RUN) || defined(DEBUG_SCHEDULER_ERRORS)
+#if defined(DEBUG_SCHEDULER) || defined(DEBUG_SCHEDULER_RUN) || defined(DEBUG_SCHEDULER_ERRORS) || defined(CONSOLE_DEBUG)
 #define SCHEDULER_TASK_IDS
 #endif
 
@@ -29,10 +30,30 @@ protected:
     Task();
 
 public:
+    /**
+     * Suspend this task @see Scheduler::suspend()
+     */
     void suspend();
-    bool isSuspended();
+
+    /**
+     * Resume this task after given delay in milliseconds
+     *
+     * @param milliseconds delay in milliseconds to wait before resuming calls to loop()
+     */
     void resume(uint16_t milliseconds);
-    uint8_t getIndex() { return index; }
+
+    /**
+     * return true if this task is currently suspended
+     */
+    bool isSuspended();
+
+    /**
+     * Return this task's index in Scheduler task table
+     * @return
+     */
+    inline uint8_t getIndex() {
+        return index;
+    }
 };
 
 class Scheduler {
@@ -52,18 +73,48 @@ class Scheduler {
     void dumpDelays(const __FlashStringHelper *msg);
 #endif
 
-    Task *task(uint8_t id);
+    static Task *task(uint8_t id);
 
 public:
     Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable);
     void begin();                       // start scheduler
-    void loop(uint16_t timeSlice = 0);  // loop tasks, return when all ready tasks have been loop once or time slice in ms exceeded
+    /**
+     * call loop() of ready tasks, return when all ready tasks have been called once or time slice in ms exceeded
+     *
+     * @param timeSlice     maximum time allotted to single loop() in ms, usually should be
+     *                      set to minimum of all tasks' resume calls. 0 means no limit,
+     *                      execute all ready tasks once.
+     *
+     */
+    void loop(uint16_t timeSlice = 0);
 
 private:
-    // task scheduling interface intended to be used by Task
+    /**
+     * Suspend task. The task's loop() will not be called until a resume() for the task is called.
+     *
+     * @param task    pointer to task which to suspend
+     *
+     */
     void suspend(Task *task);           // suspend rescheduling
+
+    /**
+     * Resume task after given number of ms. The task's loop() will be called after given number,
+     * or more, of ms has elapsed.
+     *
+     * @param task              pointer to task which to resume.
+     * @param milliseconds      milliseconds to wait before resuming task
+     *
+     */
     void resume(Task *task, uint16_t milliseconds);
+
+    /**
+     * Return true if given task is currently suspended
+     * @param task  task
+     *
+     * @return true if task is suspended
+     */
     bool isSuspended(Task *task);
+
     bool reduceDelays(uint16_t milliseconds);
 };
 
