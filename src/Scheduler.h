@@ -73,7 +73,7 @@ class Scheduler {
     void dumpDelays(const __FlashStringHelper *msg);
 #endif
 
-    static Task *task(uint8_t id);
+    Task *task(uint8_t id);
 
 public:
     Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable);
