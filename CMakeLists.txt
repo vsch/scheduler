@@ -8,8 +8,8 @@ set(ARDUINO_CPU 8MHzatmega328)
 project(${PROJECT_NAME})
 
 # Define additional source and header files or default arduino sketch files
-set(${PROJECT_NAME}_SRCS scheduler_test.cpp src/Scheduler.cpp thermistor.cpp)
-set(${PROJECT_NAME}_HDRS src/Scheduler.h)
+set(${PROJECT_NAME}_SRCS scheduler_test.cpp Scheduler.cpp thermistor.cpp)
+set(${PROJECT_NAME}_HDRS Scheduler.h)
 
 ### Additional static libraries to include in the target.
 # set(${PROJECT_NAME}_LIBS)

@@ -1,13 +1,6 @@
 #include "Arduino.h"
 #include "Scheduler.h"
 
-#define INFINITE_DELAY  0xffff
-#define NULL_TASK  0xff
-
-Task::Task() {
-    index = NULL_TASK;
-}
-
 Scheduler::Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable) {
     taskCount = count;
     tasks = taskTable;

@@ -12,6 +12,9 @@
 #define SCHEDULER_TASK_IDS
 #endif
 
+#define INFINITE_DELAY  0xffff
+#define NULL_TASK  0xff
+
 class Scheduler;
 // this must be declared in the main sketch
 extern Scheduler scheduler;
@@ -27,7 +30,9 @@ protected:
     virtual const __FlashStringHelper *id() = 0;       // printable id
 #endif
 
-    Task();
+    inline Task() {
+        index = NULL_TASK;
+    }
 
 public:
     /**
