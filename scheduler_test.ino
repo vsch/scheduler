@@ -13,7 +13,7 @@
 
 #define DISPLAY_TYPE ST7735_TYPE_OLED_096 /*| SSD1306_INVERTED*/ /*| SSD1306_EXTERNALVCC*/
 
-#include <st7745_display.h>
+#include <st7735_display.h>
 
 //uint8_t pageBuffer[DISPLAY_XSIZE];
 //Ssd1306 tft = Ssd1306(pageBuffer, DISPLAY_TYPE);

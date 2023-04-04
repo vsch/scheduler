@@ -1,21 +1,20 @@
-cmake_minimum_required(VERSION 2.8.4)
-set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/cmake/ArduinoToolchain.cmake)
+cmake_minimum_required(VERSION 3.0.0)
 set(CMAKE_CXX_STANDARD 98)
-set(PROJECT_NAME scheduler)
+set(PROJECT_NAME Scheduler)
 
 set(${PROJECT_NAME}_BOARD pro)
 set(ARDUINO_CPU 8MHzatmega328)
 project(${PROJECT_NAME})
 
 # Define additional source and header files or default arduino sketch files
-set(${PROJECT_NAME}_SRCS scheduler_test.cpp Scheduler.cpp thermistor.cpp)
-set(${PROJECT_NAME}_HDRS Scheduler.h)
+set(${PROJECT_NAME}_SRCS src/Scheduler.cpp thermistor.cpp)
+set(${PROJECT_NAME}_HDRS src/Scheduler.h)
 
 ### Additional static libraries to include in the target.
 # set(${PROJECT_NAME}_LIBS)
 
 ### Main sketch file
-# set(${PROJECT_NAME}_SKETCH scheduler.ino)
+ set(${PROJECT_NAME}_SKETCH scheduler_test.ino)
 
 ### Add project directories into the build
 # add_subdirectory()
