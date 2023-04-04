@@ -5,7 +5,6 @@ Cooperative round-robin scheduler using a simple task model with
 
 [TOC]: #
 
-## Table of Contents
 - [Overview](#overview)
 - [Example](#example)
   - [PWM Motor Controller](#pwm-motor-controller)
@@ -299,6 +298,10 @@ void setup() {
     setBit(TCCR0A, COM0B1);
 
     sei();
+}
+
+void loop() {
+   scheduler.loop();
 }
 ```
 
