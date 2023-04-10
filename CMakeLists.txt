@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.0.0)
+set(CMAKE_TOOLCHAIN_FILE /usr/local/etc/arduino-cmake/ArduinoToolchain.cmake)
 set(CMAKE_CXX_STANDARD 98)
 set(PROJECT_NAME Scheduler)
 
@@ -14,7 +15,7 @@ set(${PROJECT_NAME}_HDRS src/Scheduler.h)
 # set(${PROJECT_NAME}_LIBS)
 
 ### Main sketch file
- set(${PROJECT_NAME}_SKETCH scheduler_test.ino)
+set(${PROJECT_NAME}_SKETCH scheduler_test.ino)
 
 ### Add project directories into the build
 # add_subdirectory()
