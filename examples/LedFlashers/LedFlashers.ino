@@ -22,9 +22,10 @@ class LedFlasher : public Task {
         }
     }
 
+    defineSchedulerTaskId("LedFlasher");
+
 public:
     LedFlasher() { flashCount = 0; }
-    const __FlashStringHelper *id() { return F("LedFlasher"); }
 
     void flash(uint8_t count) {
         if (!isSuspended()) {
@@ -50,10 +51,11 @@ class Counter1 : public Task {
         resume(2000); // resume in 2 seconds
     }
 
+    defineSchedulerTaskId("Counter1");
+
 public:
     Counter1() { count = 0; }
     uint8_t getCount() { return count; }
-    const __FlashStringHelper *id() { return F("Counter1"); }
 } counter1 = Counter1();
 
 class Counter2 : public Task {
@@ -69,10 +71,11 @@ class Counter2 : public Task {
         resume(3000); // resume in 3 seconds
     }
 
+    defineSchedulerTaskId("Counter2");
+
 public:
     Counter2() { count = 0; }
     uint8_t getCount() { return count; }
-    const __FlashStringHelper *id() { return F("Counter2"); }
 
 } counter2 = Counter2();
 
@@ -91,9 +94,10 @@ class Updater : public Task {
         resume(1000);  // resume in a second
     }
 
+    defineSchedulerTaskId("Updater");
+
 public:
     Updater() = default;
-    const __FlashStringHelper *id() { return F("Updater"); }
 } updater = Updater();
 
 // Scheduler task table

@@ -104,7 +104,7 @@ class LedFlasher : public Task {
     
 public:
     LedFlasher() { flashCount = 0; }
-    const __FlashStringHelper *id() { return F("LedFlasher"); }
+    defineSchedulerTaskId("LedFlasher");
 
     void flash(uint8_t count) {
         if (!isSuspended()) {
@@ -133,7 +133,7 @@ class Counter1 : public Task {
 public:
     Counter1() { count = 0; } 
     uint8_t getCount() { return count; } 
-    const __FlashStringHelper *id() { return F("Counter1"); }
+    defineSchedulerTaskId("Counter1");
 } counter1 = Counter1();
 
 class Counter2 : public Task {
@@ -152,7 +152,7 @@ class Counter2 : public Task {
 public:
     Counter2() { count = 0; }
     uint8_t getCount() { return count; }
-    const __FlashStringHelper *id() { return F("Counter2"); }
+    defineSchedulerTaskId("Counter2");
 
 } counter2 = Counter2();
 
@@ -173,7 +173,7 @@ class Updater : public Task {
     
 public:
     Updater() = default;
-    const __FlashStringHelper *id() { return F("Updater"); }
+    defineSchedulerTaskId("Updater");
 } updater = Updater();
 
 // Scheduler task table
@@ -252,7 +252,8 @@ class MotorPWM : public Task {
         }
     }
 
-    const __FlashStringHelper *id() { return F("MotorPWM"); }
+    
+    defineSchedulerTaskId("MotorPWM");
 
 public:
     MotorPWM(volatile uint8_t &portReg) {
@@ -301,7 +302,7 @@ void setup() {
 }
 
 void loop() {
-   scheduler.loop();
+   scheduler.loop(10);
 }
 ```
 

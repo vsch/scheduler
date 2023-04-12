@@ -1,5 +1,12 @@
+#include <Arduino.h>
 #include "Arduino.h"
 #include "Scheduler.h"
+
+#ifdef SERIAL_DEBUG_SCHEDULER_DELAYS
+#define serialDebugSchedulerDumpDelays(msg) dumpDelays(PSTR(msg))
+#else
+#define serialDebugSchedulerDumpDelays(msg) ((void)0)
+#endif
 
 Scheduler::Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable) {
     taskCount = count;
@@ -7,29 +14,26 @@ Scheduler::Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable) {
     delays = delayTable;
     clockTick = 0;
     nextTask = 0;
-#ifdef DEBUG_SCHEDULER
+#ifdef SERIAL_DEBUG_SCHEDULER
     iteration = 0;
 #endif
 }
 
-Task *Scheduler::task(uint8_t id) {
-    return reinterpret_cast<Task *>(pgm_read_ptr(tasks + sizeof(Task *) * id));
+Task *Scheduler::getTask(uint8_t index) {
+    return reinterpret_cast<Task *>(pgm_read_ptr(tasks + sizeof(Task *) * index));
 }
 
 void Scheduler::begin() {
     memset(delays, 0, sizeof(*delays) * taskCount);
 
     for (uint8_t i = 0; i < taskCount; i++) {
-        Task *pTask = task(i);
+        Task *pTask = getTask(i);
         if (pTask->index != NULL_TASK) {
-#ifdef DEBUG_SCHEDULER_ERRORS
-            Serial.print(F("Task "));
-            Serial.print(pTask->id());
-            Serial.print(F(" is duplicated in scheduler at "));
-            Serial.print(pTask->taskId);
-            Serial.print(F(" and "));
-            Serial.print(i);
-#endif
+            debugSchedulerErrorsPrintf_P(PSTR("Task %S, is duplicated in scheduler at %d and %d")
+                                         , pTask->id()
+                                         , pTask->index
+                                         , i
+            );
         } else {
             pTask->index = i;
         }
@@ -37,34 +41,28 @@ void Scheduler::begin() {
 
     clockTick = micros();
     for (uint8_t i = 0; i < taskCount; i++) {
-        Task *pTask = task(i);
+        Task *pTask = getTask(i);
         pTask->begin();
     }
 
-#ifdef DEBUG_SCHEDULER_DELAYS
-    dumpDelays(F("Scheduler after start "));
-#endif
+    serialDebugSchedulerDumpDelays("Scheduler after start ");
 }
 
-#ifdef DEBUG_SCHEDULER_RUN
-void Scheduler::dumpDelays(PGM_STR msg) {
-    Serial.print(msg);
+#ifdef SERIAL_DEBUG_SCHEDULER_DELAYS
+
+void Scheduler::dumpDelays(PGM_P msg) {
+    serialDebugPuts_P(msg);
 
     for (uint8_t i = 0; i < taskCount; i++) {
-        Serial.print(' ');
-        Task *pTask = task(i);
-        Serial.print(pTask->id());
-        Serial.print('[');
-        Serial.print(pTask->taskId);
-        Serial.print(']');
-        Serial.print('{');
-        Serial.print(delays[i]);
-        Serial.print('}');
-        Serial.print(' ');
+        Task *pTask = getTask(i);
+        serialDebugPrintf_P(PSTR("%S [%d] { %d }\n")
+                            , pTask->id()
+                            , pTask->index
+                            , delays[i]
+        );
     }
-
-    Serial.println();
 }
+
 #endif
 
 bool Scheduler::reduceDelays(uint16_t milliseconds) {
@@ -92,107 +90,89 @@ bool Scheduler::reduceDelays(uint16_t milliseconds) {
 }
 
 void Scheduler::loop(uint16_t timeSlice) {
-    unsigned long tick = micros();
-    unsigned long diff = tick - clockTick;
+    uint32_t tick = micros();
+    uint32_t diff = tick - clockTick;
 
-    uint16_t diffMs = static_cast<uint16_t>(diff / 1000);
-#ifdef DEBUG_SCHEDULER_DELAYS
-    dumpDelays(F("Scheduler loop before "));
-    Serial.print(F("Tick "));
-    Serial.print(tick);
-    Serial.print(F(" clockTick "));
-    Serial.print(clockTick);
-    Serial.print(F(" diff "));
-    Serial.print(tick - clockTick);
-    Serial.print(F(" diffMs "));
-    Serial.println(diffMs);
-#endif
+    uint16_t diffMs = (uint16_t) (diff / 1000);
+    serialDebugSchedulerDumpDelays("Scheduler loop before ");
+    debugSchedulerDelaysPrintf_P(PSTR("Tick %ld clockTick %ld diff %ld diffMs %d\n")
+                                 , tick
+                                 , clockTick
+                                 , tick - clockTick
+                                 , diffMs
+    );
 
     bool haveTasks = reduceDelays(diffMs);
 
-#ifdef DEBUG_SCHEDULER_DELAYS
-    dumpDelays(F("Scheduler run after "));
-#endif
+    serialDebugSchedulerDumpDelays("Scheduler loop after ");
 
-    // adjust by ms used to reduce delay to eliminate error accumulation
+    // adjust by ms used to reduce delay and to eliminate error accumulation
     clockTick += (uint32_t) diffMs * 1000;
 
     if (!haveTasks) return;
 
-#ifdef DEBUG_SCHEDULER
+#ifdef SERIAL_DEBUG_SCHEDULER
     iteration++;
 #endif
 
-#ifdef DEBUG_SCHEDULER_RUN
-    Serial.print(F("Scheduler run "));
-    Serial.print(tick);
-    Serial.print(F(" slice "));
-    Serial.println(timeSlice);
-#endif
+    // offset task index by nextTask so we can interrupt at a getTask
+    // and continue with the same getTask next time slice
+    uint8_t lastId;
 
-    uint32_t timeSliceLimit = timeSlice * 1000;
-
-    // offset task index by nextTask so we can interrupt at a task
-    // and continue with the same task next time slice
     for (uint8_t i = 0; i < taskCount; i++) {
         uint8_t id = i + nextTask;
         if (id >= taskCount) id -= taskCount;
+        lastId = id;
 
         if (delays[id] == 0) {
-#if defined(DEBUG_SCHEDULER) || defined(DEBUG_SCHEDULER_RUN)
-            unsigned long start = micros();
+#ifdef SERIAL_DEBUG_SCHEDULER
+            uint32_t start = micros();
 #endif
-            Task *pTask = task(id);
+            Task *pTask = getTask(id);
             pTask->loop();
-
-#ifdef DEBUG_SCHEDULER_RUN
             unsigned long end = micros();
-#endif
 
             if (timeSlice) {
-#ifndef DEBUG_SCHEDULER_RUN
-                unsigned long end = micros();
-#endif
+                uint32_t timeSliceLimit = timeSlice * 1000L;
+
                 if ((uint32_t) (end - tick) > timeSliceLimit) {
-                    // ran out of time slice
-#ifdef DEBUG_SCHEDULER
-                    Serial.print(F("Scheduler["));
-                    Serial.print(iteration);
-                    Serial.print(F("] time slice ended "));
-                    Serial.print(end - tick);
-                    Serial.print(F(" "));
-                    Serial.print(timeSliceLimit);
-                    Serial.print(F(" last task "));
-                    Serial.print(pTask->id());
-                    Serial.print('[');
-                    Serial.print(pTask->taskId);
-                    Serial.print(']');
-                    Serial.print(F(" took "));
-                    Serial.println(end - start);
+#ifdef SERIAL_DEBUG_SCHEDULER
+                    debugSchedulerPrintf_P(PSTR("Scheduler[%u] time slice ended %lu limit %u last getTask %S[%d] took %lu\n")
+                                           , iteration
+                                           , (uint32_t)(end - tick)
+                                           , timeSlice
+                                           , pTask->id()
+                                           , pTask->index
+                                           , (uint32_t) (end - start)
+                    );
 #endif
-                    nextTask = id;
-                    return;
+                    // next time continue checking after the current getTask
+                    nextTask = id + 1;
+                    if (nextTask >= taskCount) nextTask = 0;
+                    lastId = -1;
+                    break;
                 }
             }
 
-#ifdef DEBUG_SCHEDULER_RUN
-            Serial.print(F("Scheduler task "));
-            Serial.print(pTask->id());
-            Serial.print('[');
-            Serial.print(pTask->taskId);
-            Serial.print(']');
-            Serial.print(F(" done in "));
-            Serial.println(end - start);
-#endif
+            debugSchedulerPrintf_P(PSTR("Scheduler[%d] getTask %S[%d] done in %lu\n")
+                                   , iteration
+                                   , pTask->id()
+                                   , pTask->index
+                                   , (uint32_t) (end - start)
+            );
         }
     }
 
-    nextTask = 0;
+    if (lastId != -1) {
+        // all ran, next time start with the first
+        nextTask = 0;
+    }
 
-#ifdef DEBUG_SCHEDULER_RUN
-    unsigned long time = micros();
-    Serial.print(F("Scheduler end run "));
-    Serial.println(time - tick);
+#ifdef SERIAL_DEBUG_SCHEDULER
+    uint32_t time = micros();
+    debugSchedulerPrintf_P(PSTR("Scheduler end run %ld\n")
+                           , time - tick
+    );
 #endif
 }
 
@@ -205,7 +185,7 @@ bool Scheduler::isSuspended(Task *task) {
 }
 
 /**
- * Set current task's delay to infinite
+ * Set current getTask's delay to infinite
  */
 void Scheduler::suspend(Task *task) {
     delays[task->index] = INFINITE_DELAY;

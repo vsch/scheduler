@@ -76,9 +76,7 @@ class LedFlasher : public Task {
         }
     }
 
-#ifdef SCHEDULER_TASK_IDS
-    const __FlashStringHelper *id() { return F("LedFlasher"); }
-#endif
+    defineSchedulerTaskId("LedFlasher");
 
 public:
     LedFlasher() { flashCount = 0; }
@@ -118,9 +116,7 @@ class Counter1 : public Task {
         resume(2000);
     }
 
-#ifdef SCHEDULER_TASK_IDS
-    const __FlashStringHelper *id() { return F("Counter1"); }
-#endif
+    defineSchedulerTaskId("Counter1");
 
 public:
     Counter1() { count = 0; }
@@ -141,9 +137,7 @@ class Counter2 : public Task {
         resume(3000);
     }
 
-#ifdef SCHEDULER_TASK_IDS
-    const __FlashStringHelper *id() { return F("Counter2"); }
-#endif
+    defineSchedulerTaskId("Counter2");
 
 public:
     Counter2() { count = 0; }
@@ -164,9 +158,7 @@ class Counter3 : public Task {
         resume(5000);
     }
 
-#ifdef SCHEDULER_TASK_IDS
-    const __FlashStringHelper *id() { return F("Counter3"); }
-#endif
+    defineSchedulerTaskId("Counter3");
 
 public:
     Counter3() { count = 0; }
@@ -186,9 +178,7 @@ class TempHumidity : public Task {
         resume(2000);
     }
 
-#ifdef SCHEDULER_TASK_IDS
-    const __FlashStringHelper *id() { return F("TempHumidity"); }
-#endif
+    defineSchedulerTaskId("TempHumidity");
 
 public:
     TempHumidity() = default;
@@ -215,9 +205,7 @@ class Thermistor : public Task {
         resume(1000);
     }
 
-#ifdef SCHEDULER_TASK_IDS
-    const __FlashStringHelper *id() { return F("TempHumidity"); }
-#endif
+    defineSchedulerTaskId("Thermistor");
 
 public:
     Thermistor() {
@@ -288,9 +276,7 @@ class MotorPWM : public Task {
         }
     }
 
-#ifdef SCHEDULER_TASK_IDS
-    const __FlashStringHelper *id() { return F("MotorPWM"); }
-#endif
+    defineSchedulerTaskId("MotorPWM");
 
 public:
     MotorPWM(volatile uint8_t &portReg) {
@@ -424,9 +410,7 @@ class Updater : public Task {
         resume(1000);
     }
 
-#ifdef SCHEDULER_TASK_IDS
-    const __FlashStringHelper *id() { return F("Updater"); }
-#endif
+    defineSchedulerTaskId("Updater");
 
 public:
     Updater() {
@@ -530,5 +514,5 @@ void setup() {
 }
 
 void loop() {
-    scheduler.loop(100);
+    scheduler.loop(10);
 }

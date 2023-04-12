@@ -14,7 +14,7 @@ project(${PROJECT_NAME})
 # set(${PROJECT_NAME}_LIBS)
 
 ### Main sketch file
- set(${PROJECT_NAME}_SKETCH LedFlashers.ino)
+set(${PROJECT_NAME}_SKETCH LedFlashers.ino)
 
 ### Add project directories into the build
 # add_subdirectory()

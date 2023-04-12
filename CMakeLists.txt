@@ -11,6 +11,12 @@ project(${PROJECT_NAME})
 set(${PROJECT_NAME}_SRCS src/Scheduler.cpp thermistor.cpp)
 set(${PROJECT_NAME}_HDRS src/Scheduler.h)
 
+#add_compile_definitions(SERIAL_DEBUG)
+#add_compile_definitions(SERIAL_DEBUG_SCHEDULER)
+#add_compile_definitions(SERIAL_DEBUG_SCHEDULER_ERRORS)
+#add_compile_definitions(SERIAL_DEBUG_SCHEDULER_DELAYS)
+#add_compile_definitions(SERIAL_DEBUG_SCHEDULER_RUN)
+
 ### Additional static libraries to include in the target.
 # set(${PROJECT_NAME}_LIBS)
 
