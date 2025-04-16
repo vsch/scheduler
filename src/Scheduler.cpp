@@ -1,12 +1,5 @@
-#include <Arduino.h>
 #include "Arduino.h"
 #include "Scheduler.h"
-
-#ifdef SERIAL_DEBUG_SCHEDULER_DELAYS
-#define serialDebugSchedulerDumpDelays(msg) dumpDelays(PSTR(msg))
-#else
-#define serialDebugSchedulerDumpDelays(msg) ((void)0)
-#endif
 
 Scheduler::Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable) {
     taskCount = count;
@@ -14,12 +7,14 @@ Scheduler::Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable) {
     delays = delayTable;
     clockTick = 0;
     nextTask = 0;
+    inLoop = 0;
 #ifdef SERIAL_DEBUG_SCHEDULER
     iteration = 0;
 #endif
 }
 
 Task *Scheduler::getTask(uint8_t index) {
+    (void) tasks;
     return reinterpret_cast<Task *>(pgm_read_ptr(tasks + sizeof(Task *) * index));
 }
 
@@ -93,6 +88,8 @@ void Scheduler::loop(uint16_t timeSlice) {
     uint32_t tick = micros();
     uint32_t diff = tick - clockTick;
 
+    inLoop = true;
+
     uint16_t diffMs = (uint16_t) (diff / 1000);
     serialDebugSchedulerDumpDelays("Scheduler loop before ");
     debugSchedulerDelaysPrintf_P(PSTR("Tick %ld clockTick %ld diff %ld diffMs %d\n")
@@ -109,7 +106,10 @@ void Scheduler::loop(uint16_t timeSlice) {
     // adjust by ms used to reduce delay and to eliminate error accumulation
     clockTick += (uint32_t) diffMs * 1000;
 
-    if (!haveTasks) return;
+    if (!haveTasks) {
+        inLoop = 0;
+        return;
+    }
 
 #ifdef SERIAL_DEBUG_SCHEDULER
     iteration++;
@@ -128,8 +128,16 @@ void Scheduler::loop(uint16_t timeSlice) {
 #ifdef SERIAL_DEBUG_SCHEDULER
             uint32_t start = micros();
 #endif
-            Task *pTask = getTask(id);
-            pTask->loop();
+            Task *pCurrentTask = getTask(id);
+
+            if (pCurrentTask->isBlocking()) {
+                YieldingTask *pBlockingTask = reinterpret_cast<YieldingTask *>(pCurrentTask);
+                resumeContext(&pBlockingTask->context);
+            } else {
+                // just a Task
+                pCurrentTask->loop();
+            }
+
             unsigned long end = micros();
 
             if (timeSlice) {
@@ -141,8 +149,8 @@ void Scheduler::loop(uint16_t timeSlice) {
                                            , iteration
                                            , (uint32_t)(end - tick)
                                            , timeSlice
-                                           , pTask->id()
-                                           , pTask->index
+                                           , pCurrentTask->id()
+                                           , pCurrentTask->index
                                            , (uint32_t) (end - start)
                     );
 #endif
@@ -156,10 +164,12 @@ void Scheduler::loop(uint16_t timeSlice) {
 
             debugSchedulerPrintf_P(PSTR("Scheduler[%d] getTask %S[%d] done in %lu\n")
                                    , iteration
-                                   , pTask->id()
-                                   , pTask->index
+                                   , pCurrentTask->id()
+                                   , pCurrentTask->index
                                    , (uint32_t) (end - start)
             );
+
+            pCurrentTask = NULL;
         }
     }
 
@@ -174,6 +184,8 @@ void Scheduler::loop(uint16_t timeSlice) {
                            , time - tick
     );
 #endif
+
+    inLoop = 0;
 }
 
 void Scheduler::resume(Task *task, uint16_t milliseconds) {
@@ -190,4 +202,55 @@ bool Scheduler::isSuspended(Task *task) {
 void Scheduler::suspend(Task *task) {
     delays[task->index] = INFINITE_DELAY;
 }
+
+/**
+ * Suspend the task's execution and yield context
+ * If successfully yielded, this function will return after the task is resumed.
+ *
+ * If the task is not the current context, it will not yield and return immediately.
+ * Check return value for true if it did not yield and handle it, if needed.
+ *
+ * @return 0 if successfuly yielded. 1 if no yield because was not the active task
+ */
+uint8_t YieldingTask::yieldSuspend() {
+    suspend();
+    if (isCurrentContext(&context)) {
+        yieldContext();
+        return 0;
+    }
+    return 1;
+}
+
+/**
+ * Set the resume milliseconds and yield the task's execution context. If successfully yielded, this
+ * function will return after at least the given delay has passed.
+ *
+ * If the task is not the current context, it will not yield and return immediately.
+ * Check return value for true if it did not yield and handle it, if needed.
+ *
+ * @param milliseconds delay in milliseconds to wait before resuming calls to loop()
+ * @return 0 if successfuly yielded. 1 if no yield because was not the active task
+ */
+uint8_t YieldingTask::yieldResume(uint16_t milliseconds) {
+    resume(milliseconds);
+    if (isCurrentContext(&context)) {
+        yieldContext();
+        return 0;
+    }
+    return 1;
+}
+
+void YieldingTask::yield() {
+    resume(0);
+    if (isCurrentContext(&context)) {
+        yieldContext();
+    }
+}
+
+#ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
+void Scheduler::dumpMaxStackInfo() {
+    // TODO: implement
+}
+
+#endif
 

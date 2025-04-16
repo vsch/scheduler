@@ -1,0 +1,8 @@
+target remote localhost:1234
+layout split
+layout regs
+break Scheduler.cpp:187
+break Scheduler.cpp:191
+break Scheduler.cpp:298
+break Scheduler.cpp:401
+break Scheduler.cpp:459

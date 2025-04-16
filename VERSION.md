@@ -2,9 +2,17 @@
 
 [TOC]: #
 
+- [Version 2.0](#version-20)
 - [Version 1.1](#version-11)
 - [Version 1.0](#version-10)
 
+
+## Version 2.0
+
+* Add: `YieldingTask` type which can use yielding methods from within
+  its loop to release the CPU to other tasks or the main loop. Execution
+  of the code will continue after the call to the yielding method, when
+  the scheduler resumes the task.
 
 ## Version 1.1
 

@@ -1,0 +1,7 @@
+# Connect to a debugger (adjust port as needed)
+target remote :1234
+
+layout split
+layout regs
+break ResourceLock.cpp:10
+break ResourceLock.cpp:27

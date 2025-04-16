@@ -3,12 +3,21 @@
 Cooperative round-robin scheduler using a simple task model with
 `begin()` and `loop()` methods.
 
+Version 2 includes `YieldingTask` type which can use yielding methods
+from within its loop to release the CPU to other tasks or the main loop.
+Execution of the code will continue after the call to the yielding
+method, when the scheduler resumes the task.
+
+This eliminates the need to convert the code to a state machine with one
+entry and one exit, by using yield functions to relinquish the CPU, the
+state is preserved on the stack and variables of the running code.
+
 [TOC]: #
 
 - [Overview](#overview)
+- [Implementation Details for `YieldingTask`](#implementation-details-for-yieldingtask)
 - [Example](#example)
   - [PWM Motor Controller](#pwm-motor-controller)
-
 
 ## Overview
 
@@ -17,6 +26,11 @@ after suspension or to schedule next execution after delay. If
 `milliseconds` is given as `0` then the current task will be rescheduled
 to run in the next scheduler loop invocation and after all ready tasks
 in the current invocation have been run.
+
+In version 2 of the library a `YieldingTask` type was added which can
+use yielding methods from within its `loop()` to release the CPU to
+other tasks or the main loop. When the scheduler resumes the task,
+execution will continue after the call to the yielding method.
 
 The resume/suspend will return to the caller immediately, with the delay
 taking effect for the next call of the task `loop()` function. Multiple
@@ -58,6 +72,56 @@ than scanning the delay table looking for ready tasks.
 
 The total RAM overhead per task is 5 bytes, with a fixed overhead of 10
 bytes for the scheduler.
+
+For `YieldingTask` the overhead adds a stack buffer, to hold the task
+specific stack contents. This only includes stack data between the point
+on the stack when it was resumed and when yield was called. This data is
+removed from the stack into the buffer at time of yield, and restored to
+the stack when the task is resumed.
+
+`YieldingTask` methods:
+
+* `uint8_t yieldSuspend()` - yield and suspend the task. It will not
+  return until task is resumed via `resume()` call.
+* `uint8_t yieldResume(uint16_t milliseconds)` - Will set the task to
+  resume in `milliseconds` and yield. Function will return when the
+  timeout has elapsed.
+* `void yield()` - sets resume delay to `0` and yields. Useful for
+  breaking up long tasks to allow other functions to be performed.
+* `uint8_t hasYielded() const` - returns true if the task has returned
+  via one of the yield methods, `0` if the task has exited its `loop()`
+  function.
+* `uint8_t maxStackUsed() const` - maximum bytes used of the task's
+  stack buffer. Can be used to reduce the buffer size, if it isn't
+  needed.
+* `uint8_t isCurrentTask() const` - returns non-zero if the task is the
+  current task in the scheduler's `loop` context.
+
+## Implementation Details for `YieldingTask`
+
+The implementation manipulates the contents of the stack to allow
+suspending and resuming tasks, in-situ. This requires assembly code
+which is highly compiler and MCU dependent. The current implementation
+of this code is in the `TinySwitcher.S` `avr-gcc` assembly and is only
+for the avr gcc toolchain and only for the AT328p and compatible MCU's.
+Although, only the 328p was actually used and tested to work.
+
+The trick involves removing data from the stack to a buffer when the
+task is yielded and restoring it to the stack when the task is resumed.
+Execution of each task proceeds on the main stack and the buffer only
+needs sufficient space to store stack data pushed between the call to a
+task's `loop` method and when the `yieldContext` was called in the
+`TinySwitcher` assembly code. How deep the call hierarchy is within the
+task has no influence. It is only how deep into the hierarchy is the
+call to yield context is made. If the task always yields from within
+it's `loop` method, then 32 bytes for the stack buffer, plus any local
+variable space definitions in the function, will be plenty.
+
+This works because the data on the stack is not position dependent.
+Except, in the case where a pointer to a local variable is also stored
+on the stack. In this case the code will break if the resumed stack is
+in a slightly different position, but that would be a very rare use
+case.
 
 ## Example
 
@@ -201,6 +265,76 @@ void loop() {
 }
 
 ```
+
+In version 2, it is possible to have an LED flashing loop that does not
+exit between flashes, but yields.
+
+```cpp
+uint8_t queueData[8];
+ResourceLock ledLock(queueData, sizeof(queueData));
+
+class LedFlasher : public YieldingTask {
+    uint8_t flashCount;
+    const uint16_t flashDelay;
+
+    void begin() {
+        if (flashCount) {
+            resume(100);
+        } else {
+            suspend();
+        }
+    }
+
+    void loop() {
+        ledLock.reserveResource(this);
+
+        Serial.print(F("LED Loop"));
+        Serial.println(flashCount);
+
+        for (uint8_t i = 0; i < flashCount; i++) {
+            digitalWrite(LED, 1);
+            yieldResume(flashDelay);
+            digitalWrite(LED, 0);
+            yieldResume(flashDelay);
+        }
+
+        yieldResume(1000);
+        ledLock.releaseResource();
+        yield();
+
+        Serial.print(F("LED Loop"));
+        Serial.print(flashCount);
+        Serial.println(F(" done."));
+    }
+
+    defineSchedulerTaskId("LedFlasher");
+
+public:
+    LedFlasher(uint8_t flashCount, uint16_t flashDelay, uint8_t *pStack, uint8_t stackMax)
+            : flashDelay(flashDelay), YieldingTask(pStack, stackMax) {
+        this->flashCount = flashCount;
+    }
+
+    void flash(uint8_t count) {
+        flashCount = static_cast<uint8_t>(count); // odd is on, even is off
+        if (isSuspended()) {
+            resume(0);
+        }
+    }
+};
+
+uint8_t flasherStack1[128];
+uint8_t flasherStack2[128];
+
+LedFlasher ledFlasher1 = LedFlasher(4, 250, flasherStack1, lengthof(flasherStack1));
+LedFlasher ledFlasher2 = LedFlasher(8, 125, flasherStack2, lengthof(flasherStack2));
+
+```
+
+These flashers will flash the LED given number of flashes and then exit
+the loop, while not blocking the CPU in between. The code also
+demonstrates the use of a `ResourceLock` to arbitrate between tasks for
+competing resources.
 
 ### PWM Motor Controller
 
