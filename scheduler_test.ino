@@ -77,8 +77,8 @@ public:
     }
 };
 
-uint8_t flasherStack1[sizeOfStack(80)];
-uint8_t flasherStack2[sizeOfStack(80)];
+uint8_t flasherStack1[sizeOfStack(32)];
+uint8_t flasherStack2[sizeOfStack(32)];
 
 LedFlasher ledFlasher1 = LedFlasher(4, 250, flasherStack1, lengthof(flasherStack1));
 LedFlasher ledFlasher2 = LedFlasher(8, 125, flasherStack2, lengthof(flasherStack2));

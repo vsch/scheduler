@@ -2,12 +2,19 @@
 
 [TOC]: #
 
+- [Version 2.2](#version-22)
 - [Version 2.1](#version-21)
 - [Version 2.0.1](#version-201)
 - [Version 2.0](#version-20)
 - [Version 1.1](#version-11)
 - [Version 1.0](#version-10)
 
+
+## Version 2.2
+
+* Change: rename `TinySwitcher` `Context` to `AsyncContext`
+* Remove: `AsyncTask::isCurrentTask()` useless method. If
+  `::isInAsyncContext()` is true then async yield can be performed.
 
 ## Version 2.1
 

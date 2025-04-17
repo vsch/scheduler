@@ -205,6 +205,10 @@ void Scheduler::suspend(Task *task) {
     delays[task->index] = INFINITE_DELAY;
 }
 
+uint8_t Scheduler::canLoop() const {
+    return !inLoop;
+}
+
 uint8_t Task::reserveResource(ResourceLock *pResource) {
     return pResource->reserveResource(this);
 }
@@ -217,8 +221,28 @@ uint8_t Task::waitOnSignal(Signal *pSignal) {
     return pSignal->wait(this);
 }
 
+void Task::resume(uint16_t milliseconds) {
+    scheduler.resume(this, milliseconds);
+}
+
+void Task::suspend() {
+    scheduler.suspend(this);
+}
+
+bool Task::isSuspended() {
+    return scheduler.isSuspended(this);
+}
+
+uint8_t Task::isAsync() {
+    return false;
+}
+
+uint8_t AsyncTask::isAsync() {
+    return true;
+}
+
 AsyncTask::AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() { // NOLINT(cppcoreguidelines-pro-type-member-init)
-    pContext = (Context *)pStack;
+    pContext = (AsyncContext *)pStack;
     initContext(pStack, AsyncTask::yieldingLoop, this, stackMax);
 }
 
@@ -233,11 +257,11 @@ AsyncTask::AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() { // NOLINT(cpp
  */
 uint8_t AsyncTask::yieldSuspend() {
     suspend();
-    if (isAsyncContext()) {
+    if (isInAsyncContext()) {
         yieldContext();
-        return 0;
+        return false;
     }
-    return 1;
+    return true;
 }
 
 /**
@@ -252,16 +276,16 @@ uint8_t AsyncTask::yieldSuspend() {
  */
 uint8_t AsyncTask::yieldResume(uint16_t milliseconds) {
     resume(milliseconds);
-    if (isAsyncContext()) {
+    if (isInAsyncContext()) {
         yieldContext();
-        return 0;
+        return false;
     }
-    return 1;
+    return true;
 }
 
 void AsyncTask::yield() {
     resume(0);
-    if (isAsyncContext()) {
+    if (isInAsyncContext()) {
         yieldContext();
     }
 }
@@ -272,6 +296,10 @@ uint8_t AsyncTask::hasYielded() const {
 
 uint8_t AsyncTask::maxStackUsed() const {
     pContext->stackMaxUsed;
+}
+
+void AsyncTask::yieldingLoop(void *arg) {
+    ((AsyncTask *)arg)->loop();
 }
 
 #ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS

@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include "common_defs.h"
 
-typedef struct Context {
-    // Context data structure
+typedef struct AsyncContext {
+    // AsyncContext data structure
     // This structure holds the context of a thread, including registers and stack pointer.
     volatile uint8_t stackUsed;      // saved stack area
     volatile uint8_t stackMax;       // maximum stack area available
@@ -18,7 +18,7 @@ typedef struct Context {
 
 typedef void (*EntryFunction)(void *);
 
-#define sizeOfStack(s)      (sizeOfPlus(Context, (s)))
+#define sizeOfStack(s)      (sizeOfPlus(AsyncContext, (s)))
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,7 +41,7 @@ extern void initContext(uint8_t *pContext, EntryFunction pEntry, void *pEntryArg
  *
  * @return  0 if not, otherwise we are
  */
-extern uint8_t isAsyncContext();
+extern uint8_t isInAsyncContext();
 
 /**
  * Resume execution in the async context. Will set current context pointer to be used by potential call to yieldContext
@@ -49,7 +49,7 @@ extern uint8_t isAsyncContext();
  *
  * @param pContext  pointer to async context
  */
-extern void resumeContext(Context *pContext);
+extern void resumeContext(AsyncContext *pContext);
 
 // will yield back to caller of resumeContext and clear current context pointer so no more yields could be done
 extern void yieldContext();

@@ -1,5 +1,5 @@
 .global initContext
-.global isAsyncContext
+.global isInAsyncContext
 .global resumeContext
 .global yieldContext
 
@@ -9,7 +9,7 @@
 
 .section .text
 
-; Offsets for Context structure members
+; Offsets for AsyncContext structure members
 .equ CONTEXT_STACK_USED, 0            ; Offset for stackUsed
 .equ CONTEXT_STACK_MAX, 1             ; Offset for stackMax
 .equ CONTEXT_STACK_MAX_USED, 2        ; Offset for stackMaxUsed
@@ -55,7 +55,7 @@ initContext:
 ; Output: r24 contains the result (1 if pContext == pCurrentContext, 0 otherwise)
 ; Clobbers: r0
 
-isAsyncContext:
+isInAsyncContext:
     ; Load pCurrentContext into (r24:r0)
     lds r24, pCurrentContext           ; Load low byte of pCurrentContext
     lds r0, pCurrentContext+1          ; Load high byte of pCurrentContext

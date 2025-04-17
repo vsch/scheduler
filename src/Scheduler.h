@@ -30,9 +30,7 @@ protected:
     virtual void loop() = 0;             // loop getTask
 
 public:
-    virtual uint8_t isAsync() {
-        return false;
-    }
+    virtual uint8_t isAsync();
 
 #ifdef SCHEDULER_TASK_IDS
     virtual PGM_P id() = 0;        // printable id
@@ -80,11 +78,9 @@ class AsyncTask : public Task {
     friend class Scheduler;
 
 protected:
-    Context *pContext;
+    AsyncContext *pContext;
 
-    uint8_t isAsync() override {
-        return true;
-    }
+    uint8_t isAsync() override;
 
 public:
     /**
@@ -140,19 +136,8 @@ public:
      */
     uint8_t maxStackUsed() const;
 
-    /**
-     * Test if the current task is the active context, i.e. it is currently running.
-     *
-     * @return 0 if not current context, else task context is the current one and the task can yield.
-     */
-    uint8_t isCurrentTask() const {
-        return ::isAsyncContext();
-    };
-
 private:
-    static void yieldingLoop(void *arg) {
-        ((AsyncTask *)arg)->loop();
-    }
+    static void yieldingLoop(void *arg);
 };
 
 class Scheduler {
@@ -213,9 +198,7 @@ public:
     void dumpMaxStackInfo();
 #endif
 
-    inline uint8_t canLoop() const {
-        return !inLoop;
-    }
+    uint8_t canLoop() const;
 
 private:
     bool reduceDelays(uint16_t milliseconds);
@@ -247,18 +230,6 @@ public:
      */
     bool isSuspended(Task *task);
 };
-
-inline void Task::resume(uint16_t milliseconds) {
-    scheduler.resume(this, milliseconds);
-}
-
-inline void Task::suspend() {
-    scheduler.suspend(this);
-}
-
-inline bool Task::isSuspended() {
-    return scheduler.isSuspended(this);
-}
 
 #ifdef SERIAL_DEBUG
 #else
