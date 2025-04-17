@@ -1,18 +1,25 @@
 #include "Signal.h"
 #include "Scheduler.h"
 
-uint8_t Signal::wait(Task *pTask) {
+uint8_t Signal::addWaitingTask(Task *pTask) {
     if (!pQueue->isFull()) {
         pQueue->addTail(pTask->getIndex());
-        return taskWait(pTask);
+        return suspendTask(pTask);
     }
-    return 1;
+    return NULL_TASK;
 }
 
 void Signal::trigger() {
     while (!pQueue->isEmpty()) {
         // give to the next task
-        triggerTask(pQueue->removeHead());
+        resumeTask(pQueue->removeHead());
     }
 }
 
+uint8_t Signal::isFull() const {
+    return pQueue->isFull();
+}
+
+uint8_t Signal::isEmpty() const {
+    return pQueue->isEmpty();
+}

@@ -1,50 +1,78 @@
-
 #include "ByteQueue.h"
 
-void byteQueue_construct(uint8_t *pData, uint8_t nSize) {
-    ByteQueue_t *this = (ByteQueue_t *)pData;
-    this->nSize = nSize;
-    this->nHead = this->nTail = 0;
+// Data versions
+uint8_t byteQueueData_getCount(const ByteQueueData_t *thizz) {
+    return queue_getCount(thizz);
 }
 
-uint8_t byteQueue_getCount(const ByteQueue_t *this) {
-    return (this->nTail < this->nHead ? this->nTail + this->nSize : this->nTail) - this->nHead;
+uint8_t byteQueueData_isEmpty(const ByteQueueData_t *thizz) {
+    return queue_isEmpty(thizz);
 }
 
-uint8_t byteQueue_peekHead(const ByteQueue_t *this) {
-    return byteQueue_isEmpty(this) ? NULL_DATA : this->data[this->nHead];
+uint8_t byteQueueData_isFull(const ByteQueueData_t *thizz) {
+    return queue_isFull(thizz);
 }
 
-uint8_t byteQueue_peekTail(const ByteQueue_t *this) {
-    return byteQueue_isEmpty(this) ? NULL_DATA : this->data[this->nTail ? this->nTail - 1 : this->nSize - 1];
+uint8_t byteQueueData_peekHead(const ByteQueueData_t *this) {
+    uint8_t index = queue_peekHead(this);
+    return index == NULL_BYTE ? NULL_BYTE : this->data[index];
+}
+
+uint8_t byteQueueData_peekTail(const ByteQueueData_t *this) {
+    uint8_t index = queue_peekTail(this);
+    return index == NULL_BYTE ? NULL_BYTE : this->data[index];
 }
 
 // enqueue/dequeue methods
-void byteQueue_addTail(ByteQueue_t *this, uint8_t byte) {
-    if (byteQueue_isFull(this)) return;
-
-    this->data[this->nTail++] = byte;
-    if (this->nTail == this->nSize) this->nTail = 0;
+uint8_t byteQueueData_addTail(ByteQueueData_t *this, uint8_t byte) {
+    uint8_t index = queue_addTail(this);
+    return index == NULL_BYTE ? NULL_BYTE : (this->data[index] = byte);
 }
 
-uint8_t byteQueue_removeTail(ByteQueue_t *this) {
-    if (byteQueue_isEmpty(this)) return 0;
-
-    if (!this->nTail) this->nTail = this->nSize;
-    return this->data[--this->nTail];
+uint8_t byteQueueData_removeTail(ByteQueueData_t *this) {
+    uint8_t index = queue_removeTail(this);
+    return index == NULL_BYTE ? NULL_BYTE : this->data[index];
 }
 
-void byteQueue_addHead(ByteQueue_t *this, uint8_t byte) {
-    if (byteQueue_isFull(this)) return;
-
-    if (!this->nHead) this->nHead = this->nSize;
-    this->data[--this->nHead] = byte;
+uint8_t byteQueueData_addHead(ByteQueueData_t *this, uint8_t byte) {
+    uint8_t index = queue_addHead(this);
+    return index == NULL_BYTE ? NULL_BYTE : (this->data[index] = byte);
 }
 
-uint8_t byteQueue_removeHead(ByteQueue_t *this) {
-    if (byteQueue_isEmpty(this)) return 0;
-
-    uint8_t byte = this->data[this->nHead++];
-    if (this->nHead == this->nSize) this->nHead = 0;
-    return byte;
+uint8_t byteQueueData_removeHead(ByteQueueData_t *this) {
+    uint8_t index = queue_removeHead(this);
+    return index == NULL_BYTE ? NULL_BYTE : this->data[index];
 }
+
+// data pointer versions
+uint8_t byteQueuePtr_peekHead(const ByteQueuePtr_t *this) {
+    uint8_t index = queue_peekHead(this);
+    return index == NULL_BYTE ? NULL_BYTE : this->data[index];
+}
+
+uint8_t byteQueuePtr_peekTail(const ByteQueuePtr_t *this) {
+    uint8_t index = queue_peekTail(this);
+    return index == NULL_BYTE ? NULL_BYTE : this->data[index];
+}
+
+// enqueue/dequeue methods
+uint8_t byteQueuePtr_addTail(ByteQueuePtr_t *this, uint8_t byte) {
+    uint8_t index = queue_addTail(this);
+    return index == NULL_BYTE ? NULL_BYTE : (this->data[index] = byte);
+}
+
+uint8_t byteQueuePtr_removeTail(ByteQueuePtr_t *this) {
+    uint8_t index = queue_removeTail(this);
+    return index == NULL_BYTE ? NULL_BYTE : this->data[index];
+}
+
+uint8_t byteQueuePtr_addHead(ByteQueuePtr_t *this, uint8_t byte) {
+    uint8_t index = queue_addHead(this);
+    return index == NULL_BYTE ? NULL_BYTE : (this->data[index] = byte);
+}
+
+uint8_t byteQueuePtr_removeHead(ByteQueuePtr_t *this) {
+    uint8_t index = queue_removeHead(this);
+    return index == NULL_BYTE ? NULL_BYTE : this->data[index];
+}
+

@@ -3,6 +3,7 @@
 
 #include <avr/pgmspace.h>
 #include "TinySwitcher.h"
+#include "common_defs.h"
 
 #if defined(SERIAL_DEBUG_SCHEDULER) || defined(SERIAL_DEBUG_SCHEDULER_ERRORS) || defined(SERIAL_DEBUG_SCHEDULER_MAX_STACKS) || defined(CONSOLE_DEBUG)
 #define SCHEDULER_TASK_IDS
@@ -11,11 +12,8 @@
 #define defineSchedulerTaskId(id)
 #endif
 
-#define INFINITE_DELAY  0xffff
-#define NULL_TASK  0xff
-
 class Scheduler;
-class ResourceLock;
+class Mutex;
 class Signal;
 
 // this must be declared in the main sketch
@@ -28,6 +26,14 @@ class Task {
 protected:
     virtual void begin() = 0;            // begin getTask
     virtual void loop() = 0;             // loop getTask
+
+    virtual void activating() {         // about to run in scheduler
+
+    };
+
+    virtual void deactivating() {      // just ran in scheduler
+
+    };
 
 public:
     virtual uint8_t isAsync();
@@ -48,7 +54,7 @@ public:
     /**
      * Resume this getTask after given delay in milliseconds
      *
-     * @param milliseconds delay in milliseconds to wait before resuming calls to loop()
+     * @param milliseconds delay in milliseconds to addWaitingTask before resuming calls to loop()
      */
     void resume(uint16_t milliseconds);
 
@@ -65,11 +71,11 @@ public:
         return index;
     }
 
-    uint8_t reserveResource(ResourceLock *pResource);
+    uint8_t reserveResource(Mutex *pResource);
     uint8_t waitOnSignal(Signal *pSignal);
-    static void releaseResource(ResourceLock *pResource);
-    inline uint8_t reserveResource(ResourceLock &pResource) { reserveResource(&pResource); }
-    static inline uint8_t releaseResource(ResourceLock &pResource) { releaseResource(&pResource); }
+    static void releaseResource(Mutex *pResource);
+    inline uint8_t reserveResource(Mutex &pResource) { reserveResource(&pResource); }
+    static inline uint8_t releaseResource(Mutex &pResource) { releaseResource(&pResource); }
     inline uint8_t waitOnSignal(Signal &pSignal) { waitOnSignal(&pSignal); }
 };
 
@@ -112,7 +118,7 @@ public:
      * If the task is not the current context, it will not yield and return immediately.
      * Check return value for true if it did not yield and handle it, if needed.
      *
-     * @param milliseconds delay in milliseconds to wait before resuming calls to loop()
+     * @param milliseconds delay in milliseconds to addWaitingTask before resuming calls to loop()
      * @return 0 if successfully yielded. 1 if no yield because was not the active task
      */
     uint8_t yieldResume(uint16_t milliseconds);
@@ -146,11 +152,12 @@ class Scheduler {
 
     uint8_t taskCount;              // getTask count
     uint8_t nextTask;               // id+1 of last getTask that was run when timeSlice ran out
-    uint8_t inLoop;               // id+1 of last getTask that was run when timeSlice ran out
+    uint8_t inLoop;                 // true if now executing loop()
 
     uint16_t *delays;
     PGM_P tasks;
     uint32_t clockTick;             // clock tick for current delays (in micros)
+    Task *pTask;             // currently executing task
 
 #ifdef SERIAL_DEBUG_SCHEDULER
     uint16_t iteration;
@@ -168,6 +175,13 @@ public:
      * @return
      */
     Task *getTask(uint8_t index);
+
+    /**
+     * Get the currently running task or NULL if none.
+     *
+     * @return  currently running task or NULL if none.
+     */
+    Task *getTask();
 
     /**
      * Construct scheduler instance
@@ -217,7 +231,7 @@ public:
      * or more, of ms has elapsed.
      *
      * @param task              pointer to getTask which to resume.
-     * @param milliseconds      milliseconds to wait before resuming getTask
+     * @param milliseconds      milliseconds to addWaitingTask before resuming getTask
      *
      */
     void resume(Task *task, uint16_t milliseconds);

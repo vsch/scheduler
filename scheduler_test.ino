@@ -6,9 +6,17 @@
 // ---------------------------------------------------------------------------
 // INCLUDES
 #include "src/Scheduler.h"
-#include "src/ResourceLock.h"
+#include "src/Request.h"
+#include "src/Mutex.h"
 
 #define LED (13)
+
+class RequestTest : public Request {
+public:
+    inline RequestTest() : Request() {}
+};
+
+RequestTest requestTest;
 
 /*
   SerialEvent occurs whenever a new data comes in the hardware serial RX. This
@@ -23,7 +31,7 @@ void serialEvent() {
 }
 
 uint8_t ledLock_queue[sizeOfByteQueue(8)];
-ResourceLock ledLock(ledLock_queue, sizeof(ledLock_queue));
+Mutex ledLock(ledLock_queue, sizeof(ledLock_queue));
 
 class LedFlasher : public AsyncTask {
     uint8_t flashCount;
@@ -35,6 +43,16 @@ class LedFlasher : public AsyncTask {
         } else {
             suspend();
         }
+    }
+
+    void activating() {
+        Serial.print(F("Activating LED Loop"));
+        Serial.println(flashCount);
+    }
+
+    void deactivating() {
+        Serial.print(F("Deactivating LED Loop"));
+        Serial.println(flashCount);
     }
 
     void loop() {
@@ -103,6 +121,8 @@ void setup() {
 unsigned long lastPrint = 0;
 
 void loop() {
+    RequestTest *pReq = &requestTest;
+
     scheduler.loop(10);
 
     if (micros() - lastPrint >= 1000L * 1000L) {

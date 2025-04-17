@@ -1,56 +1,44 @@
+
 #ifndef SCHEDULER_REQUESTBASE_H
 #define SCHEDULER_REQUESTBASE_H
 
-#include "Scheduler.h"
-#include "SignalBase.h"
-#include "Queue.h"
+#include "Scheduler_C.h"
 
-// allows tasks to wait for request completion and then get status and other information
 #define REQ_RESULT_NONE     (0)    // request not started
-#define REQ_RESULT_BUSY     (1)    // request in progress
+#define REQ_RESULT_BUSY     (1)    // request pending or in progress
 #define REQ_RESULT_DONE     (2)    // request done
 #define REQ_RESULT_ERROR    (3)    // request done with errors
-
 #define REQ_RESULT_MASK     (0x03)
 
-class RequestBase : public SignalBase {
-protected:
+
+#define REQ_OUT_OF_BUFFER   (0x04) // request is from a dedicated buffer
+#define REQ_WAITING_DONE    (0x08) // wait done was requested
+
+#define REQ_ERROR_MAX      (0x7)
+#define REQ_ERROR_MASK     (0x70)
+#define REQ_ERROR_TO_RESULT(e)     (0xf0 & ((e) << 4))
+#define REQ_RESULT_TO_ERROR(e)     ((0xf0 & (e)) >> 4)
+#define REQ_FRAME_OPEN     (0x80) // wait done was requested
+
+typedef struct RequestBase {
     uint8_t taskId;     // id of task making request
-    uint8_t result;     // result of executing the request
+    uint8_t status;     // status of executing the request
+} SharedRequest_t;
 
-    /**
-     * start request for given task, suspends task until request is complete
-     *
-     * @return      0 if successfully yielded and request started. 1 if could not start or could not yield
-     *              to wait for completion because not an AsyncTask
-     */
-    inline uint8_t startForTask() {
-        taskWait(taskId);
-    }
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-    /**
-     * Request is complete, triggers and resumes task
-     *
-     * @param result        - result to store with the request
-     */
-    inline void triggerDone(uint8_t result) {
-        this->result = result;
-        triggerTask(taskId);
-    }
+extern uint8_t req_getResultMasked(const SharedRequest_t *thizz, uint8_t mask);
+extern pTask_t *req_getTask(const SharedRequest_t *thizz);
+extern uint8_t req_getResult(const SharedRequest_t *thizz);
+extern uint8_t req_getStatus(const SharedRequest_t *thizz);
+extern void req_setResult(SharedRequest_t *thizz, uint8_t status);
+extern void req_setResultMasked(SharedRequest_t *thizz, uint8_t status, uint8_t mask);
 
-    RequestBase() {
-        taskId = 0;
-        result = REQ_RESULT_NONE;
-    }
+#ifdef __cplusplus
+}
+#endif
 
-public:
-    inline uint8_t getStatus() const { return getResult(REQ_RESULT_MASK); }
-    inline uint8_t getResult() const { return result; }
-
-    inline uint8_t getResult(uint8_t mask) const {
-        return result & mask;
-    }
-
-};
 
 #endif //SCHEDULER_REQUESTBASE_H

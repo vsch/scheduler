@@ -1,7 +1,7 @@
 #include "Scheduler.h"
 #include "SignalBase.h"
 
-uint8_t SignalBase::taskWait(Task *pTask) {
+uint8_t SignalBase::suspendTask(Task *pTask) {
     if (pTask) {
         if (pTask->isAsync()) {
             reinterpret_cast<AsyncTask *>(pTask)->yieldSuspend();
@@ -14,12 +14,18 @@ uint8_t SignalBase::taskWait(Task *pTask) {
     return 1;
 }
 
-void SignalBase::triggerTask(uint8_t taskId) {
+uint8_t SignalBase::suspendTask(uint8_t taskId) {
     Task *pTask = scheduler.getTask(taskId);
-    triggerTask(pTask);
+    return suspendTask(pTask);
 }
 
-uint8_t SignalBase::taskWait(uint8_t taskId) {
+void SignalBase::resumeTask(uint8_t taskId) {
     Task *pTask = scheduler.getTask(taskId);
-    return taskWait(pTask);
+    resumeTask(pTask);
+}
+
+void SignalBase::resumeTask(Task *pTask) {
+    if (pTask) {
+        pTask->resume(0);
+    }
 }

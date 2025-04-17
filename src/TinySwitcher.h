@@ -1,5 +1,5 @@
-#ifndef CONTEXT_SWITCH_H
-#define CONTEXT_SWITCH_H
+#ifndef SCHEDULER_TINYSWITCHER_H
+#define SCHEDULER_TINYSWITCHER_H
 
 #include <Arduino.h>
 #include "common_defs.h"
@@ -14,11 +14,11 @@ typedef struct AsyncContext {
     volatile void *pEntryArg;       // entry point for context
     volatile uint8_t stack[];       // stack storage area begins here
 
-} Context;
+} AsyncContext;
 
 typedef void (*EntryFunction)(void *);
 
-#define sizeOfStack(s)      (sizeOfPlus(AsyncContext, (s)))
+#define sizeOfStack(s)      (sizeOfPlus(AsyncContext, (s), uint8_t))
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,4 +58,4 @@ extern void yieldContext();
 }
 #endif
 
-#endif // CONTEXT_SWITCH_H
+#endif // SCHEDULER_TINYSWITCHER_H

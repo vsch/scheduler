@@ -20,23 +20,35 @@ project(${PROJECT_NAME} LANGUAGES C CXX ASM)
 
 # Define additional source and header files or default arduino sketch files
 set(${PROJECT_NAME}_SRCS
-        src/Scheduler.cpp
-        src/ResourceLock.cpp
-        src/Signal.cpp
-        src/TinySwitcher.S
-        src/SignalBase.cpp
+        src/Queue.c
         src/ByteQueue.c
+        src/WordQueue.c
+        src/SharedRequest.cpp
+        src/SharedRequestManager.cpp
+        src/RequestBase.c
+        src/Mutex.cpp
+        src/Scheduler.cpp
+        src/Signal.cpp
+        src/SignalBase.cpp
+        src/Signaling.c
+        src/TinySwitcher.S
         )
 
 set(${PROJECT_NAME}_HDRS
-        src/common_defs.h
-        src/Scheduler.h
-        src/ResourceLock.h
-        src/Signal.h
-        src/TinySwitcher.h
-        src/SignalBase.h
-        src/RequestBase.h
+        src/Queue.h
         src/ByteQueue.h
+        src/WordQueue.h
+        src/SharedRequest.h
+        src/SharedRequestManager.h
+        src/RequestBase.h
+        src/Mutex.h
+        src/Request.h
+        src/Scheduler.h
+        src/Signal.h
+        src/SignalBase.h
+        src/Signaling.h
+        src/TinySwitcher.h
+        src/common_defs.h
         )
 
 #add_compile_definitions(SERIAL_DEBUG)

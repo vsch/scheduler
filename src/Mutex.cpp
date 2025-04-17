@@ -1,8 +1,14 @@
 #include <Arduino.h>
-#include "ResourceLock.h"
+#include "Mutex.h"
 #include "Scheduler.h"
 
-uint8_t ResourceLock::reserveResource(Task *pTask) {
+Mutex::Mutex(uint8_t *queueData, uint8_t queueDataSize) {
+    queue_construct(queueData, queueDataSize);
+    this->pQueue = (ByteQueue *)queueData;
+    ownerReserveCount = 0;
+}
+
+uint8_t Mutex::reserveResource(Task *pTask) {
     if (pQueue->isEmpty()) {
         // available
         pQueue->addTail(pTask->getIndex());
@@ -15,17 +21,20 @@ uint8_t ResourceLock::reserveResource(Task *pTask) {
             return 0;
         } else {
             // not available, queue up the task
+            if (pQueue->isFull()) {
+                return NULL_TASK;
+            }
             pQueue->addTail(pTask->getIndex());
-            return taskWait(pTask);
+            return suspendTask(pTask);
         }
     }
 }
 
-uint8_t ResourceLock::reserveResource(uint8_t taskId) {
+uint8_t Mutex::reserveResource(uint8_t taskId) {
     return reserveResource(scheduler.getTask(taskId));
 }
 
-void ResourceLock::releaseResource() {
+void Mutex::releaseResource() {
     if (pQueue->peekHead() != NULL_TASK) {
         if (!--ownerReserveCount) {
             // remove owner from head and give to next in line
@@ -36,7 +45,7 @@ void ResourceLock::releaseResource() {
                 Task *pNextTask = scheduler.getTask(pQueue->peekHead());
 
                 if (pNextTask) {
-                    triggerTask(pNextTask);
+                    resumeTask(pNextTask);
                     return;
                 } else {
                     // discard, not a task id
@@ -47,16 +56,24 @@ void ResourceLock::releaseResource() {
     }
 }
 
-void ResourceLock::transferResource(Task *pTask) {
+void Mutex::transferResource(Task *pTask) {
     pQueue->removeHead();
     pQueue->addHead(pTask->getIndex());
     ownerReserveCount = 1;
 
     // wake it up if necessary
-    triggerTask(pTask);
+    resumeTask(pTask);
 }
 
-void ResourceLock::transferResource(uint8_t taskId) {
+void Mutex::transferResource(uint8_t taskId) {
     transferResource(scheduler.getTask(taskId));
+}
+
+uint8_t Mutex::reserveResource() {
+    Task *pTask = scheduler.getTask();
+    if (pTask) {
+        return reserveResource(pTask);
+    }
+    return NULL_TASK;
 }
 
