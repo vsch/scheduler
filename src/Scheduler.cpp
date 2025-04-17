@@ -134,7 +134,7 @@ void Scheduler::loop(uint16_t timeSlice) {
 
             if (pCurrentTask->isAsync()) {
                 AsyncTask *pBlockingTask = reinterpret_cast<AsyncTask *>(pCurrentTask);
-                resumeContext(&pBlockingTask->context);
+                resumeContext(pBlockingTask->pContext);
             } else {
                 // just a Task
                 pCurrentTask->loop();

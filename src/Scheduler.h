@@ -80,7 +80,7 @@ class AsyncTask : public Task {
     friend class Scheduler;
 
 protected:
-    Context context;
+    Context *pContext;
 
     uint8_t isAsync() override {
         return true;
@@ -97,7 +97,8 @@ public:
      * @param stackMax
      */
     inline AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() { // NOLINT(cppcoreguidelines-pro-type-member-init)
-        initContext(&context, AsyncTask::yieldingLoop, this, pStack, stackMax);
+        pContext = (Context *)pStack;
+        initContext(pStack, AsyncTask::yieldingLoop, this, stackMax);
     }
 
     /**
@@ -107,7 +108,7 @@ public:
      * If the task is not the current context, it will not yield and return immediately.
      * Check return value for true if it did not yield and handle it, if needed.
      *
-     * @return 0 if successfuly yielded. 1 if no yield because was not the active task
+     * @return 0 if successfully yielded. 1 if no yield because was not the active task
      */
     uint8_t yieldSuspend();
 
@@ -119,7 +120,7 @@ public:
      * Check return value for true if it did not yield and handle it, if needed.
      *
      * @param milliseconds delay in milliseconds to wait before resuming calls to loop()
-     * @return 0 if successfuly yielded. 1 if no yield because was not the active task
+     * @return 0 if successfully yielded. 1 if no yield because was not the active task
      */
     uint8_t yieldResume(uint16_t milliseconds);
 
@@ -134,7 +135,7 @@ public:
      * @return 0 if has exited its loop function, otherwise it is the number of bytes in its saved context.
     */
     uint8_t hasYielded() const {
-        return context.stackUsed;
+        return pContext->stackUsed;
     }
 
     /**
@@ -143,7 +144,7 @@ public:
      * @return maximum bytes of stack buffer used up to now during all previous resumptions.
      */
     uint8_t maxStackUsed() const {
-        return context.stackMaxUsed;
+        pContext->stackMaxUsed;
     }
 
     /**

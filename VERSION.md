@@ -2,10 +2,18 @@
 
 [TOC]: #
 
+- [Version 2.0.1](#version-201)
 - [Version 2.0](#version-20)
 - [Version 1.1](#version-11)
 - [Version 1.0](#version-10)
 
+
+## Version 2.0.1
+
+* Change: simplify test for being in an async context by testing if have
+  non-null current context in TinySwitcher. No need to test if it is of
+  the current task. If there is an async context then can
+  yieldContext().
 
 ## Version 2.0
 

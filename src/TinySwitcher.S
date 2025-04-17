@@ -15,7 +15,7 @@
 .equ CONTEXT_STACK_MAX_USED, 2        ; Offset for stackMaxUsed
 .equ CONTEXT_PENTRY, 3                ; Offset for pEntry (2 bytes)
 .equ CONTEXT_PENTRY_ARG, 5            ; Offset for pEntry (2 bytes)
-.equ CONTEXT_PSTACK, 7                ; Offset for pStack (2 bytes)
+.equ CONTEXT_PSTACK_OFFSET, 7         ; Offset for pStack (2 bytes)
 .equ __SP_L__, 0x3D                   ; SP L io address
 .equ __SP_H__, 0x3E                   ; SP H io address
 
@@ -25,30 +25,27 @@ initContext:
     ; r24:r25 contains pContext
     ; r22:r23 contains pEntry
     ; r20:r21 contains pEntryArg
-    ; r18:r19 contains pStack
-    ; r16 contains stackMax
+    ; r18 contains contextSize which is stackMax + CONTEXT_PSTACK_OFFSET
 
-    movw r30, r24                        ; Move pContext to Z (r31:r30)
-    ; lds r30, pCurrentContext           ; Load low byte of pCurrentContext into Z (r31:r30)
-    ; lds r31, pCurrentContext+1         ; Load high byte of pCurrentContext into Z
+    movw r30, r24                      ; Move pContext to Z (r31:r30)
+    ; lds r30, pCurrentContext         ; Load low byte of pCurrentContext into Z (r31:r30)
+    ; lds r31, pCurrentContext+1       ; Load high byte of pCurrentContext into Z
 
     ; Initialize pEntry
-    std Z+CONTEXT_PENTRY, r22           ; Store low byte of pEntry
-    std Z+CONTEXT_PENTRY+1, r23         ; Store high byte of pEntry
+    std Z+CONTEXT_PENTRY, r22          ; Store low byte of pEntry
+    std Z+CONTEXT_PENTRY+1, r23        ; Store high byte of pEntry
 
     ; Initialize pEntryArg
-    std Z+CONTEXT_PENTRY_ARG, r20           ; Store low byte of pEntryArg
-    std Z+CONTEXT_PENTRY_ARG+1, r21         ; Store high byte of pEntryArg
+    std Z+CONTEXT_PENTRY_ARG, r20      ; Store low byte of pEntryArg
+    std Z+CONTEXT_PENTRY_ARG+1, r21    ; Store high byte of pEntryArg
 
-    ; Initialize pStack
-    std Z+CONTEXT_PSTACK, r18           ; Store low byte of pStack
-    std Z+CONTEXT_PSTACK+1, r19         ; Store high byte of pStack
-
+    ; No longer need to Initialize pStack, it is at the end of the context structure
     ; Initialize stackMax
-    std Z+CONTEXT_STACK_MAX, r16        ; Store stackMax
+    subi r18, CONTEXT_PSTACK_OFFSET
+    std Z+CONTEXT_STACK_MAX, r18       ; Store stackMax
 
     ; Initialize stackUsed and stackMaxUsed to 0
-    clr r1                            ; Clear r1 (already set to 0 but for clarity)
+    clr r1                             ; Clear r1 (already set to 0 but for clarity)
     std Z+CONTEXT_STACK_USED, r1       ; Initialize stackUsed to 0
     std Z+CONTEXT_STACK_MAX_USED, r1   ; Initialize stackMaxUsed to 0
 
@@ -60,16 +57,16 @@ initContext:
 
 isAsyncContext:
     ; Load pCurrentContext into (r24:r0)
-    lds r24, pCurrentContext            ; Load low byte of pCurrentContext
-    lds r0, pCurrentContext+1           ; Load high byte of pCurrentContext
+    lds r24, pCurrentContext           ; Load low byte of pCurrentContext
+    lds r0, pCurrentContext+1          ; Load high byte of pCurrentContext
 
     ; test pCurrentContext (r24:r0) for NULL
-    or r24, r0                          ; or low byte with high byte
-    breq .equal                         ; NULL, r30 already 0 return it
-    ldi r24, 1                          ; Set result to 1, in async context
+    or r24, r0                         ; or low byte with high byte
+    breq .equal                        ; NULL, r30 already 0 return it
+    ldi r24, 1                         ; Set result to 1, in async context
 
 .equal:
-    ret                                 ; Return
+    ret                                ; Return
 
 ; this is a stub function which will be returned to when yieldContext returns or the pEntry function
 ; call returns without yielding or from yieldContext to restore the registers of the caller
@@ -143,8 +140,8 @@ resumeContext:
     sts pCurrentContext+1, r31           ; Store high byte of pCurrentContext from Z
 
     ; Load pStack
-    ldd r28, Z+CONTEXT_PSTACK            ; Load low byte of pStack into Y (r28:r29)
-    ldd r29, Z+CONTEXT_PSTACK+1          ; Load high byte of pStack into Y
+    movw r28, r30
+    adiw r28, CONTEXT_PSTACK_OFFSET    ; Y = pStack (pContext + sizeof(*pContext)
 
     ; Load stackUsed
     ldd r22, Z+CONTEXT_STACK_USED        ; Load stackUsed
@@ -227,8 +224,8 @@ yieldContext:
 
 .notMaxUsed:
     ; Load pStack
-    ldd r28, Z+CONTEXT_PSTACK           ; Load low byte of pStack into Y (r28:r29)
-    ldd r29, Z+CONTEXT_PSTACK+1         ; Load high byte of pStack into Y
+    movw r28, r30
+    adiw r28, CONTEXT_PSTACK_OFFSET    ; Y = pStack (pContext + sizeof(*pContext)
 
 .popToBuffer:
     pop r23                             ; Pop byte from stack
