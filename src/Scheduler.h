@@ -152,7 +152,7 @@ public:
      * @return 0 if not current context, else task context is the current one and the task can yield.
      */
     uint8_t isCurrentTask() const {
-        return ::isCurrentContext(&context);
+        return ::isAsyncContext();
     };
 
 private:

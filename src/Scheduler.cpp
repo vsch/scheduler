@@ -228,7 +228,7 @@ uint8_t Task::waitOnSignal(Signal *pSignal) {
  */
 uint8_t AsyncTask::yieldSuspend() {
     suspend();
-    if (isCurrentContext(&context)) {
+    if (isAsyncContext()) {
         yieldContext();
         return 0;
     }
@@ -247,7 +247,7 @@ uint8_t AsyncTask::yieldSuspend() {
  */
 uint8_t AsyncTask::yieldResume(uint16_t milliseconds) {
     resume(milliseconds);
-    if (isCurrentContext(&context)) {
+    if (isAsyncContext()) {
         yieldContext();
         return 0;
     }
@@ -256,7 +256,7 @@ uint8_t AsyncTask::yieldResume(uint16_t milliseconds) {
 
 void AsyncTask::yield() {
     resume(0);
-    if (isCurrentContext(&context)) {
+    if (isAsyncContext()) {
         yieldContext();
     }
 }

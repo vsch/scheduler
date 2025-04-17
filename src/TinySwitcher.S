@@ -1,5 +1,5 @@
 .global initContext
-.global isCurrentContext
+.global isAsyncContext
 .global resumeContext
 .global yieldContext
 
@@ -54,29 +54,23 @@ initContext:
 
     ret                                ; Return
 
-; Function: uint8_t isCurrentContext(Context *pContext)
-; Input: r24:r25 contains pContext (16-bit pointer)
+; Function: uint8_t isAsyncContext()
 ; Output: r24 contains the result (1 if pContext == pCurrentContext, 0 otherwise)
-; Clobbers: r30, r31
+; Clobbers: r0
 
-isCurrentContext:
-    ; Load pCurrentContext into Z (r31:r30)
-    lds r30, pCurrentContext            ; Load low byte of pCurrentContext
-    lds r31, pCurrentContext+1          ; Load high byte of pCurrentContext
+isAsyncContext:
+    ; Load pCurrentContext into (r24:r0)
+    lds r24, pCurrentContext            ; Load low byte of pCurrentContext
+    lds r0, pCurrentContext+1           ; Load high byte of pCurrentContext
 
-    ; Compare pContext (r24:r25) with pCurrentContext (r31:r30)
-    cp r24, r30                         ; Compare low byte
-    cpc r25, r31                        ; Compare high byte with carry
-
-    ; Set result in r24
-    breq .equal                         ; If equal, branch to .equal
-    clr r24                             ; Set result to 0 (not equal)
-    ret                                 ; Return
+    ; test pCurrentContext (r24:r0) for NULL
+    or r24, r0                          ; or low byte with high byte
+    breq .equal                         ; NULL, r30 already 0 return it
+    ldi r24, 1                          ; Set result to 1, in async context
 
 .equal:
-    ldi r24, 1                          ; Set result to 1 (equal)
     ret                                 ; Return
-    
+
 ; this is a stub function which will be returned to when yieldContext returns or the pEntry function
 ; call returns without yielding or from yieldContext to restore the registers of the caller
 restoreNoClobberRegs:
@@ -129,11 +123,11 @@ resumeContext:
     ; if the function returns without yielding
     ldi r22, lo8(restoreNoClobberRegs)  ; Load low byte of restoreNoClobberRegs
     ldi r23, hi8(restoreNoClobberRegs)  ; Load high byte of restoreNoClobberRegs, PC bit 0 is always 0
- 
+
     ; Shift the address right by 1 (divide by 2) since AVR stores the address in WORD offsets
     lsr r23                             ; Logical shift right high byte
     ror r22                             ; Rotate right low byte through carry
- 
+
     push r22                            ; Push restoreNoClobberRegs address onto stack
     push r23                            ; Push restoreNoClobberRegs address onto stack
 
@@ -248,7 +242,7 @@ yieldContext:
     ; clear pCurrentContext
     clr r1                              ; Clear r1, which is already set to 0 but for clarity
 
-    sts pCurrentContext, r1           
+    sts pCurrentContext, r1
     sts pCurrentContext+1, r1           ; clear pCurrentContext
 
     ret

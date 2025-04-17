@@ -27,8 +27,13 @@ extern "C" {
 //     through a static function wrapper
 extern void initContext(Context *pContext, EntryFunction pEntry, void *pEntryArg, uint8_t *pStack, uint8_t stackMax);
 
-// see if the given context is the current context being executed.
-extern uint8_t isCurrentContext(const Context *pContext);
+/**
+ *
+ * test if in an async context
+ *
+ * @return  0 if not, otherwise we are
+ */
+extern uint8_t isAsyncContext();
 
 // resume execution per context. Will set current context pointer to be used by potential call to yieldContext
 // NOTE: This function will not return until yieldContext is called or the callee returns from the entry function
