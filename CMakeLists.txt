@@ -29,7 +29,6 @@ set(${PROJECT_NAME}_SRCS
         src/Mutex.cpp
         src/Scheduler.cpp
         src/Signal.cpp
-        src/SignalBase.cpp
         src/Signaling.c
         src/TinySwitcher.S
         )

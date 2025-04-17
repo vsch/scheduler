@@ -1,6 +1,11 @@
 #include "Signal.h"
 #include "Scheduler.h"
 
+Signal::Signal(uint8_t *queueData, uint8_t queueDataSize) {
+    queue_construct(queueData, queueDataSize);
+    this->pQueue = (ByteQueue *)queueData;
+}
+
 uint8_t Signal::addWaitingTask(Task *pTask) {
     if (!pQueue->isFull()) {
         pQueue->addTail(pTask->getIndex());
@@ -23,3 +28,4 @@ uint8_t Signal::isFull() const {
 uint8_t Signal::isEmpty() const {
     return pQueue->isEmpty();
 }
+

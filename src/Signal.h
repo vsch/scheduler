@@ -10,10 +10,7 @@ class Signal : protected SignalBase {
     ByteQueue *pQueue;
 
 public:
-    inline Signal(uint8_t *queueData, uint8_t queueDataSize) {
-        queue_construct(queueData, queueDataSize);
-        this->pQueue = (ByteQueue *)queueData;
-    }
+    Signal(uint8_t *queueData, uint8_t queueDataSize);
 
     /**
      * Wait for signal to resumeTask
