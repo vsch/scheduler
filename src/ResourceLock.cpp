@@ -2,25 +2,20 @@
 #include "ResourceLock.h"
 #include "Scheduler.h"
 
-ResourceLock::ResourceLock(uint8_t *queueBuffer, uint8_t queueSize)
-        : queue(queueBuffer, queueSize) {
-    ownerReserveCount = 0;
-}
-
 uint8_t ResourceLock::reserveResource(Task *pTask) {
-    if (queue.isEmpty()) {
+    if (pQueue->isEmpty()) {
         // available
-        queue.addTail(pTask->getIndex());
+        pQueue->addTail(pTask->getIndex());
         ownerReserveCount = 1;
         return 0;
     } else {
-        if (queue.peekHead() == pTask->getIndex()) {
+        if (pQueue->peekHead() == pTask->getIndex()) {
             // same owner, reserving again
             ownerReserveCount++;
             return 0;
         } else {
             // not available, queue up the task
-            queue.addTail(pTask->getIndex());
+            pQueue->addTail(pTask->getIndex());
             return taskWait(pTask);
         }
     }
@@ -31,21 +26,21 @@ uint8_t ResourceLock::reserveResource(uint8_t taskId) {
 }
 
 void ResourceLock::releaseResource() {
-    if (queue.peekHead() != NULL_TASK) {
+    if (pQueue->peekHead() != NULL_TASK) {
         if (!--ownerReserveCount) {
             // remove owner from head and give to next in line
-            queue.removeHead();
+            pQueue->removeHead();
 
-            while (!queue.isEmpty()) {
+            while (!pQueue->isEmpty()) {
                 // give to this task
-                Task *pNextTask = scheduler.getTask(queue.peekHead());
+                Task *pNextTask = scheduler.getTask(pQueue->peekHead());
 
                 if (pNextTask) {
                     triggerTask(pNextTask);
                     return;
                 } else {
                     // discard, not a task id
-                    queue.removeHead();
+                    pQueue->removeHead();
                 }
             }
         }
@@ -53,8 +48,8 @@ void ResourceLock::releaseResource() {
 }
 
 void ResourceLock::transferResource(Task *pTask) {
-    queue.removeHead();
-    queue.addHead(pTask->getIndex());
+    pQueue->removeHead();
+    pQueue->addHead(pTask->getIndex());
     ownerReserveCount = 1;
 
     // wake it up if necessary

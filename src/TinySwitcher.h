@@ -2,24 +2,22 @@
 #define CONTEXT_SWITCH_H
 
 #include <Arduino.h>
-
-#define offsetof(p, m)    (&((*(p *)(0)).m))
-#define lengthof(p)    (sizeof(p)/sizeof(*(p)))
+#include "common_defs.h"
 
 typedef struct Context {
     // Context data structure
     // This structure holds the context of a thread, including registers and stack pointer.
-    uint8_t stackUsed;      // saved stack area
-    uint8_t stackMax;       // maximum stack area available
-    uint8_t stackMaxUsed;   // max stack space accually used
-    void (*pEntry)();
-    void *pEntryArg;       // entry point for context
-    uint8_t stack[];       // stack storage area begins here
+    volatile uint8_t stackUsed;      // saved stack area
+    volatile uint8_t stackMax;       // maximum stack area available
+    volatile uint8_t stackMaxUsed;   // max stack space actually used
+    volatile void (*pEntry)();
+    volatile void *pEntryArg;       // entry point for context
+    volatile uint8_t stack[];       // stack storage area begins here
+
 } Context;
 
 typedef void (*EntryFunction)(void *);
 
-#define sizeOfPlus(t, b)    (sizeof(t)+(b))
 #define sizeOfStack(s)      (sizeOfPlus(Context, (s)))
 
 #ifdef __cplusplus

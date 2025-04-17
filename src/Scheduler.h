@@ -96,10 +96,7 @@ public:
      * @param pStack
      * @param stackMax
      */
-    inline AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() { // NOLINT(cppcoreguidelines-pro-type-member-init)
-        pContext = (Context *)pStack;
-        initContext(pStack, AsyncTask::yieldingLoop, this, stackMax);
-    }
+    AsyncTask(uint8_t *pStack, uint8_t stackMax);
 
     /**
      * Suspend the task's execution and yield context
@@ -134,18 +131,14 @@ public:
      *
      * @return 0 if has exited its loop function, otherwise it is the number of bytes in its saved context.
     */
-    uint8_t hasYielded() const {
-        return pContext->stackUsed;
-    }
+    uint8_t hasYielded() const;
 
     /**
      * Get the maximum stack usage of the stack buffer for this task.
      *
      * @return maximum bytes of stack buffer used up to now during all previous resumptions.
      */
-    uint8_t maxStackUsed() const {
-        pContext->stackMaxUsed;
-    }
+    uint8_t maxStackUsed() const;
 
     /**
      * Test if the current task is the active context, i.e. it is currently running.

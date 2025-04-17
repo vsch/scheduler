@@ -14,8 +14,8 @@
 .equ CONTEXT_STACK_MAX, 1             ; Offset for stackMax
 .equ CONTEXT_STACK_MAX_USED, 2        ; Offset for stackMaxUsed
 .equ CONTEXT_PENTRY, 3                ; Offset for pEntry (2 bytes)
-.equ CONTEXT_PENTRY_ARG, 5            ; Offset for pEntry (2 bytes)
-.equ CONTEXT_PSTACK_OFFSET, 7         ; Offset for pStack (2 bytes)
+.equ CONTEXT_PENTRY_ARG, 5            ; Offset for pEntryArg (2 bytes)
+.equ CONTEXT_PSTACK_OFFSET, 7         ; Offset to stack
 .equ __SP_L__, 0x3D                   ; SP L io address
 .equ __SP_H__, 0x3E                   ; SP H io address
 

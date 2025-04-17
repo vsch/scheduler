@@ -10,18 +10,6 @@
 
 #define LED (13)
 
-//#define DEBUG_LED
-#define lengthof(a)  (sizeof(a)/sizeof((a)[0]))     // get length of array
-//#define DEBUG_PWM
-
-#ifdef DEBUG_LED
-#define debugLedPrintf_P(...) printf_P(__VA_ARGS__)
-#define debugLedPuts_P(...) puts_P(__VA_ARGS__)
-#else
-#define debugLedPrintf_P(...) ((void)0)
-#define debugLedPuts_P(...) ((void)0)
-#endif
-
 /*
   SerialEvent occurs whenever a new data comes in the hardware serial RX. This
   routine is loop between each time loop() runs, so using delay inside loop can
@@ -34,8 +22,8 @@ void serialEvent() {
     }
 }
 
-uint8_t queueData[8];
-ResourceLock ledLock(queueData, sizeof(queueData));
+uint8_t ledLock_queue[sizeOfByteQueue(8)];
+ResourceLock ledLock(ledLock_queue, sizeof(ledLock_queue));
 
 class LedFlasher : public AsyncTask {
     uint8_t flashCount;
@@ -50,10 +38,12 @@ class LedFlasher : public AsyncTask {
     }
 
     void loop() {
-        reserveResource(ledLock);
-
         Serial.print(F("LED Loop"));
         Serial.println(flashCount);
+
+        reserveResource(ledLock);
+
+        Serial.println(F("reserved LED"));
 
         for (uint8_t i = 0; i < flashCount; i++) {
             digitalWrite(LED, 1);
@@ -87,8 +77,8 @@ public:
     }
 };
 
-uint8_t flasherStack1[sizeOfStack(32)];
-uint8_t flasherStack2[sizeOfStack(32)];
+uint8_t flasherStack1[sizeOfStack(80)];
+uint8_t flasherStack2[sizeOfStack(80)];
 
 LedFlasher ledFlasher1 = LedFlasher(4, 250, flasherStack1, lengthof(flasherStack1));
 LedFlasher ledFlasher2 = LedFlasher(8, 125, flasherStack2, lengthof(flasherStack2));
@@ -110,10 +100,20 @@ void setup() {
     scheduler.begin();
 }
 
+unsigned long lastPrint = 0;
+
 void loop() {
     scheduler.loop(10);
-//    Serial.print(F("Task 1 max stack: "));
-//    Serial.println(ledFlasher1.maxStackUsed());
-//    Serial.print(F("Task 2 max stack: "));
-//    Serial.println(ledFlasher2.maxStackUsed());
+
+    if (micros() - lastPrint >= 1000L * 1000L) {
+        lastPrint = micros();
+
+        uint8_t stackUsed1 = ledFlasher1.maxStackUsed();
+        uint8_t stackUsed2 = ledFlasher2.maxStackUsed();
+
+        Serial.print(F("Task 1 max stack: "));
+        Serial.println(stackUsed1);
+        Serial.print(F("Task 2 max stack: "));
+        Serial.println(stackUsed2);
+    }
 }

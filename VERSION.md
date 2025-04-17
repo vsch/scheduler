@@ -2,11 +2,18 @@
 
 [TOC]: #
 
+- [Version 2.1](#version-21)
 - [Version 2.0.1](#version-201)
 - [Version 2.0](#version-20)
 - [Version 1.1](#version-11)
 - [Version 1.0](#version-10)
 
+
+## Version 2.1
+
+* Change: implement C based `ByteQueue` to be used by all C++ classes
+  for their queueing. The queue data buffer is at the end of the
+  structure, eliminating need for indirection to access the elements.
 
 ## Version 2.0.1
 

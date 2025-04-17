@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5...3.31 FATAL_ERROR)
 set(CMAKE_TOOLCHAIN_FILE /usr/local/etc/arduino-cmake/ArduinoToolchain.cmake)
-set(CMAKE_CXX_STANDARD 98)
+set(CMAKE_CXX_STANDARD 11)
 set(PROJECT_NAME Scheduler)
 
 set(BOARD_NANO 1)
@@ -22,20 +22,21 @@ project(${PROJECT_NAME} LANGUAGES C CXX ASM)
 set(${PROJECT_NAME}_SRCS
         src/Scheduler.cpp
         src/ResourceLock.cpp
-        src/Queue.cpp
         src/Signal.cpp
         src/TinySwitcher.S
         src/SignalBase.cpp
+        src/ByteQueue.c
         )
 
 set(${PROJECT_NAME}_HDRS
+        src/common_defs.h
         src/Scheduler.h
         src/ResourceLock.h
-        src/Queue.h
         src/Signal.h
         src/TinySwitcher.h
         src/SignalBase.h
         src/RequestBase.h
+        src/ByteQueue.h
         )
 
 #add_compile_definitions(SERIAL_DEBUG)

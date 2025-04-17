@@ -2,17 +2,21 @@
 #define SCHEDULER_RESOURCELOCK_H
 
 #include "Scheduler.h"
-#include "Queue.h"
+#include "ByteQueue.h"
 #include "SignalBase.h"
 
 // sharable resource to be used in Task and AsyncTask calls
 
 class ResourceLock : public SignalBase {
     uint8_t ownerReserveCount;  // counts how many times the owner reserved the lock, will release when this goes to 0
-    Queue queue;
+    ByteQueue *pQueue;
 
 public:
-    ResourceLock(uint8_t *queueBuffer, uint8_t queueSize);
+    inline ResourceLock(uint8_t *queueData, uint8_t queueDataSize) {
+        byteQueue_construct(queueData, queueDataSize);
+        this->pQueue = (ByteQueue *)queueData;
+        ownerReserveCount = 0;
+    }
 
     /**
      * Get resource if available or suspend calling task until it is available.

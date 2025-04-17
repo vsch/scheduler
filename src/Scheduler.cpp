@@ -217,6 +217,11 @@ uint8_t Task::waitOnSignal(Signal *pSignal) {
     return pSignal->wait(this);
 }
 
+AsyncTask::AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() { // NOLINT(cppcoreguidelines-pro-type-member-init)
+    pContext = (Context *)pStack;
+    initContext(pStack, AsyncTask::yieldingLoop, this, stackMax);
+}
+
 /**
  * Suspend the task's execution and yield context
  * If successfully yielded, this function will return after the task is resumed.
@@ -259,6 +264,14 @@ void AsyncTask::yield() {
     if (isAsyncContext()) {
         yieldContext();
     }
+}
+
+uint8_t AsyncTask::hasYielded() const {
+    return pContext->stackUsed;
+}
+
+uint8_t AsyncTask::maxStackUsed() const {
+    pContext->stackMaxUsed;
 }
 
 #ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
