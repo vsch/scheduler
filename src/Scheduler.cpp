@@ -1,5 +1,7 @@
 #include "Arduino.h"
 #include "Scheduler.h"
+#include "ResourceLock.h"
+#include "Signal.h"
 
 Scheduler::Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable) {
     taskCount = count;
@@ -130,8 +132,8 @@ void Scheduler::loop(uint16_t timeSlice) {
 #endif
             Task *pCurrentTask = getTask(id);
 
-            if (pCurrentTask->isBlocking()) {
-                YieldingTask *pBlockingTask = reinterpret_cast<YieldingTask *>(pCurrentTask);
+            if (pCurrentTask->isAsync()) {
+                AsyncTask *pBlockingTask = reinterpret_cast<AsyncTask *>(pCurrentTask);
                 resumeContext(&pBlockingTask->context);
             } else {
                 // just a Task
@@ -203,6 +205,18 @@ void Scheduler::suspend(Task *task) {
     delays[task->index] = INFINITE_DELAY;
 }
 
+uint8_t Task::reserveResource(ResourceLock *pResource) {
+    return pResource->reserveResource(this);
+}
+
+void Task::releaseResource(ResourceLock *pResource) {
+    pResource->releaseResource();
+}
+
+uint8_t Task::waitOnSignal(Signal *pSignal) {
+    return pSignal->wait(this);
+}
+
 /**
  * Suspend the task's execution and yield context
  * If successfully yielded, this function will return after the task is resumed.
@@ -212,7 +226,7 @@ void Scheduler::suspend(Task *task) {
  *
  * @return 0 if successfuly yielded. 1 if no yield because was not the active task
  */
-uint8_t YieldingTask::yieldSuspend() {
+uint8_t AsyncTask::yieldSuspend() {
     suspend();
     if (isCurrentContext(&context)) {
         yieldContext();
@@ -231,7 +245,7 @@ uint8_t YieldingTask::yieldSuspend() {
  * @param milliseconds delay in milliseconds to wait before resuming calls to loop()
  * @return 0 if successfuly yielded. 1 if no yield because was not the active task
  */
-uint8_t YieldingTask::yieldResume(uint16_t milliseconds) {
+uint8_t AsyncTask::yieldResume(uint16_t milliseconds) {
     resume(milliseconds);
     if (isCurrentContext(&context)) {
         yieldContext();
@@ -240,7 +254,7 @@ uint8_t YieldingTask::yieldResume(uint16_t milliseconds) {
     return 1;
 }
 
-void YieldingTask::yield() {
+void AsyncTask::yield() {
     resume(0);
     if (isCurrentContext(&context)) {
         yieldContext();

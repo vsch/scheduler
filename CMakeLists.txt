@@ -3,7 +3,7 @@ set(CMAKE_TOOLCHAIN_FILE /usr/local/etc/arduino-cmake/ArduinoToolchain.cmake)
 set(CMAKE_CXX_STANDARD 98)
 set(PROJECT_NAME Scheduler)
 
-set(BOARD_NANO 0)
+set(BOARD_NANO 1)
 
 if (BOARD_NANO)
     set(ARDUINO_CPU atmega328old)
@@ -19,8 +19,24 @@ set(${PROJECT_NAME}_DEBUG true)
 project(${PROJECT_NAME} LANGUAGES C CXX ASM)
 
 # Define additional source and header files or default arduino sketch files
-set(${PROJECT_NAME}_SRCS src/Scheduler.cpp src/ResourceLock.cpp src/Queue.cpp src/Signal.cpp src/TinySwitcher.S scheduler_test.cpp)
-set(${PROJECT_NAME}_HDRS src/Scheduler.h src/ResourceLock.h src/Queue.h src/Signal.h src/TinySwitcher.h)
+set(${PROJECT_NAME}_SRCS
+        src/Scheduler.cpp
+        src/ResourceLock.cpp
+        src/Queue.cpp
+        src/Signal.cpp
+        src/TinySwitcher.S
+        src/SignalBase.cpp
+        )
+
+set(${PROJECT_NAME}_HDRS
+        src/Scheduler.h
+        src/ResourceLock.h
+        src/Queue.h
+        src/Signal.h
+        src/TinySwitcher.h
+        src/SignalBase.h
+        src/RequestBase.h
+        )
 
 #add_compile_definitions(SERIAL_DEBUG)
 #add_compile_definitions(SERIAL_DEBUG_SCHEDULER_MAX_STACKS)
@@ -37,7 +53,7 @@ set(${PROJECT_NAME}_HDRS src/Scheduler.h src/ResourceLock.h src/Queue.h src/Sign
 # set(${PROJECT_NAME}_LIBS)
 
 ### Main sketch file
-# set(${PROJECT_NAME}_SKETCH Scheduler.ino)
+ set(${PROJECT_NAME}_SKETCH scheduler_test.ino)
 
 ### Add project directories into the build
 # add_subdirectory()

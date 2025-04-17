@@ -15,6 +15,8 @@
 #define NULL_TASK  0xff
 
 class Scheduler;
+class ResourceLock;
+class Signal;
 
 // this must be declared in the main sketch
 extern Scheduler scheduler;
@@ -28,7 +30,7 @@ protected:
     virtual void loop() = 0;             // loop getTask
 
 public:
-    virtual uint8_t isBlocking() {
+    virtual uint8_t isAsync() {
         return false;
     }
 
@@ -64,16 +66,23 @@ public:
     inline uint8_t getIndex() const {
         return index;
     }
+
+    uint8_t reserveResource(ResourceLock *pResource);
+    uint8_t waitOnSignal(Signal *pSignal);
+    static void releaseResource(ResourceLock *pResource);
+    inline uint8_t reserveResource(ResourceLock &pResource) { reserveResource(&pResource); }
+    static inline uint8_t releaseResource(ResourceLock &pResource) { releaseResource(&pResource); }
+    inline uint8_t waitOnSignal(Signal &pSignal) { waitOnSignal(&pSignal); }
 };
 
 // this task can call blocking wait functions of the scheduler
-class YieldingTask : public Task {
+class AsyncTask : public Task {
     friend class Scheduler;
 
 protected:
     Context context;
 
-    virtual uint8_t isBlocking() {
+    uint8_t isAsync() override {
         return true;
     }
 
@@ -87,8 +96,8 @@ public:
      * @param pStack
      * @param stackMax
      */
-    inline YieldingTask(uint8_t *pStack, uint8_t stackMax) : Task() { // NOLINT(cppcoreguidelines-pro-type-member-init)
-        initContext(&context, YieldingTask::yieldingLoop, this, pStack, stackMax);
+    inline AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() { // NOLINT(cppcoreguidelines-pro-type-member-init)
+        initContext(&context, AsyncTask::yieldingLoop, this, pStack, stackMax);
     }
 
     /**
@@ -148,13 +157,13 @@ public:
 
 private:
     static void yieldingLoop(void *arg) {
-        ((YieldingTask *)arg)->loop();
+        ((AsyncTask *)arg)->loop();
     }
 };
 
 class Scheduler {
     friend class Task;
-    friend class YieldingTask;
+    friend class AsyncTask;
 
     uint8_t taskCount;              // getTask count
     uint8_t nextTask;               // id+1 of last getTask that was run when timeSlice ran out

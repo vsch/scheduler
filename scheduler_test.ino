@@ -38,7 +38,7 @@ void serialEvent() {
 uint8_t queueData[8];
 ResourceLock ledLock(queueData, sizeof(queueData));
 
-class LedFlasher : public YieldingTask {
+class LedFlasher : public AsyncTask {
     uint8_t flashCount;
     const uint16_t flashDelay;
 
@@ -51,7 +51,7 @@ class LedFlasher : public YieldingTask {
     }
 
     void loop() {
-        ledLock.reserveResource(this);
+        reserveResource(ledLock);
 
         Serial.print(F("LED Loop"));
         Serial.println(flashCount);
@@ -64,7 +64,7 @@ class LedFlasher : public YieldingTask {
         }
 
         yieldResume(1000);
-        ledLock.releaseResource();
+        releaseResource(ledLock);
         yield();
 
         Serial.print(F("LED Loop"));
@@ -76,7 +76,7 @@ class LedFlasher : public YieldingTask {
 
 public:
     LedFlasher(uint8_t flashCount, uint16_t flashDelay, uint8_t *pStack, uint8_t stackMax)
-            : flashDelay(flashDelay), YieldingTask(pStack, stackMax) {
+            : flashDelay(flashDelay), AsyncTask(pStack, stackMax) {
         this->flashCount = flashCount;
     }
 
@@ -88,8 +88,8 @@ public:
     }
 };
 
-uint8_t flasherStack1[128];
-uint8_t flasherStack2[128];
+uint8_t flasherStack1[32];
+uint8_t flasherStack2[32];
 
 LedFlasher ledFlasher1 = LedFlasher(4, 250, flasherStack1, lengthof(flasherStack1));
 LedFlasher ledFlasher2 = LedFlasher(8, 125, flasherStack2, lengthof(flasherStack2));
@@ -113,4 +113,8 @@ void setup() {
 
 void loop() {
     scheduler.loop(10);
+//    Serial.print(F("Task 1 max stack: "));
+//    Serial.println(ledFlasher1.maxStackUsed());
+//    Serial.print(F("Task 2 max stack: "));
+//    Serial.println(ledFlasher2.maxStackUsed());
 }

@@ -1,0 +1,31 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "AVR Debug with Cortex-Debug",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "external",
+            "executable": "${workspaceFolder}/build/Scheduler.elf",
+            "cwd": "${workspaceFolder}",
+            "gdbPath": "/usr/local/bin/avr-gdb",
+            "device": "atmega328p", // Replace with your AVR device if different
+            "gdbTarget": "localhost:1234", // Specify the GDB server target
+            "targetProcessor": 0,
+            "showDevDebugOutput": "raw",
+            "preLaunchCommands": [
+                "set architecture avr",
+                "-enable-pretty-printing",
+                // "break main", // Set a breakpoint at the entry point
+                // "continue"    // Resume execution to hit the breakpoint
+            ],
+            "postLaunchCommands": [],
+            "overrideLaunchCommands": [],
+            "svdFile": "", // Optional: Add an SVD file if available for your AVR device
+            "liveWatch": true, // Enable Live Watch
+        }
+     ]
+}

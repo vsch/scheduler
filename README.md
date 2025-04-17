@@ -3,7 +3,7 @@
 Cooperative round-robin scheduler using a simple task model with
 `begin()` and `loop()` methods.
 
-Version 2 includes `YieldingTask` type which can use yielding methods
+Version 2 includes `AsyncTask` type which can use yielding methods
 from within its loop to release the CPU to other tasks or the main loop.
 Execution of the code will continue after the call to the yielding
 method, when the scheduler resumes the task.
@@ -15,7 +15,7 @@ state is preserved on the stack and variables of the running code.
 [TOC]: #
 
 - [Overview](#overview)
-- [Implementation Details for `YieldingTask`](#implementation-details-for-yieldingtask)
+- [Implementation Details for `AsyncTask`](#implementation-details-for-yieldingtask)
 - [Example](#example)
   - [PWM Motor Controller](#pwm-motor-controller)
 
@@ -27,7 +27,7 @@ after suspension or to schedule next execution after delay. If
 to run in the next scheduler loop invocation and after all ready tasks
 in the current invocation have been run.
 
-In version 2 of the library a `YieldingTask` type was added which can
+In version 2 of the library a `AsyncTask` type was added which can
 use yielding methods from within its `loop()` to release the CPU to
 other tasks or the main loop. When the scheduler resumes the task,
 execution will continue after the call to the yielding method.
@@ -73,13 +73,13 @@ than scanning the delay table looking for ready tasks.
 The total RAM overhead per task is 5 bytes, with a fixed overhead of 10
 bytes for the scheduler.
 
-For `YieldingTask` the overhead adds a stack buffer, to hold the task
+For `AsyncTask` the overhead adds a stack buffer, to hold the task
 specific stack contents. This only includes stack data between the point
 on the stack when it was resumed and when yield was called. This data is
 removed from the stack into the buffer at time of yield, and restored to
 the stack when the task is resumed.
 
-`YieldingTask` methods:
+`AsyncTask` methods:
 
 * `uint8_t yieldSuspend()` - yield and suspend the task. It will not
   return until task is resumed via `resume()` call.
@@ -97,7 +97,7 @@ the stack when the task is resumed.
 * `uint8_t isCurrentTask() const` - returns non-zero if the task is the
   current task in the scheduler's `loop` context.
 
-## Implementation Details for `YieldingTask`
+## Implementation Details for `AsyncTask`
 
 The implementation manipulates the contents of the stack to allow
 suspending and resuming tasks, in-situ. This requires assembly code
@@ -273,7 +273,7 @@ exit between flashes, but yields.
 uint8_t queueData[8];
 ResourceLock ledLock(queueData, sizeof(queueData));
 
-class LedFlasher : public YieldingTask {
+class LedFlasher : public AsyncTask {
     uint8_t flashCount;
     const uint16_t flashDelay;
 
@@ -311,7 +311,7 @@ class LedFlasher : public YieldingTask {
 
 public:
     LedFlasher(uint8_t flashCount, uint16_t flashDelay, uint8_t *pStack, uint8_t stackMax)
-            : flashDelay(flashDelay), YieldingTask(pStack, stackMax) {
+            : flashDelay(flashDelay), AsyncTask(pStack, stackMax) {
         this->flashCount = flashCount;
     }
 
