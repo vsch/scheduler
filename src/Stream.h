@@ -7,6 +7,7 @@
 #define STREAM_FLAGS_ADDRESS    (0x00ff)      // used to pass I2C device address
 #define STREAM_FLAGS_RD         (0x0100)      // marks the stream as read enabled, can get from it
 #define STREAM_FLAGS_WR         (0x0200)      // marks the stream as write enabled, can put to it
+#define STREAM_FLAGS_RD_WR      (0x0300)      // marks the stream as write enabled, can put to it
 
 // Simple streaming both read and write for use in C interrupts and C code, provided from C/C++ code
 typedef struct ByteStream ByteStream_t;
