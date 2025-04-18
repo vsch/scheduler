@@ -5,18 +5,16 @@
 
 // ---------------------------------------------------------------------------
 // INCLUDES
+#include <Arduino.h>
 #include "src/Scheduler.h"
-#include "src/Request.h"
 #include "src/Mutex.h"
+#include "src/Streams.h"
+#include "src/Stream.h"
 
 #define LED (13)
 
-class RequestTest : public Request {
-public:
-    inline RequestTest() : Request() {}
-};
-
-RequestTest requestTest;
+uint8_t qData[sizeOfByteQueue(64)];
+ByteQueue qRequests(qData, sizeof(qData));
 
 /*
   SerialEvent occurs whenever a new data comes in the hardware serial RX. This
@@ -30,8 +28,8 @@ void serialEvent() {
     }
 }
 
-uint8_t ledLock_queue[sizeOfByteQueue(8)];
-Mutex ledLock(ledLock_queue, sizeof(ledLock_queue));
+uint8_t queueData[8];
+Mutex ledLock(queueData, sizeof(queueData));
 
 class LedFlasher : public AsyncTask {
     uint8_t flashCount;
@@ -45,33 +43,29 @@ class LedFlasher : public AsyncTask {
         }
     }
 
-    void activating() {
-        Serial.print(F("Activating LED Loop"));
-        Serial.println(flashCount);
-    }
-
-    void deactivating() {
-        Serial.print(F("Deactivating LED Loop"));
-        Serial.println(flashCount);
-    }
-
     void loop() {
+        ledLock.reserve();
+
         Serial.print(F("LED Loop"));
         Serial.println(flashCount);
-
-        reserveResource(ledLock);
-
-        Serial.println(F("reserved LED"));
 
         for (uint8_t i = 0; i < flashCount; i++) {
             digitalWrite(LED, 1);
             yieldResume(flashDelay);
             digitalWrite(LED, 0);
             yieldResume(flashDelay);
+            ByteStream bs(&qRequests, STREAM_FLAGS_WR);
+            // qRequests.addTail('L');
+            // qRequests.addTail(getIndex() + '0');
+            // qRequests.addTail(':');
+            bs.put('L');
+            bs.put(getIndex() + '0');
+            bs.put(':');
+            qRequests.updateStreamed(&bs, bs.flags);
         }
 
-        yieldResume(1000);
-        releaseResource(ledLock);
+        yieldResume(500);
+        ledLock.release();
         yield();
 
         Serial.print(F("LED Loop"));
@@ -95,11 +89,11 @@ public:
     }
 };
 
-uint8_t flasherStack1[sizeOfStack(32)];
-uint8_t flasherStack2[sizeOfStack(32)];
+uint8_t flasherStack1[128];
+uint8_t flasherStack2[128];
 
-LedFlasher ledFlasher1 = LedFlasher(4, 250, flasherStack1, lengthof(flasherStack1));
-LedFlasher ledFlasher2 = LedFlasher(8, 125, flasherStack2, lengthof(flasherStack2));
+LedFlasher ledFlasher1 = LedFlasher(2, 250, flasherStack1, lengthof(flasherStack1));
+LedFlasher ledFlasher2 = LedFlasher(4, 125, flasherStack2, lengthof(flasherStack2));
 
 Task *const taskTable[] PROGMEM = {
         &ledFlasher1,
@@ -121,11 +115,9 @@ void setup() {
 unsigned long lastPrint = 0;
 
 void loop() {
-    RequestTest *pReq = &requestTest;
-
     scheduler.loop(10);
 
-    if (micros() - lastPrint >= 1000L * 1000L) {
+    if (micros() - lastPrint >= 5 * 1000L * 1000L) {
         lastPrint = micros();
 
         uint8_t stackUsed1 = ledFlasher1.maxStackUsed();
@@ -135,5 +127,15 @@ void loop() {
         Serial.println(stackUsed1);
         Serial.print(F("Task 2 max stack: "));
         Serial.println(stackUsed2);
+
+        if (!qRequests.isEmpty()) {
+            ByteStream bs(&qRequests, STREAM_FLAGS_RD);
+            Serial.print(F("Requests: "));
+            while (!bs.is_empty()) {
+                Serial.print((char) bs.get());
+            }
+            Serial.println();
+            qRequests.updateStreamed(&bs, bs.flags);
+        }
     }
 }

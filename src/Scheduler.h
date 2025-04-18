@@ -13,8 +13,6 @@
 #endif
 
 class Scheduler;
-class Mutex;
-class Signal;
 
 // this must be declared in the main sketch
 extern Scheduler scheduler;
@@ -26,14 +24,6 @@ class Task {
 protected:
     virtual void begin() = 0;            // begin getTask
     virtual void loop() = 0;             // loop getTask
-
-    virtual void activating() {         // about to run in scheduler
-
-    };
-
-    virtual void deactivating() {      // just ran in scheduler
-
-    };
 
 public:
     virtual uint8_t isAsync();
@@ -54,7 +44,7 @@ public:
     /**
      * Resume this getTask after given delay in milliseconds
      *
-     * @param milliseconds delay in milliseconds to addWaitingTask before resuming calls to loop()
+     * @param milliseconds delay in milliseconds to wait before resuming calls to loop()
      */
     void resume(uint16_t milliseconds);
 
@@ -70,13 +60,6 @@ public:
     inline uint8_t getIndex() const {
         return index;
     }
-
-    uint8_t reserveResource(Mutex *pResource);
-    uint8_t waitOnSignal(Signal *pSignal);
-    static void releaseResource(Mutex *pResource);
-    inline uint8_t reserveResource(Mutex &pResource) { reserveResource(&pResource); }
-    static inline uint8_t releaseResource(Mutex &pResource) { releaseResource(&pResource); }
-    inline uint8_t waitOnSignal(Signal &pSignal) { waitOnSignal(&pSignal); }
 };
 
 // this task can call blocking wait functions of the scheduler
@@ -87,6 +70,14 @@ protected:
     AsyncContext *pContext;
 
     uint8_t isAsync() override;
+
+    virtual void activating() {         // about to run in scheduler
+
+    };
+
+    virtual void deactivated() {      // just ran in scheduler
+
+    };
 
 public:
     /**
@@ -184,6 +175,13 @@ public:
     Task *getTask();
 
     /**
+     * Get the currently running task id or NULL_TASK if none.
+     *
+     * @return  currently running task or NULL if none.
+     */
+    uint8_t getTaskId();
+
+    /**
      * Construct scheduler instance
      *
      * @param count         number of tasks in the table
@@ -231,7 +229,7 @@ public:
      * or more, of ms has elapsed.
      *
      * @param task              pointer to getTask which to resume.
-     * @param milliseconds      milliseconds to addWaitingTask before resuming getTask
+     * @param milliseconds      milliseconds to wait before resuming getTask
      *
      */
     void resume(Task *task, uint16_t milliseconds);

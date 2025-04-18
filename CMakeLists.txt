@@ -3,6 +3,8 @@ set(CMAKE_TOOLCHAIN_FILE /usr/local/etc/arduino-cmake/ArduinoToolchain.cmake)
 set(CMAKE_CXX_STANDARD 11)
 set(PROJECT_NAME Scheduler)
 
+set(${PROJECT_NAME}_DEBUG true)
+
 set(BOARD_NANO 1)
 
 if (BOARD_NANO)
@@ -20,34 +22,21 @@ project(${PROJECT_NAME} LANGUAGES C CXX ASM)
 
 # Define additional source and header files or default arduino sketch files
 set(${PROJECT_NAME}_SRCS
-        src/Queue.c
-        src/ByteQueue.c
-        src/WordQueue.c
-        src/SharedRequest.cpp
-        src/SharedRequestManager.cpp
-        src/RequestBase.c
+        src/ByteQueue.cpp
         src/Mutex.cpp
-        src/Scheduler.cpp
+        src/Streams.cpp
         src/Signal.cpp
-        src/Signaling.c
+        src/Scheduler.cpp
         src/TinySwitcher.S
         )
-
 set(${PROJECT_NAME}_HDRS
-        src/Queue.h
         src/ByteQueue.h
-        src/WordQueue.h
-        src/SharedRequest.h
-        src/SharedRequestManager.h
-        src/RequestBase.h
         src/Mutex.h
-        src/Request.h
-        src/Scheduler.h
+        src/Stream.h
+        src/Streams.h
         src/Signal.h
-        src/SignalBase.h
-        src/Signaling.h
+        src/Scheduler.h
         src/TinySwitcher.h
-        src/common_defs.h
         )
 
 #add_compile_definitions(SERIAL_DEBUG)
@@ -65,7 +54,7 @@ set(${PROJECT_NAME}_HDRS
 # set(${PROJECT_NAME}_LIBS)
 
 ### Main sketch file
- set(${PROJECT_NAME}_SKETCH scheduler_test.ino)
+set(${PROJECT_NAME}_SKETCH scheduler_test.ino)
 
 ### Add project directories into the build
 # add_subdirectory()

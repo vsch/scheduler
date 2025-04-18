@@ -3,55 +3,38 @@
 
 #include "Scheduler.h"
 #include "ByteQueue.h"
-#include "Signaling.h"
-#include "SignalBase.h"
 
 // sharable resource to be used in Task and AsyncTask calls
 
-class Mutex : protected SignalBase {
-    uint8_t ownerReserveCount;  // counts how many times the owner reserved the lock, will release when this goes to 0
-    ByteQueue *pQueue;
+class Mutex {
+    ByteQueue queue;
 
 public:
-    Mutex(uint8_t *queueData, uint8_t queueDataSize);
+    Mutex(uint8_t *queueBuffer, uint8_t queueSize);
 
     /**
      * Get resource if available or suspend calling task until it is available.
      * If the resource is not available, suspend the task and if possible yield.
      *
-     * NOTE: the current owner can call reserveResource again, and will obtain the resource. However,
-     *     the owner must release the resource as many times as it has called reserve. Only the last call to
-     *     release resource will actually release the resource.
-     *
-     * @return 0 if successfully yielded and resource reserved. 1 if not avaialble and could not yield to addWaitingTask
+     * @return 0 if successfully yielded and resource reserved. 1 if not avaialble and could not yield to wait
      *           for it
      */
-    uint8_t reserveResource(Task *pTask);
-    uint8_t reserveResource(uint8_t taskId);
-
-    /**
-     * Reserve resource to the currently running task
-     *
-     * @return reserveResource(Task *) or 0 if no currently running task.
-     */
-    uint8_t reserveResource();
+    uint8_t reserve();
 
     /**
      * Release resource from the current task and resume next task in line giving it the resource
      *
      */
-    void releaseResource();
+    void release();
 
     /**
-     * Transfer ownership of the resource to the given task. Resource should be owned by the task at the
-     * head of the queue.
-     *
-     * NOTE: if the resource is currently not owned this will make the given task its new owner
+     * Transfer ownership of the resource to the given task if the mutex is owned by the task at the
+     * head of the queue, ie. currently active task.
      *
      * @param pTask new owner of resource
+     * @return 0 if done, NULL_TASK if current task is not the owner
      */
-    void transferResource(Task *pTask);
-    void transferResource(uint8_t taskId);
+    uint8_t transfer(Task *pTask);
 };
 
 #endif //SCHEDULER_MUTEX_H

@@ -15,7 +15,7 @@ state is preserved on the stack and variables of the running code.
 [TOC]: #
 
 - [Overview](#overview)
-- [Implementation Details for `AsyncTask`](#implementation-details-for-yieldingtask)
+- [Implementation Details for `AsyncTask`](#implementation-details-for-asynctask)
 - [Example](#example)
   - [PWM Motor Controller](#pwm-motor-controller)
 
@@ -94,8 +94,6 @@ the stack when the task is resumed.
 * `uint8_t maxStackUsed() const` - maximum bytes used of the task's
   stack buffer. Can be used to reduce the buffer size, if it isn't
   needed.
-* `uint8_t isCurrentTask() const` - returns non-zero if the task is the
-  current task in the scheduler's `loop` context.
 
 ## Implementation Details for `AsyncTask`
 
@@ -271,7 +269,7 @@ exit between flashes, but yields.
 
 ```cpp
 uint8_t queueData[8];
-ResourceLock ledLock(queueData, sizeof(queueData));
+Mutex ledLock(queueData, sizeof(queueData));
 
 class LedFlasher : public AsyncTask {
     uint8_t flashCount;
@@ -286,7 +284,7 @@ class LedFlasher : public AsyncTask {
     }
 
     void loop() {
-        ledLock.reserveResource(this);
+        ledLock.reserve();
 
         Serial.print(F("LED Loop"));
         Serial.println(flashCount);
@@ -299,7 +297,7 @@ class LedFlasher : public AsyncTask {
         }
 
         yieldResume(1000);
-        ledLock.releaseResource();
+        ledLock.release();
         yield();
 
         Serial.print(F("LED Loop"));

@@ -1,8 +1,5 @@
 #include "Arduino.h"
 #include "Scheduler.h"
-#include "Scheduler_C.h"
-#include "Mutex.h"
-#include "Signal.h"
 
 Scheduler::Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable) {
     taskCount = count;
@@ -27,8 +24,7 @@ void Scheduler::begin() {
     for (uint8_t i = 0; i < taskCount; i++) {
         Task *pTask = getTask(i);
         if (pTask->index != NULL_TASK) {
-            debugSchedulerErrorsPrintf_P(PSTR("Task %S, is duplicated in scheduler at %d and %d"), pTask->id(), pTask->index, i
-            );
+            debugSchedulerErrorsPrintf_P(PSTR("Task %S, is duplicated in scheduler at %d and %d"), pTask->id(), pTask->index, i);
         } else {
             pTask->index = i;
         }
@@ -93,8 +89,7 @@ void Scheduler::loop(uint16_t timeSlice) {
 
     uint16_t diffMs = (uint16_t) (diff / 1000);
     serialDebugSchedulerDumpDelays("Scheduler loop before ");
-    debugSchedulerDelaysPrintf_P(PSTR("Tick %ld clockTick %ld diff %ld diffMs %d\n"), tick, clockTick, tick - clockTick, diffMs
-    );
+    debugSchedulerDelaysPrintf_P(PSTR("Tick %ld clockTick %ld diff %ld diffMs %d\n"), tick, clockTick, tick - clockTick, diffMs);
 
     bool haveTasks = reduceDelays(diffMs);
 
@@ -129,15 +124,15 @@ void Scheduler::loop(uint16_t timeSlice) {
             Task *pLastTask = pTask;
 #endif
 
-            pTask->activating();
             if (pTask->isAsync()) {
-                AsyncTask *pBlockingTask = reinterpret_cast<AsyncTask *>(pTask);
-                resumeContext(pBlockingTask->pContext);
+                AsyncTask *pAsyncTask = reinterpret_cast<AsyncTask *>(pTask);
+                pAsyncTask->activating();
+                resumeContext(pAsyncTask->pContext);
+                pAsyncTask->deactivated();
             } else {
                 // just a Task
                 pTask->loop();
             }
-            pTask->deactivating();
             pTask = NULL;
 
             unsigned long end = micros();
@@ -164,8 +159,7 @@ void Scheduler::loop(uint16_t timeSlice) {
                 }
             }
 
-            debugSchedulerPrintf_P(PSTR("Scheduler[%d] getTask %S[%d] done in %lu\n"), iteration, pLastTask->id(), pLastTask->index, (uint32_t) (end - start)
-            );
+            debugSchedulerPrintf_P(PSTR("Scheduler[%d] getTask %S[%d] done in %lu\n"), iteration, pLastTask->id(), pLastTask->index, (uint32_t) (end - start));
         }
     }
 
@@ -207,52 +201,8 @@ Task *Scheduler::getTask() {
     return pTask;
 }
 
-/**
- * Scheduler C interface functions
- */
-
-pTask_t scheduler_getTask(TaskId_t taskId) {
-    return scheduler.getTask(taskId);
-}
-
-uint8_t scheduler_isAsyncTask(pTask_t pTask) {
-    return pTask != NULL && pTask->isAsync();
-}
-
-uint8_t scheduler_isAsyncTaskId(TaskId_t taskId) {
-    return scheduler_isAsyncTask(scheduler_getTask(taskId));
-}
-
-void scheduler_asyncYieldSuspend(pTask_t pTask) {
-    ((AsyncTask *) pTask)->yieldSuspend();
-}
-
-void scheduler_suspendTask(pTask_t pTask) {
-    if (pTask) scheduler.suspend(pTask);
-}
-
-void scheduler_suspendTaskId(TaskId_t taskId) {
-    scheduler_suspendTask(scheduler_getTask(taskId));
-}
-
-void scheduler_resumeTask(pTask_t pTask, uint16_t millis) {
-    if (pTask) scheduler.resume(pTask, millis);
-}
-
-void scheduler_resumeTaskId(TaskId_t taskId, uint16_t millis) {
-    scheduler_resumeTask(scheduler_getTask(taskId), millis);
-}
-
-uint8_t Task::reserveResource(Mutex *pResource) {
-    return pResource->reserveResource(this);
-}
-
-void Task::releaseResource(Mutex *pResource) {
-    pResource->releaseResource();
-}
-
-uint8_t Task::waitOnSignal(Signal *pSignal) {
-    return pSignal->addWaitingTask(this);
+uint8_t Scheduler::getTaskId() {
+    return pTask ? pTask->index : NULL_TASK;
 }
 
 void Task::resume(uint16_t milliseconds) {
@@ -287,7 +237,7 @@ AsyncTask::AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() { // NOLINT(cpp
  * If the task is not the current context, it will not yield and return immediately.
  * Check return value for true if it did not yield and handle it, if needed.
  *
- * @return 0 if successfuly yielded. 1 if no yield because was not the active task
+ * @return 0 if successfully yielded. 1 if no yield because was not the active task
  */
 uint8_t AsyncTask::yieldSuspend() {
     suspend();
@@ -305,16 +255,16 @@ uint8_t AsyncTask::yieldSuspend() {
  * If the task is not the current context, it will not yield and return immediately.
  * Check return value for true if it did not yield and handle it, if needed.
  *
- * @param milliseconds delay in milliseconds to addWaitingTask before resuming calls to loop()
- * @return 0 if successfuly yielded. 1 if no yield because was not the active task
+ * @param milliseconds delay in milliseconds to wait before resuming calls to loop()
+ * @return 0 if successfully yielded. 1 if no yield because was not the active task
  */
 uint8_t AsyncTask::yieldResume(uint16_t milliseconds) {
     resume(milliseconds);
     if (isInAsyncContext()) {
         yieldContext();
-        return false;
+        return 0;
     }
-    return true;
+    return 1;
 }
 
 void AsyncTask::yield() {
@@ -329,11 +279,11 @@ uint8_t AsyncTask::hasYielded() const {
 }
 
 uint8_t AsyncTask::maxStackUsed() const {
-    pContext->stackMaxUsed;
+    return pContext->stackMaxUsed;
 }
 
 void AsyncTask::yieldingLoop(void *arg) {
-    ((AsyncTask *) arg)->loop();
+    ((AsyncTask *)arg)->loop();
 }
 
 #ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
