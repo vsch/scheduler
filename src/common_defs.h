@@ -9,6 +9,7 @@
 
 #define offsetof(p, m)    (&((*(p *)(0)).m))
 #define lengthof(p)    (sizeof(p)/sizeof(*(p)))
+#define sizeOfArray(b, e)    (sizeof(e)*(b))
 #define sizeOfPlus(t, b, e)    (sizeof(t)+sizeof(e)*(b))
 
 typedef uint8_t TaskId_t;
