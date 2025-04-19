@@ -6,6 +6,10 @@ Mutex::Mutex(uint8_t *queueBuffer, uint8_t queueSize)
         : queue(queueBuffer, queueSize) {
 }
 
+uint8_t Mutex::isFree() const {
+    return queue.isEmpty();
+}
+
 uint8_t Mutex::reserve() {
     Task *pTask = scheduler.getTask();
     if (pTask) {
@@ -60,5 +64,9 @@ uint8_t Mutex::transfer(Task *pTask) {
         return 0;
     }
     return NULL_TASK;
+}
+
+bool Mutex::isOwner(uint8_t taskId) {
+    return queue.peekHead() == taskId;
 }
 

@@ -3,9 +3,12 @@ set(CMAKE_TOOLCHAIN_FILE /usr/local/etc/arduino-cmake/ArduinoToolchain.cmake)
 set(CMAKE_CXX_STANDARD 11)
 set(PROJECT_NAME Scheduler)
 
+# Arduino.CMake internal, does not seem to work
 set(${PROJECT_NAME}_DEBUG true)
 
+# Configuration
 set(BOARD_NANO 1)
+set(DEBUG_BUILD 0)
 
 if (BOARD_NANO)
     set(ARDUINO_CPU atmega328old)
@@ -15,28 +18,28 @@ else ()
     set(ARDUINO_CPU 16MHzatmega328)
 endif ()
 
-set(${PROJECT_NAME}_DEBUG true)
-
 # Enable ASM language
 project(${PROJECT_NAME} LANGUAGES C CXX ASM)
 
 # Define additional source and header files or default arduino sketch files
 set(${PROJECT_NAME}_SRCS
-        src/ByteQueue.cpp
+        src/Queue.cpp
         src/Mutex.cpp
         src/Streams.cpp
         src/Signal.cpp
-        src/Scheduler.cpp
         src/TinySwitcher.S
+        src/Scheduler.cpp
+        src/Controller.cpp
         )
 set(${PROJECT_NAME}_HDRS
-        src/ByteQueue.h
+        src/Queue.h
         src/Mutex.h
         src/Stream.h
         src/Streams.h
         src/Signal.h
-        src/Scheduler.h
         src/TinySwitcher.h
+        src/Scheduler.h
+        src/Controller.h
         )
 
 #add_compile_definitions(SERIAL_DEBUG)
@@ -47,8 +50,9 @@ set(${PROJECT_NAME}_HDRS
 #add_compile_definitions(SERIAL_DEBUG_SCHEDULER_RUN)
 
 # Disable optimizations and enable debug symbols for debugging
-#set(CMAKE_CXX_FLAGS_DEBUG "-O1 -g -fno-inline -fverbose-asm")
-#set(CMAKE_C_FLAGS_DEBUG "-O1 -g -fno-inline -fverbose-asm")
+if (DEBUG_BUILD)
+    set(CMAKE_CXX_FLAGS_DEBUG "-O1 -g -fno-inline -fverbose-asm")
+endif ()
 
 ### Additional static libraries to include in the target.
 # set(${PROJECT_NAME}_LIBS)

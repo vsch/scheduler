@@ -13,8 +13,12 @@
 
 #define LED (13)
 
-uint8_t qData[sizeOfByteQueue(64)];
-ByteQueue qRequests(qData, sizeof(qData));
+#ifdef QUEUE_WORD_FUNCS
+#define QUEUE_WORDS
+#endif
+
+uint8_t qData[sizeOfQueue(32, uint8_t)];
+Queue qRequests(qData, sizeof(qData));
 
 /*
   SerialEvent occurs whenever a new data comes in the hardware serial RX. This
@@ -58,10 +62,14 @@ class LedFlasher : public AsyncTask {
             // qRequests.addTail('L');
             // qRequests.addTail(getIndex() + '0');
             // qRequests.addTail(':');
+#ifdef QUEUE_WORDS
+            bs.putW(flashCount << 8 | flashDelay);
+#else
             bs.put('L');
             bs.put(getIndex() + '0');
             bs.put(':');
-            qRequests.updateStreamed(&bs, bs.flags);
+#endif
+            qRequests.updateStreamed(&bs);
         }
 
         yieldResume(500);
@@ -132,10 +140,17 @@ void loop() {
             ByteStream bs(&qRequests, STREAM_FLAGS_RD);
             Serial.print(F("Requests: "));
             while (!bs.is_empty()) {
+#ifdef QUEUE_WORDS
+                Serial.print(F("0x"));
+                Serial.print(bs.getW(), HEX);
+                Serial.print(' ');
+#else
                 Serial.print((char) bs.get());
+#endif
+
             }
             Serial.println();
-            qRequests.updateStreamed(&bs, bs.flags);
+            qRequests.updateStreamed(&bs);
         }
     }
 }

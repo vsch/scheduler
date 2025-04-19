@@ -3,6 +3,7 @@
   <component name="Arduino Project Settings">
     <option name="afterSuccessfulBuild" value="false" />
     <option name="baudRate" value="57600" />
+    <option name="clearOnReconnect" value="false" />
     <option name="port" value="/dev/cu.usbserial-A5069RR4" />
     <option name="showSendOptions" value="false" />
   </component>

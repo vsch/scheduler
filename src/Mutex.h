@@ -2,15 +2,17 @@
 #define SCHEDULER_MUTEX_H
 
 #include "Scheduler.h"
-#include "ByteQueue.h"
+#include "Queue.h"
 
 // sharable resource to be used in Task and AsyncTask calls
 
 class Mutex {
-    ByteQueue queue;
+    Queue queue;
 
 public:
     Mutex(uint8_t *queueBuffer, uint8_t queueSize);
+
+    uint8_t isFree() const;
 
     /**
      * Get resource if available or suspend calling task until it is available.
@@ -35,6 +37,8 @@ public:
      * @return 0 if done, NULL_TASK if current task is not the owner
      */
     uint8_t transfer(Task *pTask);
+    bool isOwner(uint8_t taskId);
+    inline bool isOwner(Task *pTask) { return isOwner(pTask->getIndex()); }
 };
 
 #endif //SCHEDULER_MUTEX_H

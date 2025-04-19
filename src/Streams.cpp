@@ -1,5 +1,21 @@
-#include "Arduino.h"
 #include "Streams.h"
+
+uint8_t ByteStream::setFlags(uint8_t flags, uint8_t mask) {
+    mask &= ~(STREAM_FLAGS_RD_WR);
+    this->flags &= ~mask;
+    this->flags |= flags & mask;
+    return this->flags;
+}
+
+uint8_t ByteStream::setOwnBuffer(uint8_t *pData, uint8_t nSize) {
+    if (can_write()) {
+        this->nTail = this->nSize = nSize;
+        this->nHead = 0;
+        this->pData = pData;
+        return 0;
+    }
+    return NULL_BYTE;
+}
 
 // test if any more data to read
 uint8_t stream_is_empty(const ByteStream_t *thizz) {
@@ -12,7 +28,7 @@ uint8_t stream_is_full(const ByteStream_t *thizz) {
 }
 
 // capacity to accept written bytes
-uint16_t stream_capacity(const ByteStream_t *thizz) {
+uint8_t stream_capacity(const ByteStream_t *thizz) {
     return thizz->capacity();
 }
 
@@ -40,15 +56,15 @@ uint8_t stream_put(ByteStream_t *thizz, uint8_t data) {
     return NULL_BYTE;
 }
 
-// get address from flags
-uint8_t stream_address(const ByteStream_t *thizz) {
-    return thizz->address();
-}
-
 uint8_t stream_can_write(const ByteStream_t *thizz) {
     return thizz->can_write();
 }
 
 uint8_t stream_can_read(const ByteStream_t *thizz) {
     return thizz->can_read();
+}
+
+// get address from flags
+uint8_t stream_address(const ByteStream_t *thizz) {
+    return thizz->address();
 }
