@@ -1,3 +1,4 @@
+#include "Arduino.h"
 #include "Streams.h"
 
 uint8_t ByteStream::setFlags(uint8_t flags, uint8_t mask) {

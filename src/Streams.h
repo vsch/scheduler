@@ -3,9 +3,14 @@
 #define SCHEDULER_STREAMS_H
 
 #include "Arduino.h"
+#ifdef CONSOLE_DEBUG
+#include "stdlib.h"
+#include "new"
+#else
+#include <new.h>
+#endif
 #include "Stream.h"
 #include "Queue.h"
-#include "new.h"
 
 struct ByteStream : protected Queue {
     friend class Queue;

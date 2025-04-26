@@ -1,13 +1,19 @@
 #ifndef _SCHEDULER_H_
 #define _SCHEDULER_H_
 
+#include "Arduino.h"
+
+#ifndef CONSOLE_DEBUG
 #include <avr/pgmspace.h>
+#endif
+
 #include "TinySwitcher.h"
 #include "common_defs.h"
+#include "type_defs.h"
 
 #if defined(SERIAL_DEBUG_SCHEDULER) || defined(SERIAL_DEBUG_SCHEDULER_ERRORS) || defined(SERIAL_DEBUG_SCHEDULER_MAX_STACKS) || defined(CONSOLE_DEBUG)
 #define SCHEDULER_TASK_IDS
-#define defineSchedulerTaskId(str)  virtual PGM_P id() { return PSTR(str); }
+#define defineSchedulerTaskId(str)  virtual PGM_P id() override { return PSTR(str); }
 #else
 #define defineSchedulerTaskId(id)
 #endif

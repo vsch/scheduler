@@ -15,7 +15,7 @@ Scheduler::Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable) {
 
 Task *Scheduler::getTask(uint8_t index) {
     (void) tasks;
-    return reinterpret_cast<Task *>(pgm_read_ptr(tasks + sizeof(Task *) * index));
+    return (Task *)(pgm_read_ptr(tasks + sizeof(Task *) * index));
 }
 
 void Scheduler::begin() {
@@ -163,7 +163,7 @@ void Scheduler::loop(uint16_t timeSlice) {
         }
     }
 
-    if (lastId != -1) {
+    if (lastId != (uint8_t)-1) {
         // all ran, next time start with the first
         nextTask = 0;
     }

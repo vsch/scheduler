@@ -65,7 +65,7 @@ uint8_t Queue::updateQueued(Queue *pOther, uint8_t flags) {
 }
 
 uint8_t Queue::updateStreamed(ByteStream *pOther) {
-    updateQueued(pOther, pOther->flags);
+    return updateQueued(pOther, pOther->flags);
 }
 
 #ifdef QUEUE_BLOCK_FUNCS

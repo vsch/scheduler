@@ -7,7 +7,7 @@
 #define sizeOfQueue(s, t)            (sizeOfArray((s)+1, t))
 #define sizeOfByteQueue(s)          (sizeOfQueue((s), uint8_t))
 
-#define QUEUE_BLOCK_FUNCS
+// #define QUEUE_BLOCK_FUNCS
 #define QUEUE_WORD_FUNCS
 #define QUEUE_DEDICATED_WORD_FUNCS
 

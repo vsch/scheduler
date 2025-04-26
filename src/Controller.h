@@ -219,6 +219,10 @@ public:
 
         // make sure loop task is enabled start our loop task to monitor its completion
         this->resume(0);
+
+        // need to reset the write stream for stuff moved to read stream
+        writeBuffer.getStream(writeStream, STREAM_FLAGS_WR);
+        return writeStream; 
     }
 };
 

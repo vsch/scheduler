@@ -26,7 +26,7 @@ set(${PROJECT_NAME}_SRCS
         src/Queue.cpp
         src/Mutex.cpp
         src/Streams.cpp
-        src/Signal.cpp
+        src/Signals.cpp
         src/TinySwitcher.S
         src/Scheduler.cpp
         src/Controller.cpp
@@ -36,7 +36,7 @@ set(${PROJECT_NAME}_HDRS
         src/Mutex.h
         src/Stream.h
         src/Streams.h
-        src/Signal.h
+        src/Signals.h
         src/TinySwitcher.h
         src/Scheduler.h
         src/Controller.h

@@ -1,16 +1,16 @@
-#ifndef SCHEDULER_SIGNAL_H
-#define SCHEDULER_SIGNAL_H
+#ifndef SCHEDULER_SIGNALS_H
+#define SCHEDULER_SIGNALS_H
 
 #include "Scheduler.h"
 #include "Queue.h"
 
 // allows tasks to wait for signal from other tasks/locations
 
-class Signal {
+class Signals {
     Queue queue;
 
 public:
-    Signal(uint8_t *queueBuffer, uint8_t queueSize);
+    Signals(uint8_t *queueBuffer, uint8_t queueSize);
 
     /**
      * Wait for signal to trigger
@@ -27,4 +27,4 @@ public:
     void trigger();
 };
 
-#endif //SCHEDULER_SIGNAL_H
+#endif //SCHEDULER_SIGNALS_H

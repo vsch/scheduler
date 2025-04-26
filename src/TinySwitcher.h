@@ -1,7 +1,40 @@
 #ifndef SCHEDULER_TINYSWITCHER_H
 #define SCHEDULER_TINYSWITCHER_H
 
-#include <Arduino.h>
+#ifdef CONSOLE_DEBUG
+#include <coroutine>
+#include <cstdint>
+
+// Define the type for the entry function of a task
+typedef void (*EntryFunction)(void *arg);
+
+// Forward declaration of the coroutine handle type
+struct ContextPromise;
+using ContextHandle = std::coroutine_handle<ContextPromise>;
+
+// Declare the MainContextPromise structure
+struct MainContextPromise;
+
+// Declare the global mainContext handle
+extern std::coroutine_handle<MainContextPromise> mainContext;
+
+// Declare the createMainContext function
+std::coroutine_handle<MainContextPromise> createMainContext();
+
+// Structure to represent an asynchronous context
+struct AsyncContext {
+    uint8_t stackUsed;          // Placeholder for stack usage (not used in coroutines)
+    uint8_t stackMax;           // Placeholder for maximum stack size (not used in coroutines)
+    uint8_t stackMaxUsed;       // Placeholder for maximum stack usage (not used in coroutines)
+    ContextHandle coroutineHandle; // Coroutine handle for the task
+    EntryFunction entryFunction;   // Entry function for the task
+    void *entryArg;               // Argument for the entry function
+};
+
+#define sizeOfStack(s)      (sizeOfPlus(AsyncContext, 0, uint8_t))
+#else // CONSOLE_DEBUG
+
+#include "Arduino.h"
 #include "common_defs.h"
 
 typedef struct AsyncContext {
@@ -10,15 +43,16 @@ typedef struct AsyncContext {
     volatile uint8_t stackUsed;      // saved stack area
     volatile uint8_t stackMax;       // maximum stack area available
     volatile uint8_t stackMaxUsed;   // max stack space actually used
-    volatile void (*pEntry)();
-    volatile void *pEntryArg;       // entry point for context
-    volatile uint8_t stack[];       // stack storage area begins here
+    void (*pEntry)();
+    void *pEntryArg;       // entry point for context
+    uint8_t stack[];       // stack storage area begins here
 
 } AsyncContext;
 
-typedef void (*EntryFunction)(void *);
-
 #define sizeOfStack(s)      (sizeOfPlus(AsyncContext, (s), uint8_t))
+#endif // CONSOLE_DEBUG
+
+typedef void (*EntryFunction)(void *);
 
 #ifdef __cplusplus
 extern "C" {
