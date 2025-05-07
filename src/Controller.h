@@ -10,7 +10,7 @@
 #define RESERVATIONS_PACK(r, b)         ((((r & 0x07) - 1) << 5) | (DIV_ROUNDED_UP(b,8) > 0x1f ? 0x1f : DIV_ROUNDED_UP(b,8)))
 #define RESERVATIONS_BYTES(b)           ((DIV_ROUNDED_UP(b,8) > 0x1f ? 0x1f : DIV_ROUNDED_UP(b,8))*8)
 #define RESERVATIONS_UNPACK_REQ(p)      ((((p) >> 5) & 0x07) + 1)
-#define RESERVATIONS_UNPACK_BYTES(p)    ((p) & 0x1f)
+#define RESERVATIONS_UNPACK_BYTES(p)    (((p) & 0x1f)*8)
 
 class Controller : public Task {
     Queue pendingReadStreams;           // requests waiting to be handleProcessedRequest
@@ -42,18 +42,22 @@ public:
 
             : pendingReadStreams(pData, sizeOfQueue(maxStreams, uint8_t))
               , freeReadStreams(pData + sizeOfQueue(maxStreams, uint8_t), sizeOfQueue(maxStreams, uint8_t))
-              , writeBuffer(pData + sizeOfQueue(maxStreams, uint8_t) + sizeOfQueue(maxStreams, uint8_t), sizeOfQueue(writeBufferSize, uint8_t))
-              , reservationLock(pData + sizeOfQueue(maxStreams, uint8_t) + sizeOfQueue(maxStreams, uint8_t) + sizeOfQueue(writeBufferSize, uint8_t), sizeOfQueue(maxTasks, uint8_t))
-              , requirementList(pData + sizeOfQueue(maxStreams, uint8_t) + sizeOfQueue(maxStreams, uint8_t) + sizeOfQueue(writeBufferSize, uint8_t) + sizeOfQueue(maxTasks, uint8_t), sizeOfQueue(maxTasks, uint8_t))
+              , writeBuffer(pData + sizeOfQueue(maxStreams, uint8_t) + sizeOfQueue(maxStreams, uint8_t),
+                            sizeOfQueue(writeBufferSize, uint8_t))
+              , reservationLock(pData + sizeOfQueue(maxStreams, uint8_t) + sizeOfQueue(maxStreams, uint8_t) +
+                                sizeOfQueue(writeBufferSize, uint8_t), sizeOfQueue(maxTasks, uint8_t))
+              , requirementList(pData + sizeOfQueue(maxStreams, uint8_t) + sizeOfQueue(maxStreams, uint8_t) +
+                                sizeOfQueue(writeBufferSize, uint8_t) + sizeOfQueue(maxTasks, uint8_t),
+                                sizeOfQueue(maxTasks, uint8_t))
               , writeStream(&writeBuffer, 0) {
 
         // now initialize all the read Streams
         readStreams = (ByteStream *) (pData
-                                      + sizeOfQueue(maxStreams, uint8_t)
-                                      + sizeOfQueue(maxStreams, uint8_t)
-                                      + sizeOfQueue(writeBufferSize, uint8_t)
-                                      + sizeOfQueue(maxTasks, uint8_t)
-                                      + sizeOfQueue(maxTasks, uint8_t));
+                                      + sizeOfQueue(maxStreams, uint8_t)   /* pendingReadStreams */
+                                      + sizeOfQueue(maxStreams, uint8_t)   /* freeReadStreams */
+                                      + sizeOfQueue(writeBufferSize, uint8_t)   /* writeBuffer */
+                                      + sizeOfQueue(maxTasks, uint8_t)   /* reservationLock */
+                                      + sizeOfQueue(maxTasks, uint8_t));   /* requirementList */
 
         ByteStream *pStream = readStreams;
 
@@ -73,14 +77,15 @@ public:
      * CAVEAT: bytes will be adjusted to be between 0 and 31*8, or 0..248 which is the max which can be encoded
      *    in the chosen reservationLock encoding scheme.
      *
-     * NOTE: if the request bytes > adjusted bytes or writeBuffer size then asking for more than is possible, and it
-     *  will fail every call. Asking for less than what you will actually be required will cause requests to be
+     * NOTE: if the request bytes > adjusted bytes or > writeBuffer size then asking for more than is possible, and it
+     *  will fail every call. Asking for less than what will actually be required will cause requests to be
      *  dropped and adding bytes to fail.
      *
      * @param requests  number of requests that will be generated, ie. separate process requests.
      * @param bytes     maximum total number of bytes generated in all requests for this call
-     * @return          result 0 if reserved, 1 if need to suspend() waiting for resources, or NULL_BYTE if call made
-     *                  not from task context
+     * @return          result 0 if reserved, 1 if need to suspend() waiting for resources, or NULL_BYTE if
+     *                  requirements can never be satisfied because it exceeds allocated
+     *                  resources
      */
 
     uint8_t willRequire(uint8_t requests, uint8_t bytes) {
@@ -120,6 +125,12 @@ public:
     void begin() override {
     }
 
+    // to be implemented by subclasses, will be called from the default loop()
+    virtual void checkForCompletedRequests() = 0;
+
+    // start processing the given request
+    virtual void startProcessingRequest(ByteStream *pStream) = 0;
+
     void handleProcessedRequest(ByteStream *pStream) {
         // put its handled info back to writeBuffer and it back in the free queue
         // unless it is an own buffer request
@@ -133,12 +144,6 @@ public:
         freeReadStreams.addTail(pStream - readStreams);
     }
 
-    // to be implemented by subclasses, will be called from the default loop()
-    virtual void checkForCompletedRequests() = 0;
-
-    // start processing the given request
-    virtual void startProcessingRequest(ByteStream *pStream) = 0;
-
     void loop() override {
         if (pendingReadStreams.getCount()) {
             checkForCompletedRequests();
@@ -146,7 +151,7 @@ public:
             if (!pendingReadStreams.isEmpty()) {
                 ByteStream *pStream = readStreams + pendingReadStreams.peekHead();
                 if (!(pStream->isPending())) {
-                    // its ready for processing
+                    // its ready for processing and not already being processed
                     pStream->flags |= STREAM_FLAGS_PENDING;
                     startProcessingRequest(pStream);
                 }
@@ -160,7 +165,7 @@ public:
             uint8_t bytes = RESERVATIONS_UNPACK_BYTES(packed);
 
             if (requests <= freeReadStreams.getCount() && bytes <= writeBuffer.getCapacity()) {
-                // let'er rip
+                // let'er rip there are enough free resources
                 requirementList.removeHead();
                 reservationLock.release();
             }
@@ -178,7 +183,8 @@ public:
      * Accept given byte stream for processing.
      *
      * NOTE: the new read stream created from this write stream will have its head set to previous read request's tail
-     *     so that it will send only what the previous request will not send.
+     *     so that it will send only what the previous request will not send. This only applies to non-own buffer
+     *     streams which provide a block of data to send, outside the shared writeBuffer.
      *
      * @param writeStream       pointer to stream to process, will be reset to new reality if needed
      * @return                  pointer to writeStream or NULL if not handleProcessedRequest because of lack of readStreams
@@ -199,10 +205,11 @@ public:
         // copy the write stream info into read stream for processing
         writeStream->getStream(pStream, STREAM_FLAGS_RD);
 
-        if (!pendingReadStreams.isEmpty()) {
+        if (!pendingReadStreams.isEmpty() && writeStream->pData == writeBuffer.pData) {
             // copy last request's tail to this one's head to have this one not include
-            // previous request's data. If this is the first pending request then there is no such issue to address.
-            ByteStream *pPrevRequest = readStreams + pendingReadStreams.peekHead();
+            // previous request's data. If this is the first pending request or own-buffer stream then there is no such
+            // issue to address.
+            ByteStream *pPrevRequest = readStreams + pendingReadStreams.peekTail();
             pStream->nHead = pPrevRequest->nTail;
         }
 
@@ -220,9 +227,9 @@ public:
         // make sure loop task is enabled start our loop task to monitor its completion
         this->resume(0);
 
-        // need to reset the write stream for stuff moved to read stream
+        // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
         writeBuffer.getStream(writeStream, STREAM_FLAGS_WR);
-        return writeStream; 
+        return writeStream;
     }
 };
 
