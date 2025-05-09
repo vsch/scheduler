@@ -36,6 +36,10 @@ class Queue {
 public:
     Queue(uint8_t *pData, uint8_t nSize);
 
+    inline void empty() {
+        nHead = nTail = 0;
+    }
+
     uint8_t getCount() const;
     uint8_t peekHead(uint8_t offset) const;
     uint8_t peekTail(uint8_t offset) const;
@@ -155,6 +159,11 @@ public:
     uint8_t updateStreamed(ByteStream *pOther);
 
     ByteStream *getStream(ByteStream *pOther, uint8_t flags);
+
+#ifdef CONSOLE_DEBUG
+    // print out queue for testing
+    void dumpQueue(char *buffer, uint32_t sizeofBuffer);
+#endif
 };
 
 #endif //SCHEDULER_QUEUE_H

@@ -248,3 +248,68 @@ ByteStream *Queue::getStream(ByteStream *pOther, uint8_t flags) {
     return pOther;
 }
 
+#ifdef CONSOLE_DEBUG
+
+// print out queue for testing
+void Queue::dumpQueue(char *buffer, uint32_t sizeofBuffer) {
+    uint32_t len = strlen(buffer);
+    buffer += len;
+    sizeofBuffer -= len;
+
+    // Output: Queue { nSize:%d, nHead:%d, nTail:%d
+    // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
+    // }
+    snprintf(buffer, sizeofBuffer, "Queue { nSize:%d, nHead:%d, nTail:%d\n", nSize, nHead, nTail);
+    for (uint16_t i = 0; i < nSize; i++) {
+        len = strlen(buffer);
+        buffer += len;
+        sizeofBuffer -= len;
+        bool addSpace = false;
+        bool hadHead = false;
+
+        if (!(i % 16)) {
+            if (i) {
+                *buffer++ = '\n';
+                sizeofBuffer -= 1;
+            }
+
+            *buffer++ = ' ';
+            sizeofBuffer -= 1;
+        }
+
+        if (i == nHead) {
+            *buffer++ = ' ';
+            *buffer++ = '[';
+            sizeofBuffer -= 2;
+            hadHead = true;
+        }
+
+        if (i == nTail) {
+            *buffer++ = ']';
+            *buffer++ = ' ';
+            sizeofBuffer -= 2;
+        } else {
+            addSpace = !hadHead;
+        }
+
+        if (addSpace) {
+            *buffer++ = ' ';
+            sizeofBuffer--;
+        }
+
+        snprintf(buffer, sizeofBuffer, "0x%2.2x", pData[i]);
+
+        len = strlen(buffer);
+        buffer += len;
+        sizeofBuffer -= len;
+    }
+
+    *buffer++ = '\n';
+    *buffer++ = '}';
+    *buffer++ = '\n';
+    sizeofBuffer -= 3;
+    *buffer = '\0';
+}
+
+#endif
+
