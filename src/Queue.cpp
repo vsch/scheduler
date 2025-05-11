@@ -251,7 +251,7 @@ ByteStream *Queue::getStream(ByteStream *pOther, uint8_t flags) {
 #ifdef CONSOLE_DEBUG
 
 // print out queue for testing
-void Queue::dumpQueue(char *buffer, uint32_t sizeofBuffer) {
+void Queue::dump(char *buffer, uint32_t sizeofBuffer) {
     uint32_t len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
@@ -260,6 +260,11 @@ void Queue::dumpQueue(char *buffer, uint32_t sizeofBuffer) {
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
     snprintf(buffer, sizeofBuffer, "Queue { nSize:%d, nHead:%d, nTail:%d\n", nSize, nHead, nTail);
+    len = strlen(buffer);
+    buffer += len;
+    sizeofBuffer -= len;
+    snprintf(buffer, sizeofBuffer, "  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n", isEmpty(), isFull(), getCount(), getCapacity());
+
     for (uint16_t i = 0; i < nSize; i++) {
         len = strlen(buffer);
         buffer += len;

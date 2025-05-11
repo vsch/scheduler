@@ -92,6 +92,11 @@ public:
     static ByteStream *construct(void *pBlock, Queue *pByteQueue, uint8_t flags) {
         return new(pBlock) ByteStream(pByteQueue, flags);
     }
+
+#ifdef CONSOLE_DEBUG
+    // print out queue for testing
+    void dump(char *buffer, uint32_t sizeofBuffer);
+#endif
 };
 
 #endif //SCHEDULER_STREAMS_H

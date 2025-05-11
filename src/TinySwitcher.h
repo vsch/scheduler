@@ -4,6 +4,7 @@
 
 #ifdef CONSOLE_DEBUG
 #include <boost/context/fiber.hpp>
+#include <boost/context/continuation.hpp>
 #include <cstdint>
 #include <functional>
 
@@ -17,7 +18,9 @@ struct AsyncContext {
     uint8_t stackMaxUsed;
     EntryFunction entryFunction;
     void *entryArg;
-    ctx::fiber fiber;      // Boost fiber for context switching
+    //ctx::fiber fiber;      // Boost fiber for context switching
+    boost::context::continuation continuation;
+    boost::context::continuation caller;
     bool isActive;         // Indicates if the context is running
 };
 
@@ -41,10 +44,11 @@ typedef struct AsyncContext {
 #endif // CONSOLE_DEBUG
 
 #ifdef __cplusplus
+
 extern "C" {
 #endif
 
-extern void initContext(uint8_t *pContext, EntryFunction pEntry, void *pEntryArg, uint16_t contextSize);
+extern void initContext(void *pContextBuff, EntryFunction entryFunction, void *entryArg, uint16_t stackSize);
 extern uint8_t isInAsyncContext();
 extern void resumeContext(AsyncContext *pContext);
 extern void yieldContext();

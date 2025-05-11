@@ -162,7 +162,7 @@ public:
 
 #ifdef CONSOLE_DEBUG
     // print out queue for testing
-    void dumpQueue(char *buffer, uint32_t sizeofBuffer);
+    void dump(char *buffer, uint32_t sizeofBuffer);
 #endif
 };
 
