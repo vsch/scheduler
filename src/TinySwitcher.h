@@ -21,7 +21,6 @@ struct AsyncContext {
     //ctx::fiber fiber;      // Boost fiber for context switching
     boost::context::continuation continuation;
     boost::context::continuation caller;
-    bool isActive;         // Indicates if the context is running
 };
 
 #define sizeOfStack(s)      (sizeof(AsyncContext))
@@ -48,7 +47,7 @@ typedef struct AsyncContext {
 extern "C" {
 #endif
 
-extern void initContext(void *pContextBuff, EntryFunction entryFunction, void *entryArg, uint16_t stackSize);
+extern AsyncContext *initContext(void *pContextBuff, EntryFunction entryFunction, void *entryArg, uint16_t stackSize);
 extern uint8_t isInAsyncContext();
 extern void resumeContext(AsyncContext *pContext);
 extern void yieldContext();
