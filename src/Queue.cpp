@@ -64,7 +64,7 @@ uint8_t Queue::updateQueued(Queue *pOther, uint8_t flags) {
     return NULL_BYTE;
 }
 
-uint8_t Queue::updateStreamed(ByteStream *pOther) {
+uint8_t Queue::updateStreamed(Stream *pOther) {
     return updateQueued(pOther, pOther->flags);
 }
 
@@ -239,7 +239,7 @@ uint16_t Queue::peekHeadW() const {
 
 #endif
 
-ByteStream *Queue::getStream(ByteStream *pOther, uint8_t flags) {
+Stream *Queue::getStream(Stream *pOther, uint8_t flags) {
     pOther->nSize = nSize;
     pOther->nHead = nHead;
     pOther->nTail = nTail;
@@ -251,19 +251,23 @@ ByteStream *Queue::getStream(ByteStream *pOther, uint8_t flags) {
 #ifdef CONSOLE_DEBUG
 
 // print out queue for testing
-void Queue::dump(char *buffer, uint32_t sizeofBuffer) {
+void Queue::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent) {
     uint32_t len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
+    char indentStr[32];
+    memset(indentStr, ' ', sizeof indentStr);
+    indentStr[indent] = '\0';
+
 
     // Output: Queue { nSize:%d, nHead:%d, nTail:%d
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
-    snprintf(buffer, sizeofBuffer, "Queue { nSize:%d, nHead:%d, nTail:%d\n", nSize, nHead, nTail);
+    snprintf(buffer, sizeofBuffer, "%sQueue { nSize:%d, nHead:%d, nTail:%d\n", indentStr, nSize, nHead, nTail);
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
-    snprintf(buffer, sizeofBuffer, "  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n", isEmpty(), isFull(), getCount(), getCapacity());
+    snprintf(buffer, sizeofBuffer, "%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n", indentStr, isEmpty(), isFull(), getCount(), getCapacity());
 
     for (uint16_t i = 0; i < nSize; i++) {
         len = strlen(buffer);
@@ -309,12 +313,10 @@ void Queue::dump(char *buffer, uint32_t sizeofBuffer) {
         sizeofBuffer -= len;
     }
 
-    *buffer++ = '\n';
-    *buffer++ = '}';
-    *buffer++ = '\n';
-    sizeofBuffer -= 3;
-    *buffer = '\0';
+    snprintf(buffer, sizeofBuffer, "\n%s}\n", indentStr);
+    len = strlen(buffer);
+    buffer += len;
+    sizeofBuffer -= len;
 }
 
-#endif
-
+#endif // CONSOLE_DEBUG

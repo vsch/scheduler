@@ -228,17 +228,31 @@ public:
      * @param task    pointer to getTask which to suspend
      *
      */
-    void suspend(Task *task);           // suspend rescheduling
+    void suspend(uint8_t taskId);           // suspend rescheduling
+    inline void suspend(Task *task)
+    {
+        suspend(task->getIndex());
+    }
 
     /**
      * Resume getTask after given number of ms. The task's loop() will be called after given number,
      * or more, of ms has elapsed.
      *
-     * @param task              pointer to getTask which to resume.
+     * @param taskId            task index
      * @param milliseconds      milliseconds to wait before resuming getTask
      *
      */
-    void resume(Task *task, uint16_t milliseconds);
+    void resume(uint8_t taskId, uint16_t milliseconds);
+
+    inline void resume(Task *task, uint16_t milliseconds) {
+        resume(task->index, milliseconds);
+    }
+
+    inline uint8_t isValidId(uint8_t taskId) {
+        return (taskId < taskCount);
+    }
+
+    uint8_t isAsyncTask(uint8_t taskId);
 
     /**
      * Return true if given getTask is currently suspended
@@ -247,6 +261,11 @@ public:
      * @return true if getTask is suspended
      */
     bool isSuspended(Task *task);
+
+#ifdef CONSOLE_DEBUG
+    // print out queue for testing
+    void dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent = 0);
+#endif
 };
 
 #ifdef SERIAL_DEBUG

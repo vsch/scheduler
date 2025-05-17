@@ -2,31 +2,41 @@
 #include "Mutex.h"
 #include "Scheduler.h"
 
-Mutex::Mutex(uint8_t *queueBuffer, uint8_t queueSize)
-        : queue(queueBuffer, queueSize) {
+Mutex::Mutex(uint8_t* queueBuffer, uint8_t queueSize)
+    : queue(queueBuffer, queueSize)
+{
 }
 
-uint8_t Mutex::isFree() const {
+uint8_t Mutex::isFree() const
+{
     return queue.isEmpty();
 }
 
-uint8_t Mutex::reserve() {
-    Task *pTask = scheduler.getTask();
-    if (pTask) {
-        uint8_t taskId = scheduler.getTaskId();
-        if (queue.isEmpty()) {
+uint8_t Mutex::reserve(uint8_t taskId)
+{
+    if (scheduler.isValidId(taskId))
+    {
+        if (queue.isEmpty())
+        {
             // available
             queue.addTail(taskId);
             return 0;
-        } else {
+        }
+        else
+        {
             // not available, queue up the task
             queue.addTail(taskId);
 
-            if (pTask->isAsync()) {
-                reinterpret_cast<AsyncTask *>(pTask)->yieldSuspend();
+            Task* pTask = scheduler.getTask(taskId);
+
+            if (pTask && pTask->isAsync())
+            {
+                reinterpret_cast<AsyncTask*>(pTask)->yieldSuspend();
                 return 0;
-            } else {
-                pTask->suspend();
+            }
+            else
+            {
+                scheduler.suspend(taskId);
                 return 1;
             }
         }
@@ -34,39 +44,73 @@ uint8_t Mutex::reserve() {
     return NULL_TASK;
 }
 
-void Mutex::release() {
-    if (queue.peekHead() != NULL_TASK) {
-        // remove owner from head and give to next in line
+uint8_t Mutex::release(uint8_t taskId)
+{
+    return queue.removeHead();
+}
+
+void Mutex::release()
+{
+    // remove owner from head and give to next in line
+    while (!queue.isEmpty())
+    {
         queue.removeHead();
 
-        while (!queue.isEmpty()) {
-            // give to this task
-            Task *pNextTask = scheduler.getTask(queue.peekHead());
+        // give to this task
+        Task* pNextTask = scheduler.getTask(queue.peekHead());
 
-            if (pNextTask) {
-                pNextTask->resume(0);
-                return;
-            } else {
-                // discard, not a task id
-                queue.removeHead();
-            }
+        if (pNextTask)
+        {
+            pNextTask->resume(0);
+            return;
         }
     }
 }
 
-uint8_t Mutex::transfer(Task *pTask) {
-    if (queue.peekHead() == scheduler.getTaskId()) {
+uint8_t Mutex::transfer(uint8_t fromTaskId, uint8_t toTaskId)
+{
+    if (isOwner(fromTaskId))
+    {
         queue.removeHead();
-        queue.addHead(pTask->getIndex());
+        queue.addHead(toTaskId);
 
         // wake it up if necessary
-        pTask->resume(0);
+        scheduler.resume(toTaskId, 0);
         return 0;
     }
     return NULL_TASK;
 }
 
-bool Mutex::isOwner(uint8_t taskId) {
+bool Mutex::isOwner(uint8_t taskId)
+{
     return queue.peekHead() == taskId;
 }
 
+#ifdef CONSOLE_DEBUG
+// print out queue for testing
+void Mutex::dump(char* buffer, uint32_t sizeofBuffer, uint8_t indent)
+{
+    uint32_t len = strlen(buffer);
+    buffer += len;
+    sizeofBuffer -= len;
+    char indentStr[32];
+    memset(indentStr, ' ', sizeof indentStr);
+    indentStr[indent] = '\0';
+
+    uint8_t head = queue.peekHead();
+    // Output: Queue { nSize:%d, nHead:%d, nTail:%d
+    // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
+    // }
+    strncat(buffer, indentStr, sizeofBuffer);
+    len = strlen(buffer);
+    buffer += len;
+    sizeofBuffer -= len;
+
+    snprintf(buffer, sizeofBuffer, "Mutex { Owner:%d\n", head);
+    queue.dump(buffer, sizeofBuffer, indent + 2);
+    len = strlen(buffer);
+    buffer += len;
+    sizeofBuffer -= len;
+    snprintf(buffer, sizeofBuffer, "}\n");
+}
+#endif

@@ -14,8 +14,10 @@ Scheduler::Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable) {
 }
 
 Task *Scheduler::getTask(uint8_t index) {
+    if (index >= taskCount) return NULL;
+
     (void) tasks;
-    return (Task *)(pgm_read_ptr(tasks + sizeof(Task *) * index));
+    return (Task *) (pgm_read_ptr(tasks + sizeof(Task *) * index));
 }
 
 void Scheduler::begin() {
@@ -24,7 +26,8 @@ void Scheduler::begin() {
     for (uint8_t i = 0; i < taskCount; i++) {
         Task *pTask = getTask(i);
         if (pTask->index != NULL_TASK) {
-            debugSchedulerErrorsPrintf_P(PSTR("Task %S, is duplicated in scheduler at %d and %d"), pTask->id(), pTask->index, i);
+            debugSchedulerErrorsPrintf_P(PSTR("Task %S, is duplicated in scheduler at %d and %d"), pTask->id(),
+                                         pTask->index, i);
         } else {
             pTask->index = i;
         }
@@ -89,7 +92,8 @@ void Scheduler::loop(uint16_t timeSlice) {
 
     uint16_t diffMs = (uint16_t) (diff / 1000);
     serialDebugSchedulerDumpDelays("Scheduler loop before ");
-    debugSchedulerDelaysPrintf_P(PSTR("Tick %ld clockTick %ld diff %ld diffMs %d\n"), tick, clockTick, tick - clockTick, diffMs);
+    debugSchedulerDelaysPrintf_P(PSTR("Tick %ld clockTick %ld diff %ld diffMs %d\n"), tick, clockTick, tick - clockTick,
+                                 diffMs);
 
     bool haveTasks = reduceDelays(diffMs);
 
@@ -159,11 +163,12 @@ void Scheduler::loop(uint16_t timeSlice) {
                 }
             }
 
-            debugSchedulerPrintf_P(PSTR("Scheduler[%d] getTask %S[%d] done in %lu\n"), iteration, pLastTask->id(), pLastTask->index, (uint32_t) (end - start));
+            debugSchedulerPrintf_P(PSTR("Scheduler[%d] getTask %S[%d] done in %lu\n"), iteration, pLastTask->id(),
+                                   pLastTask->index, (uint32_t) (end - start));
         }
     }
 
-    if (lastId != (uint8_t)-1) {
+    if (lastId != (uint8_t) -1) {
         // all ran, next time start with the first
         nextTask = 0;
     }
@@ -178,8 +183,15 @@ void Scheduler::loop(uint16_t timeSlice) {
     inLoop = 0;
 }
 
-void Scheduler::resume(Task *task, uint16_t milliseconds) {
-    delays[task->index] = milliseconds == INFINITE_DELAY ? INFINITE_DELAY - 1 : milliseconds;
+void Scheduler::resume(uint8_t taskId, uint16_t milliseconds) {
+    if (taskId < taskCount) {
+        delays[taskId] = milliseconds == INFINITE_DELAY ? INFINITE_DELAY - 1 : milliseconds;
+    }
+}
+
+uint8_t Scheduler::isAsyncTask(uint8_t taskId) {
+    Task *pTask = getTask(taskId);
+    return pTask && pTask->isAsync();
 }
 
 bool Scheduler::isSuspended(Task *task) {
@@ -189,8 +201,8 @@ bool Scheduler::isSuspended(Task *task) {
 /**
  * Set current getTask's delay to infinite
  */
-void Scheduler::suspend(Task *task) {
-    delays[task->index] = INFINITE_DELAY;
+void Scheduler::suspend(uint8_t taskId) {
+    delays[taskId] = INFINITE_DELAY;
 }
 
 uint8_t Scheduler::canLoop() const {
@@ -225,7 +237,8 @@ uint8_t AsyncTask::isAsync() {
     return true;
 }
 
-AsyncTask::AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() { // NOLINT(cppcoreguidelines-pro-type-member-init)
+AsyncTask::AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() {
+    // NOLINT(cppcoreguidelines-pro-type-member-init)
     pContext = (AsyncContext *) pStack;
     initContext(pStack, AsyncTask::yieldingLoop, this, stackMax);
 }
@@ -283,7 +296,7 @@ uint8_t AsyncTask::maxStackUsed() const {
 }
 
 void AsyncTask::yieldingLoop(void *arg) {
-    ((AsyncTask *)arg)->loop();
+    ((AsyncTask *) arg)->loop();
 }
 
 #ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
@@ -293,3 +306,53 @@ void Scheduler::dumpMaxStackInfo() {
 
 #endif
 
+#ifdef CONSOLE_DEBUG
+
+// print out queue for testing
+void Scheduler::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent) {
+    uint32_t len = strlen(buffer);
+    buffer += len;
+    sizeofBuffer -= len;
+    char indentStr[32];
+    memset(indentStr, ' ', sizeof indentStr);
+    indentStr[indent] = '\0';
+
+    snprintf(buffer, sizeofBuffer, "%sScheduler { nTasks:%d\n", indentStr, taskCount);
+    len = strlen(buffer);
+    buffer += len;
+    sizeofBuffer -= len;
+    snprintf(buffer, sizeofBuffer, "%s  canLoop() = %d\n", indentStr, canLoop());
+
+    for (uint8_t i = 0; i < taskCount; i++) {
+        len = strlen(buffer);
+        buffer += len;
+        sizeofBuffer -= len;
+        Task *pTask = getTask(i);
+
+        if (!(i % 16)) {
+            if (i) {
+                *buffer++ = '\n';
+                sizeofBuffer -= 1;
+            }
+
+            *buffer++ = ' ';
+            sizeofBuffer -= 1;
+        }
+
+        *buffer++ = ' ';
+        sizeofBuffer--;
+
+        snprintf(buffer, sizeofBuffer, "0x%2.2x", pTask->getIndex());
+
+        len = strlen(buffer);
+        buffer += len;
+        sizeofBuffer -= len;
+    }
+
+    snprintf(buffer, sizeofBuffer, "\n%s}\n", indentStr);
+    len = strlen(buffer);
+    buffer += len;
+    sizeofBuffer -= len;
+}
+
+#endif // CONSOLE_DEBUG

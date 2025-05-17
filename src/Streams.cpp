@@ -1,14 +1,14 @@
 #include "Arduino.h"
 #include "Streams.h"
 
-uint8_t ByteStream::setFlags(uint8_t flags, uint8_t mask) {
+uint8_t Stream::setFlags(uint8_t flags, uint8_t mask) {
     mask &= ~(STREAM_FLAGS_RD_WR);
     this->flags &= ~mask;
     this->flags |= flags & mask;
     return this->flags;
 }
 
-uint8_t ByteStream::setOwnBuffer(uint8_t *pData, uint8_t nSize) {
+uint8_t Stream::setOwnBuffer(uint8_t *pData, uint8_t nSize) {
     if (can_write()) {
         this->nTail = this->nSize = nSize;
         this->nHead = 0;
@@ -20,72 +20,76 @@ uint8_t ByteStream::setOwnBuffer(uint8_t *pData, uint8_t nSize) {
 
 // test if any more data to read
 uint8_t stream_is_empty(const ByteStream_t *thizz) {
-    return thizz->is_empty();
+    return ((Stream *)thizz)->is_empty();
 }
 
 // test if room for more data to write
 uint8_t stream_is_full(const ByteStream_t *thizz) {
-    return thizz->is_full();
+    return ((Stream *)thizz)->is_full();
 }
 
 // capacity to accept written bytes
 uint8_t stream_capacity(const ByteStream_t *thizz) {
-    return thizz->capacity();
+    return ((Stream *)thizz)->capacity();
 }
 
 // read byte
 uint8_t stream_get(ByteStream_t *thizz) {
-    if (thizz->can_read()) {
-        return thizz->get();
+    if (((Stream *)thizz)->can_read()) {
+        return ((Stream *)thizz)->get();
     }
     return NULL_BYTE;
 }
 
 // get the next byte, but leave it in the stream
 uint8_t stream_peek(const ByteStream_t *thizz) {
-    if (thizz->can_read()) {
-        return thizz->peek();
+    if (((Stream *)thizz)->can_read()) {
+        return ((Stream *)thizz)->peek();
     }
     return NULL_BYTE;
 }
 
 // write byte
 uint8_t stream_put(ByteStream_t *thizz, uint8_t data) {
-    if (thizz->can_write()) {
-        return thizz->put(data);
+    if (((Stream *)thizz)->can_write()) {
+        return ((Stream *)thizz)->put(data);
     }
     return NULL_BYTE;
 }
 
 uint8_t stream_can_write(const ByteStream_t *thizz) {
-    return thizz->can_write();
+    return ((Stream *)thizz)->can_write();
 }
 
 uint8_t stream_can_read(const ByteStream_t *thizz) {
-    return thizz->can_read();
+    return ((Stream *)thizz)->can_read();
 }
 
 // get address from flags
 uint8_t stream_address(const ByteStream_t *thizz) {
-    return thizz->address();
+    return ((Stream *)thizz)->address();
 }
 
 #ifdef CONSOLE_DEBUG
 
 // print out queue for testing
-void ByteStream::dump(char *buffer, uint32_t sizeofBuffer) {
+void Stream::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent) {
     uint32_t len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
+    char indentStr[32];
+    memset(indentStr, ' ', sizeof indentStr);
+    indentStr[indent] = '\0';
+
 
     // Output: Queue { nSize:%d, nHead:%d, nTail:%d
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
-    snprintf(buffer, sizeofBuffer, "Stream { flags:%c%c nSize:%d, nHead:%d, nTail:%d\n", canRead() ? 'R':' ', canWrite() ? 'W':' ', nSize, nHead, nTail);
+    snprintf(buffer, sizeofBuffer, "%sStream { flags:%c%c nSize:%d, nHead:%d, nTail:%d\n", indentStr, canRead() ? 'R':' ', canWrite() ? 'W':' ', nSize, nHead, nTail);
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
-    snprintf(buffer, sizeofBuffer, "  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n", isEmpty(), isFull(), getCount(), getCapacity());
+    snprintf(buffer, sizeofBuffer, "%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n", indentStr, isEmpty(), isFull(), getCount(), getCapacity());
 
     for (uint16_t i = 0; i < nSize; i++) {
         len = strlen(buffer);
@@ -131,11 +135,10 @@ void ByteStream::dump(char *buffer, uint32_t sizeofBuffer) {
         sizeofBuffer -= len;
     }
 
-    *buffer++ = '\n';
-    *buffer++ = '}';
-    *buffer++ = '\n';
-    sizeofBuffer -= 3;
-    *buffer = '\0';
+    snprintf(buffer, sizeofBuffer, "\n%s}\n", indentStr);
+    len = strlen(buffer);
+    buffer += len;
+    sizeofBuffer -= len;
 }
 
 #endif

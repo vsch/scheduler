@@ -17,7 +17,7 @@
 #endif
 #endif
 
-class ByteStream;
+class Stream;
 class Controller;
 
 /**
@@ -25,7 +25,7 @@ class Controller;
  */
 
 class Queue {
-    friend class ByteStream;
+    friend class Stream;
     friend class Controller;
 
     uint8_t nSize;
@@ -65,7 +65,7 @@ public:
     // version which allows testing if there is enough room for given number of bytes
     inline uint8_t isFull(uint8_t toAdd) const { return getCount() + toAdd == nSize; }
 
-    inline uint8_t isEmpty(uint8_t toRemove) const { return getCount() < toRemove; }
+    inline uint8_t isEmpty(uint8_t toRemove) const { return toRemove ? getCount() < toRemove : isEmpty(); }
 
     inline uint8_t enqueue(uint8_t data) { return addTail(data); }
 
@@ -156,13 +156,13 @@ public:
 #endif // QUEUE_WORD_FUNCS
 
     uint8_t updateQueued(Queue *pOther, uint8_t flags);
-    uint8_t updateStreamed(ByteStream *pOther);
+    uint8_t updateStreamed(Stream *pOther);
 
-    ByteStream *getStream(ByteStream *pOther, uint8_t flags);
+    Stream *getStream(Stream *pOther, uint8_t flags);
 
 #ifdef CONSOLE_DEBUG
     // print out queue for testing
-    void dump(char *buffer, uint32_t sizeofBuffer);
+    void dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent = 0);
 #endif
 };
 

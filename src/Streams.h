@@ -12,14 +12,14 @@
 #include "Stream.h"
 #include "Queue.h"
 
-struct ByteStream : protected Queue {
+struct Stream : protected Queue {
     friend class Queue;
     friend class Controller;
     uint8_t flags;
     uint8_t addr;
 
 public:
-    ByteStream(Queue *pByteQueue, uint8_t streamFlags) : Queue(*pByteQueue) {
+    Stream(Queue *pByteQueue, uint8_t streamFlags) : Queue(*pByteQueue) {
         flags = streamFlags;
         addr = 0;
     }
@@ -89,13 +89,13 @@ public:
     inline uint8_t can_write() const { return canWrite(); }
 
     // block must be at least sizeof(ByteStream) in size
-    static ByteStream *construct(void *pBlock, Queue *pByteQueue, uint8_t flags) {
-        return new(pBlock) ByteStream(pByteQueue, flags);
+    static Stream *construct(void *pBlock, Queue *pByteQueue, uint8_t flags) {
+        return new(pBlock) Stream(pByteQueue, flags);
     }
 
 #ifdef CONSOLE_DEBUG
     // print out queue for testing
-    void dump(char *buffer, uint32_t sizeofBuffer);
+    void dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent = 0);
 #endif
 };
 
