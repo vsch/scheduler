@@ -88,7 +88,7 @@ bool Mutex::isOwner(uint8_t taskId)
 
 #ifdef CONSOLE_DEBUG
 // print out queue for testing
-void Mutex::dump(char* buffer, uint32_t sizeofBuffer, uint8_t indent)
+void Mutex::dump(char* buffer, uint32_t sizeofBuffer, uint8_t indent, uint8_t compact)
 {
     uint32_t len = strlen(buffer);
     buffer += len;
@@ -106,11 +106,11 @@ void Mutex::dump(char* buffer, uint32_t sizeofBuffer, uint8_t indent)
     buffer += len;
     sizeofBuffer -= len;
 
-    snprintf(buffer, sizeofBuffer, "Mutex { Owner:%d\n", head);
-    queue.dump(buffer, sizeofBuffer, indent + 2);
+    snprintf(buffer, sizeofBuffer, "%sMutex { Owner:%d\n", indentStr, head);
+    queue.dump(buffer, sizeofBuffer, indent + 2, compact);
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
-    snprintf(buffer, sizeofBuffer, "}\n");
+    snprintf(buffer, sizeofBuffer, "%s}\n", indentStr);
 }
 #endif

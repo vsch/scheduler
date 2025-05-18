@@ -11,8 +11,36 @@
 #define RESERVATIONS_UNPACK_REQ(p)      ((((p) >> 5) & 0x07) + 1)
 #define RESERVATIONS_UNPACK_BYTES(p)    (((p) & 0x1f)*8)
 
+#define PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) (sizeOfQueue(maxStreams, uint8_t))
+#define FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)    (sizeOfQueue(maxStreams, uint8_t))
+#define WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)         (sizeOfQueue(writeBufferSize, uint8_t))
+#define RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)     (sizeOfQueue(maxTasks, uint8_t))
+#define REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)     (sizeOfQueue(maxTasks, uint8_t))
+#define WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)         (0)
+#define READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)    (sizeOfArray(maxStreams, ByteStream))
+
+#define PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize) (0)
+#define FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)    (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize)         (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize)     (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize)     (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define WRITE_STREAM_OFFS(maxStreams, maxTasks, writeBufferSize)         (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize) + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize)    (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize) + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize))
+
+// Use this macro to allocate space for all the queues and buffers in the controller
+#define sizeOfControllerBuffer(maxStreams, maxTasks, writeBufferSize) (0\
+        + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)/* pendingReadStreams */ \
+        + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)/* freeReadStreams */ \
+        + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)/* writeBuffer */ \
+        + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)/* reservationLock */ \
+        + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)/* requirementList */      \
+        + WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)/* writeStream actual read streams added to queues */ \
+        + READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)/* readStreamTable actual read streams added to queues */ \
+      )
+
 class Controller : public Task
 {
+protected:
     Queue pendingReadStreams; // requests waiting to be handleProcessedRequest
     Queue freeReadStreams; // requests for processing available
     Queue writeBuffer; // shared write byte buffer
@@ -36,32 +64,6 @@ public:
      */
     Controller(uint8_t* pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize)
 
-#define PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) (sizeOfQueue(maxStreams, uint8_t))
-#define FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)    (sizeOfQueue(maxStreams, uint8_t))
-#define WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)         (sizeOfQueue(writeBufferSize, uint8_t))
-#define RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)     (sizeOfQueue(maxTasks, uint8_t))
-#define REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)     (sizeOfQueue(maxTasks, uint8_t))
-#define WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)         (0)
-#define READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)    (sizeOfArray(maxStreams, ByteStream))
-
-#define PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize) (0)
-#define FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)    (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize)         (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize)     (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize)     (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define WRITE_STREAM_OFFS(maxStreams, maxTasks, writeBufferSize)         (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize) + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize)    (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize) + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize))
-
-
-#define sizeOfController(maxStreams, maxTasks, writeBufferSize) (0\
-        + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)/* pendingReadStreams */ \
-        + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)/* freeReadStreams */ \
-        + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)/* writeBuffer */ \
-        + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)/* reservationLock */ \
-        + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)/* requirementList */      \
-        + WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)/* writeStream actual read streams added to queues */ \
-        + READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)/* readStreamTable actual read streams added to queues */ \
-      )
         : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
           , freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
           , writeBuffer(pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize))
@@ -75,12 +77,12 @@ public:
     {
         // now initialize all the read Streams
 
-        printf("pendingReadStreams %4.4p 0x%4.4lx %4.4p\n", pendingReadStreams.pData, PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize), pendingReadStreams.pData + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize));
-        printf("freeReadStreams %4.4p 0x%4.4lx %4.4p\n", freeReadStreams.pData, FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize), freeReadStreams.pData + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize));
-        printf("writeBuffer %4.4p 0x%4.4lx %4.4p\n", writeBuffer.pData, WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize), writeBuffer.pData + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize));
-        printf("reservationLock %4.4p 0x%4.4lx %4.4p\n", reservationLock.queue.pData, RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize), reservationLock.queue.pData + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize));
-        printf("requirementList %4.4p 0x%4.4lx %4.4p\n", requirementList.pData, REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize), requirementList.pData + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize));
-        printf("readStreamTable %4.4p 0x%4.4lx %4.4p\n", readStreamTable, READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize), (uint8_t *)(readStreamTable) + READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize));
+        //printf("pendingReadStreams %p 0x%4.4lx %p\n", pendingReadStreams.pData, PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize), pendingReadStreams.pData + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize));
+        //printf("freeReadStreams %p 0x%4.4lx %p\n", freeReadStreams.pData, FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize), freeReadStreams.pData + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize));
+        //printf("writeBuffer %p 0x%4.4lx %p\n", writeBuffer.pData, WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize), writeBuffer.pData + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize));
+        //printf("reservationLock %p 0x%4.4lx %p\n", reservationLock.queue.pData, RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize), reservationLock.queue.pData + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize));
+        //printf("requirementList %p 0x%4.4lx %p\n", requirementList.pData, REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize), requirementList.pData + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize));
+        //printf("readStreamTable %p 0x%4.4lx %p\n", readStreamTable, READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize), (uint8_t *)(readStreamTable) + READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize));
 
         for (int i = 0; i < maxStreams; i++)
         {
@@ -88,6 +90,14 @@ public:
             Stream::construct(pStream, &writeBuffer, 0);
             freeReadStreams.addTail(i);
         }
+    }
+
+    uint8_t getReadStreamId(Stream *pStream) {
+        return pStream - readStreamTable;
+    }
+
+    Stream *getReadStream(uint8_t id) {
+        return readStreamTable + id;
     }
 
     uint8_t requestCapacity() const
@@ -181,7 +191,7 @@ public:
 
         // this should be the one completed
         pendingReadStreams.removeHead();
-        freeReadStreams.addTail(pStream - readStreamTable);
+        freeReadStreams.addTail(getReadStreamId(pStream));
     }
 
     void loop() override
@@ -288,8 +298,9 @@ public:
         return writeStream;
     }
 #ifdef CONSOLE_DEBUG
+
     // print out queue for testing
-    void dump(char* buffer, uint32_t sizeofBuffer, uint8_t indent = 0);
+    virtual void dump(char* buffer, uint32_t sizeofBuffer, uint8_t indent = 0);
 #endif
 };
 

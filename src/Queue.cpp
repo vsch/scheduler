@@ -251,7 +251,7 @@ Stream *Queue::getStream(Stream *pOther, uint8_t flags) {
 #ifdef CONSOLE_DEBUG
 
 // print out queue for testing
-void Queue::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent) {
+void Queue::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent, uint8_t compact) {
     uint32_t len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
@@ -267,56 +267,71 @@ void Queue::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent) {
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
-    snprintf(buffer, sizeofBuffer, "%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n", indentStr, isEmpty(), isFull(), getCount(), getCapacity());
+    snprintf(buffer, sizeofBuffer, "%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n%s", indentStr, isEmpty(), isFull(), getCount(), getCapacity(), indentStr);
+    uint16_t cnt = 0, last_cnt = -1;
 
-    for (uint16_t i = 0; i < nSize; i++) {
-        len = strlen(buffer);
-        buffer += len;
-        sizeofBuffer -= len;
-        bool addSpace = false;
-        bool hadHead = false;
+    if (!compact || !isEmpty()) {
 
-        if (!(i % 16)) {
-            if (i) {
-                *buffer++ = '\n';
-                sizeofBuffer -= 1;
+        for (uint16_t i = 0; i < nSize; i++) {
+            len = strlen(buffer);
+            buffer += len;
+            sizeofBuffer -= len;
+            bool addSpace = false;
+            bool hadHead = false;
+
+            if (last_cnt != cnt && !(cnt % 16)) {
+                last_cnt = cnt;
+
+                if (cnt) {
+                    snprintf(buffer, sizeofBuffer, "\n%s  ", indentStr);
+                    len = strlen(buffer);
+                    buffer += len;
+                    sizeofBuffer -= len;
+                }
             }
 
-            *buffer++ = ' ';
-            sizeofBuffer -= 1;
-        }
+            if (!compact || (nHead <= nTail && i >= nHead && i <= nTail) || (nHead > nTail && i <= nTail && i >= nHead)) {
 
-        if (i == nHead) {
-            *buffer++ = ' ';
-            *buffer++ = '[';
-            sizeofBuffer -= 2;
-            hadHead = true;
-        }
+                if (i == nHead) {
+                    *buffer++ = '[';
+                    sizeofBuffer -= 1;
+                    hadHead = true;
+                }
 
-        if (i == nTail) {
-            *buffer++ = ']';
-            *buffer++ = ' ';
-            sizeofBuffer -= 2;
-        } else {
-            addSpace = !hadHead;
-        }
+                if (i == nTail) {
+                    *buffer++ = ']';
+                    *buffer++ = ' ';
+                    sizeofBuffer -= 2;
+                } else {
+                    addSpace = !hadHead;
+                }
 
-        if (addSpace) {
-            *buffer++ = ' ';
-            sizeofBuffer--;
-        }
+                if (addSpace) {
+                    *buffer++ = ' ';
+                    sizeofBuffer--;
+                }
 
-        snprintf(buffer, sizeofBuffer, "0x%2.2x", pData[i]);
+                if (!compact || (nHead <= nTail && i >= nHead && i < nTail) || (nHead > nTail && i < nTail && i >= nHead)) {
+                    cnt++;
+                    snprintf(buffer, sizeofBuffer, "0x%2.2x", pData[i]);
+                }
+
+                len = strlen(buffer);
+                buffer += len;
+                sizeofBuffer -= len;
+            }
+        }
 
         len = strlen(buffer);
         buffer += len;
         sizeofBuffer -= len;
+        snprintf(buffer, sizeofBuffer, "\n%s}\n", indentStr);
+    } else {
+        len = strlen(buffer);
+        buffer += len;
+        sizeofBuffer -= len;
+        snprintf(buffer, sizeofBuffer, "}\n");
     }
-
-    snprintf(buffer, sizeofBuffer, "\n%s}\n", indentStr);
-    len = strlen(buffer);
-    buffer += len;
-    sizeofBuffer -= len;
 }
 
 #endif // CONSOLE_DEBUG

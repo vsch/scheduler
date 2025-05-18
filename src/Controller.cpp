@@ -4,8 +4,7 @@
 #ifdef CONSOLE_DEBUG
 
 // print out queue for testing
-void Controller::dump(char* buffer, uint32_t sizeofBuffer, uint8_t indent)
-{
+void Controller::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent) {
     //    Queue pendingReadStreams;           // requests waiting to be handleProcessedRequest
     //    Queue freeReadStreams;              // requests for processing available
     //    ByteStream *readStreams;            // pointer to first element in array of ByteSteam entries
@@ -30,57 +29,60 @@ void Controller::dump(char* buffer, uint32_t sizeofBuffer, uint8_t indent)
     buffer += len;
     sizeofBuffer -= len;
     snprintf(buffer, sizeofBuffer, "%s  requestCapacity() = %d byteCapacity() = %d\n", indentStr, requestCapacity(), byteCapacity());
+
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
+    snprintf(buffer, sizeofBuffer, "%s  pendingReadStreams ", indentStr);
 
-    snprintf(buffer, sizeofBuffer, "%s pendingReadStreams ", indentStr);
-    this->pendingReadStreams.dump(buffer, sizeofBuffer, indent + 2);
+    this->pendingReadStreams.dump(buffer, sizeofBuffer, indent + 2, 1);
+
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
+    snprintf(buffer, sizeofBuffer, "%s  freeReadStreams ", indentStr);
+    this->freeReadStreams.dump(buffer, sizeofBuffer, indent + 2, 1);
 
-    snprintf(buffer, sizeofBuffer, "%s freeReadStreams ", indentStr);
-    this->freeReadStreams.dump(buffer, sizeofBuffer, indent + 2);
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
+    snprintf(buffer, sizeofBuffer, "%s  readStreamTable \n%s", indentStr, indentStr);
+    for (uint8_t i = 0; i < maxStreams; i++) {
+        len = strlen(buffer);
+        buffer += len;
+        sizeofBuffer -= len;
+        snprintf(buffer, sizeofBuffer, "%s  [%i]", indentStr, i);
+        this->readStreamTable[i].dump(buffer, sizeofBuffer, indent + 2, 1);
+    }
 
-    snprintf(buffer, sizeofBuffer, "%s readStreamTable ", indentStr);
-    this->readStreamTable->dump(buffer, sizeofBuffer, indent + 2);
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
+    snprintf(buffer, sizeofBuffer, "%s  writeBuffer ", indentStr);
+    this->writeBuffer.dump(buffer, sizeofBuffer, indent + 2, 1);
 
-    snprintf(buffer, sizeofBuffer, "%s writeBuffer ", indentStr);
-    this->writeBuffer.dump(buffer, sizeofBuffer, indent + 2);
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
+    snprintf(buffer, sizeofBuffer, "%s  writeStream ", indentStr);
+    this->writeStream.dump(buffer, sizeofBuffer, indent + 2, 1);
 
-    snprintf(buffer, sizeofBuffer, "%s writeStream ", indentStr);
-    this->writeStream.dump(buffer, sizeofBuffer, indent + 2);
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
+    snprintf(buffer, sizeofBuffer, "%s  reservationLock ", indentStr);
+    this->reservationLock.dump(buffer, sizeofBuffer, indent + 2, 1);
 
-    snprintf(buffer, sizeofBuffer, "%s reservationLock ", indentStr);
-    this->reservationLock.dump(buffer, sizeofBuffer, indent + 2);
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
+    snprintf(buffer, sizeofBuffer, "%s  requirementList ", indentStr);
+    this->requirementList.dump(buffer, sizeofBuffer, indent + 2, 1);
 
-    snprintf(buffer, sizeofBuffer, "%s requirementList ", indentStr);
-    this->requirementList.dump(buffer, sizeofBuffer, indent + 2);
     len = strlen(buffer);
     buffer += len;
     sizeofBuffer -= len;
-
-
     snprintf(buffer, sizeofBuffer, "\n%s}\n", indentStr);
-    len = strlen(buffer);
-    buffer += len;
-    sizeofBuffer -= len;
 }
 
 #endif // CONSOLE_DEBUG
