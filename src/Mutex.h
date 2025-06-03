@@ -52,8 +52,10 @@ public:
 
 #ifdef CONSOLE_DEBUG
     // print out queue for testing
-    void dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent = 0, uint8_t compact = 0);
+    void dump(uint8_t indent, uint8_t compact);
 #endif
+
+    void reset();
 };
 
 #endif //SCHEDULER_MUTEX_H

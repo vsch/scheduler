@@ -35,6 +35,8 @@ class Queue {
 
 public:
     Queue(uint8_t *pData, uint8_t nSize);
+    
+    void reset();
 
     inline void empty() {
         nHead = nTail = 0;
@@ -163,7 +165,7 @@ public:
 #ifdef CONSOLE_DEBUG
 
     // print out queue for testing
-    void dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent, uint8_t compact);
+    void dump(uint8_t indent, uint8_t compact);
 #endif
 };
 

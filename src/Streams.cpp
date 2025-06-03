@@ -71,12 +71,10 @@ uint8_t stream_address(const ByteStream_t *thizz) {
 }
 
 #ifdef CONSOLE_DEBUG
+#include "tests/FileTestResults_AddResult.h"
 
 // print out queue for testing
-void Stream::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent, uint8_t compact) {
-    uint32_t len = strlen(buffer);
-    buffer += len;
-    sizeofBuffer -= len;
+void Stream::dump(uint8_t indent, uint8_t compact) {
     char indentStr[32];
     memset(indentStr, ' ', sizeof indentStr);
     indentStr[indent] = '\0';
@@ -85,18 +83,17 @@ void Stream::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent, uint8_t c
     // Output: Queue { nSize:%d, nHead:%d, nTail:%d
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
-    snprintf(buffer, sizeofBuffer, "%sStream { flags:%c%c nSize:%d, nHead:%d, nTail:%d\n", indentStr, canRead() ? 'R' : ' ', canWrite() ? 'W' : ' ', nSize, nHead, nTail);
-    len = strlen(buffer);
-    buffer += len;
-    sizeofBuffer -= len;
-    snprintf(buffer, sizeofBuffer, "%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n", indentStr, isEmpty(), isFull(), getCount(), getCapacity());
+    addActualOutput("%sStream { flags:%c%c nSize:%d, nHead:%d, nTail:%d\n", indentStr, canRead() ? 'R' : ' ',
+               canWrite() ? 'W' : ' ', nSize, nHead, nTail);
+    addActualOutput("%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n", indentStr, isEmpty(), isFull(),
+               getCount(), getCapacity());
     uint16_t cnt = 0, last_cnt = -1;
 
     if (!compact || !isEmpty()) {
+        // first line, add indent
+        addActualOutput("%s", indentStr);
+        
         for (uint16_t i = 0; i < nSize; i++) {
-            len = strlen(buffer);
-            buffer += len;
-            sizeofBuffer -= len;
             bool addSpace = false;
             bool hadHead = false;
 
@@ -104,54 +101,39 @@ void Stream::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent, uint8_t c
                 last_cnt = cnt;
 
                 if (cnt) {
-                    *buffer++ = '\n';
-                    sizeofBuffer -= 1;
+                    addActualOutput("\n");
                 }
-
-                *buffer++ = ' ';
-                sizeofBuffer -= 1;
             }
 
-            if (!compact || (nHead <= nTail && i >= nHead && i <= nTail) || (nHead > nTail && i <= nTail && i >= nHead)) {
+            if (!compact || (nHead <= nTail && i >= nHead && i <= nTail) ||
+                (nHead > nTail && i <= nTail && i >= nHead)) {
                 if (i == nHead) {
-                    *buffer++ = ' ';
-                    *buffer++ = '[';
-                    sizeofBuffer -= 2;
+                    addActualOutput(" [");
                     hadHead = true;
                 }
 
                 if (i == nTail) {
-                    *buffer++ = ']';
-                    *buffer++ = ' ';
-                    sizeofBuffer -= 2;
+                    addActualOutput("] ");
                 } else {
                     addSpace = !hadHead;
                 }
 
-                if (!compact || (nHead <= nTail && i >= nHead && i < nTail) || (nHead > nTail && i < nTail && i >= nHead)) {
+                if (!compact || (nHead <= nTail && i >= nHead && i < nTail) ||
+                    (nHead > nTail && i < nTail && i >= nHead)) {
                     cnt++;
 
                     if (addSpace) {
-                        *buffer++ = ' ';
-                        sizeofBuffer--;
+                        addActualOutput(" ");
                     }
 
-                    snprintf(buffer, sizeofBuffer, "0x%2.2x", pData[i]);
+                    addActualOutput("0x%2.2x", pData[i]);
                 }
-
-
             }
         }
 
-        len = strlen(buffer);
-        buffer += len;
-        sizeofBuffer -= len;
-        snprintf(buffer, sizeofBuffer, "\n%s}\n", indentStr);
+        addActualOutput("\n%s}\n", indentStr);
     } else {
-        len = strlen(buffer);
-        buffer += len;
-        sizeofBuffer -= len;
-        snprintf(buffer, sizeofBuffer, "%s}\n", indentStr);
+        addActualOutput("%s}\n", indentStr);
     }
 }
 

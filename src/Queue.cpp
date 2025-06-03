@@ -7,6 +7,10 @@ Queue::Queue(uint8_t *pData, uint8_t nSize) : pData(pData) {
     nHead = nTail = 0;
 }
 
+void Queue::reset() {
+    nHead = nTail = 0;
+}
+
 uint8_t Queue::getCount() const {
     return (nTail < nHead ? nTail + nSize : nTail) - nHead;
 }
@@ -249,12 +253,10 @@ Stream *Queue::getStream(Stream *pOther, uint8_t flags) {
 }
 
 #ifdef CONSOLE_DEBUG
+#include "tests/FileTestResults_AddResult.h"
 
 // print out queue for testing
-void Queue::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent, uint8_t compact) {
-    uint32_t len = strlen(buffer);
-    buffer += len;
-    sizeofBuffer -= len;
+void Queue::dump(uint8_t indent, uint8_t compact) {
     char indentStr[32];
     memset(indentStr, ' ', sizeof indentStr);
     indentStr[indent] = '\0';
@@ -263,19 +265,15 @@ void Queue::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent, uint8_t co
     // Output: Queue { nSize:%d, nHead:%d, nTail:%d
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
-    snprintf(buffer, sizeofBuffer, "%sQueue { nSize:%d, nHead:%d, nTail:%d\n", indentStr, nSize, nHead, nTail);
-    len = strlen(buffer);
-    buffer += len;
-    sizeofBuffer -= len;
-    snprintf(buffer, sizeofBuffer, "%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n%s", indentStr, isEmpty(), isFull(), getCount(), getCapacity(), indentStr);
+//    addActualOutput("%s%sQueue { nSize:%d, nHead:%d, nTail:%d\n", *indentStr ? "\n" : "", indentStr, nSize, nHead, nTail);
+    addActualOutput("%sQueue { nSize:%d, nHead:%d, nTail:%d\n", indentStr, nSize, nHead, nTail);
+    addActualOutput("%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n%s", indentStr, isEmpty(),
+               isFull(), getCount(), getCapacity(), indentStr);
     uint16_t cnt = 0, last_cnt = -1;
 
     if (!compact || !isEmpty()) {
 
         for (uint16_t i = 0; i < nSize; i++) {
-            len = strlen(buffer);
-            buffer += len;
-            sizeofBuffer -= len;
             bool addSpace = false;
             bool hadHead = false;
 
@@ -283,54 +281,39 @@ void Queue::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent, uint8_t co
                 last_cnt = cnt;
 
                 if (cnt) {
-                    snprintf(buffer, sizeofBuffer, "\n%s  ", indentStr);
-                    len = strlen(buffer);
-                    buffer += len;
-                    sizeofBuffer -= len;
+                    addActualOutput("\n%s  ", indentStr);
                 }
             }
 
-            if (!compact || (nHead <= nTail && i >= nHead && i <= nTail) || (nHead > nTail && i <= nTail && i >= nHead)) {
+            if (!compact || (nHead <= nTail && i >= nHead && i <= nTail) ||
+                (nHead > nTail && i <= nTail && i >= nHead)) {
 
                 if (i == nHead) {
-                    *buffer++ = '[';
-                    sizeofBuffer -= 1;
+                    addActualOutput("[");
                     hadHead = true;
                 }
 
                 if (i == nTail) {
-                    *buffer++ = ']';
-                    *buffer++ = ' ';
-                    sizeofBuffer -= 2;
+                    addActualOutput("] ");
                 } else {
                     addSpace = !hadHead;
                 }
 
                 if (addSpace) {
-                    *buffer++ = ' ';
-                    sizeofBuffer--;
+                    addActualOutput(" ");
                 }
 
-                if (!compact || (nHead <= nTail && i >= nHead && i < nTail) || (nHead > nTail && i < nTail && i >= nHead)) {
+                if (!compact || (nHead <= nTail && i >= nHead && i < nTail) ||
+                    (nHead > nTail && i < nTail && i >= nHead)) {
                     cnt++;
-                    snprintf(buffer, sizeofBuffer, "0x%2.2x", pData[i]);
+                    addActualOutput("0x%2.2x", pData[i]);
                 }
-
-                len = strlen(buffer);
-                buffer += len;
-                sizeofBuffer -= len;
             }
         }
 
-        len = strlen(buffer);
-        buffer += len;
-        sizeofBuffer -= len;
-        snprintf(buffer, sizeofBuffer, "\n%s}\n", indentStr);
+        addActualOutput("\n%s}\n", indentStr);
     } else {
-        len = strlen(buffer);
-        buffer += len;
-        sizeofBuffer -= len;
-        snprintf(buffer, sizeofBuffer, "}\n");
+        addActualOutput("}\n");
     }
 }
 
