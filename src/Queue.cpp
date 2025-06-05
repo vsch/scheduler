@@ -58,7 +58,8 @@ uint8_t Queue::updateQueued(Queue *pOther, uint8_t flags) {
     // take updated values if based on our data
     if (pOther->pData == pData) {
         if (flags & STREAM_FLAGS_RD) {
-            nHead = pOther->nHead;
+            // assume the whole stream was handled, otherwise the head will get stuck in a partially read stream
+            nHead = pOther->nTail;
         }
         if (flags & STREAM_FLAGS_WR) {
             nTail = pOther->nTail;

@@ -2,6 +2,7 @@
 #include "Controller.h"
 
 #ifdef CONSOLE_DEBUG
+
 #include "tests/FileTestResults_AddResult.h"
 
 // print out queue for testing
@@ -31,8 +32,20 @@ void Controller::dump(uint8_t indent, uint8_t compact) {
     if (!compact || compact == 2) {
         addActualOutput("%s  freeReadStreams ", indentStr);
         this->freeReadStreams.dump(indent + 2, 1);
+
     }
-    
+
+    if (!this->pendingReadStreams.isEmpty()) {
+        // output individual pending streams
+        int iMax = pendingReadStreams.getCount();
+        for (int i = 0; i < iMax; i++) {
+            const uint8_t head = pendingReadStreams.peekHead(i);
+            addActualOutput("%s  readStream[%d]:", indentStr, head);
+            Stream *pStream = getReadStream(head);
+            pStream->dump(indent + 2, 1);
+        }
+    }
+
     if (!compact) {
         addActualOutput("%s  readStreamTable \n%s", indentStr, indentStr);
         for (uint8_t i = 0; i < maxStreams; i++) {
