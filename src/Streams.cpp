@@ -71,6 +71,7 @@ uint8_t stream_address(const ByteStream_t *thizz) {
 }
 
 #ifdef CONSOLE_DEBUG
+
 #include "tests/FileTestResults_AddResult.h"
 
 // print out queue for testing
@@ -83,16 +84,11 @@ void Stream::dump(uint8_t indent, uint8_t compact) {
     // Output: Queue { nSize:%d, nHead:%d, nTail:%d
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
-    addActualOutput("%sStream { flags:%c%c nSize:%d, nHead:%d, nTail:%d\n", indentStr, canRead() ? 'R' : ' ',
-               canWrite() ? 'W' : ' ', nSize, nHead, nTail);
-    addActualOutput("%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n", indentStr, isEmpty(), isFull(),
-               getCount(), getCapacity());
+    addActualOutput("%sStream { flags:%c%c nSize:%d, nHead:%d, nTail:%d\n", indentStr, canRead() ? 'R' : ' ', canWrite() ? 'W' : ' ', nSize, nHead, nTail);
+    addActualOutput("%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n%s", indentStr, isEmpty(), isFull(), getCount(), getCapacity(), indentStr);
     uint16_t cnt = 0, last_cnt = -1;
 
     if (!compact || !isEmpty()) {
-        // first line, add indent
-        addActualOutput("%s", indentStr);
-        
         for (uint16_t i = 0; i < nSize; i++) {
             bool addSpace = false;
             bool hadHead = false;
@@ -101,12 +97,13 @@ void Stream::dump(uint8_t indent, uint8_t compact) {
                 last_cnt = cnt;
 
                 if (cnt) {
-                    addActualOutput("\n");
+                    addActualOutput("\n%s  ", indentStr);
                 }
             }
 
             if (!compact || (nHead <= nTail && i >= nHead && i <= nTail) ||
                 (nHead > nTail && i <= nTail && i >= nHead)) {
+
                 if (i == nHead) {
                     addActualOutput(" [");
                     hadHead = true;
@@ -118,23 +115,37 @@ void Stream::dump(uint8_t indent, uint8_t compact) {
                     addSpace = !hadHead;
                 }
 
+                if (addSpace) {
+                    addActualOutput(" ");
+                }
+
                 if (!compact || (nHead <= nTail && i >= nHead && i < nTail) ||
                     (nHead > nTail && i < nTail && i >= nHead)) {
                     cnt++;
-
-                    if (addSpace) {
-                        addActualOutput(" ");
-                    }
-
                     addActualOutput("0x%2.2x", pData[i]);
                 }
             }
         }
+        addActualOutput("\n");
 
-        addActualOutput("\n%s}\n", indentStr);
-    } else {
+        if (!compact) {
+            int iMax = getCount();
+            addActualOutput("%s  peekHead {", indentStr);
+            for (int i = 0; i <= iMax; ++i) {
+                addActualOutput(" 0x%2.2x", peekHead(i));
+            }
+            addActualOutput("%s }\n", indentStr);
+            addActualOutput("%s  peekTail {", indentStr);
+            for (int i = 0; i <= iMax; ++i) {
+                addActualOutput(" 0x%2.2x", peekTail(i));
+            }
+            addActualOutput("%s }\n", indentStr);
+        }
+        
         addActualOutput("%s}\n", indentStr);
+    } else {
+        addActualOutput("}\n");
     }
 }
 
-#endif
+#endif // CONSOLE_DEBUG

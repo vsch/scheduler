@@ -47,19 +47,18 @@ uint8_t Queue::addHead(uint8_t data) {
 }
 
 uint8_t Queue::peekHead(uint8_t offset) const {
-    return isEmpty(offset) ? NULL_BYTE : pData[nHead + offset < nSize ? nHead + offset : nHead + offset - nSize];
+    return getCount() <= offset ? NULL_BYTE : pData[nHead + offset < nSize ? nHead + offset : nHead + offset - nSize];
 }
 
 uint8_t Queue::peekTail(uint8_t offset) const {
-    return isEmpty(offset) ? NULL_BYTE : pData[nTail >= offset ? nTail - offset : nSize - offset];
+    return getCount() <= offset ? NULL_BYTE : pData[nTail <= offset ? nSize - (offset - nTail) - 1 : nTail - offset - 1];
 }
 
 uint8_t Queue::updateQueued(Queue *pOther, uint8_t flags) {
     // take updated values if based on our data
     if (pOther->pData == pData) {
         if (flags & STREAM_FLAGS_RD) {
-            // assume the whole stream was handled, otherwise the head will get stuck in a partially read stream
-            nHead = pOther->nTail;
+            nHead = pOther->nHead;
         }
         if (flags & STREAM_FLAGS_WR) {
             nTail = pOther->nTail;
@@ -254,6 +253,7 @@ Stream *Queue::getStream(Stream *pOther, uint8_t flags) {
 }
 
 #ifdef CONSOLE_DEBUG
+
 #include "tests/FileTestResults_AddResult.h"
 
 // print out queue for testing
@@ -268,12 +268,11 @@ void Queue::dump(uint8_t indent, uint8_t compact) {
     // }
 //    addActualOutput("%s%sQueue { nSize:%d, nHead:%d, nTail:%d\n", *indentStr ? "\n" : "", indentStr, nSize, nHead, nTail);
     addActualOutput("%sQueue { nSize:%d, nHead:%d, nTail:%d\n", indentStr, nSize, nHead, nTail);
-    addActualOutput("%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n%s", indentStr, isEmpty(),
-               isFull(), getCount(), getCapacity(), indentStr);
+    addActualOutput("%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n%s", indentStr, isEmpty(), isFull(), getCount(), getCapacity(), indentStr);
+    // addActualOutput("%s  peekHead() = %d peekTail() = %d peekHead(0) = %d peekTail(0) = %d\n%s", indentStr, peekHead(), peekTail(), peekHead(0), peekTail(0), indentStr);
     uint16_t cnt = 0, last_cnt = -1;
 
     if (!compact || !isEmpty()) {
-
         for (uint16_t i = 0; i < nSize; i++) {
             bool addSpace = false;
             bool hadHead = false;
@@ -290,7 +289,7 @@ void Queue::dump(uint8_t indent, uint8_t compact) {
                 (nHead > nTail && i <= nTail && i >= nHead)) {
 
                 if (i == nHead) {
-                    addActualOutput("[");
+                    addActualOutput(" [");
                     hadHead = true;
                 }
 
@@ -311,8 +310,23 @@ void Queue::dump(uint8_t indent, uint8_t compact) {
                 }
             }
         }
+        addActualOutput("\n");
 
-        addActualOutput("\n%s}\n", indentStr);
+        if (!compact) {
+            int iMax = getCount();
+            addActualOutput("%s  peekHead {", indentStr);
+            for (int i = 0; i <= iMax; ++i) {
+                addActualOutput(" 0x%2.2x", peekHead(i));
+            }
+            addActualOutput("%s }\n", indentStr);
+            addActualOutput("%s  peekTail {", indentStr);
+            for (int i = 0; i <= iMax; ++i) {
+                addActualOutput(" 0x%2.2x", peekTail(i));
+            }
+            addActualOutput("%s }\n", indentStr);
+        }
+
+        addActualOutput("%s}\n", indentStr);
     } else {
         addActualOutput("}\n");
     }

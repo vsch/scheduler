@@ -266,12 +266,13 @@ public:
             // copy last request's tail to this one's head to have this one not include
             // previous request's data. If this is the first pending request or own-buffer stream then there is no such
             // issue to address.
-            Stream *pPrevRequest = readStreamTable + pendingReadStreams.peekTail();
+            uint8_t tail = pendingReadStreams.peekTail();
+            Stream *pPrevRequest = readStreamTable + tail;
             pStream->nHead = pPrevRequest->nTail;
         }
 
         // queue it for processing
-        pendingReadStreams.addTail(pStream - readStreamTable);
+        pendingReadStreams.addTail(head);
         if (pendingReadStreams.getCount() == 1) {
             // first one, then no-one to start it up but here
             pStream->flags |= STREAM_FLAGS_PENDING;
