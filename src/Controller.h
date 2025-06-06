@@ -1,6 +1,7 @@
 #ifndef SCHEDULER_CONTROLLER_H
 #define SCHEDULER_CONTROLLER_H
 
+#include "Arduino.h"
 #include "Streams.h"
 #include "Queue.h"
 #include "Mutex.h"
@@ -63,18 +64,12 @@ public:
      */
     Controller(uint8_t *pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize)
 
-            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize),
-                                 PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize),
-                              FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              writeBuffer(pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize),
-                          WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              reservationLock(pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize),
-                              RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              requirementList(pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize),
-                              REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              writeStream(&writeBuffer, 0), readStreamTable(
-                    reinterpret_cast<Stream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))),
+            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              writeBuffer(pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              reservationLock(pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              requirementList(pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              writeStream(&writeBuffer, 0), readStreamTable(reinterpret_cast<Stream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))),
               maxStreams(maxStreams), maxTasks(maxTasks), writeBufferSize(writeBufferSize) {
         // now initialize all the read Streams
 
@@ -116,11 +111,11 @@ public:
         return readStreamTable + id;
     }
 
-    uint8_t requestCapacity() const {
+    [[nodiscard]] uint8_t requestCapacity() const {
         return freeReadStreams.getCount();
     }
 
-    uint8_t byteCapacity() const {
+    [[nodiscard]] uint8_t byteCapacity() const {
         return writeBuffer.getCapacity();
     }
 
@@ -196,16 +191,28 @@ public:
         pStream->flags = 0;
 
         // this should be the one completed
+        cli();
         pendingReadStreams.removeHead();
+        sei();
+        
         freeReadStreams.addTail(getReadStreamId(pStream));
     }
 
     void loop() override {
-        if (pendingReadStreams.getCount()) {
+        uint8_t pendingCount;
+        uint8_t peekHead;
+        
+        // NOTE: protect pendingReadStreams from mods in interrupts
+        cli();
+        pendingCount = pendingReadStreams.getCount();
+        peekHead = pendingReadStreams.peekHead();
+        sei();
+        
+        if (pendingCount) {
             checkForCompletedRequests();
 
-            if (!pendingReadStreams.isEmpty()) {
-                Stream *pStream = readStreamTable + pendingReadStreams.peekHead();
+            if (pendingCount) {
+                Stream *pStream = readStreamTable + peekHead;
                 if (!(pStream->isPending())) {
                     // its ready for processing and not already being processed
                     pStream->flags |= STREAM_FLAGS_PENDING;
@@ -227,7 +234,7 @@ public:
             }
         }
 
-        if (!pendingReadStreams.getCount() && requirementList.isEmpty()) {
+        if (!pendingCount && requirementList.isEmpty()) {
             // can suspend until there is something to check for.
             suspend();
         } else {
@@ -262,6 +269,8 @@ public:
         // copy the write stream info into read stream for processing
         writeStream->getStream(pStream, STREAM_FLAGS_RD);
 
+        // NOTE: protect from mods in interrupts mid-way through this code
+        cli();
         if (!pendingReadStreams.isEmpty() && writeStream->pData == writeBuffer.pData) {
             // copy last request's tail to this one's head to have this one not include
             // previous request's data. If this is the first pending request or own-buffer stream then there is no such
@@ -281,6 +290,7 @@ public:
             // otherwise checking will be done in loop() for completed previous requests
             // and new request processing started if needed
         }
+        sei();
 
         // make sure loop task is enabled start our loop task to monitor its completion
         this->resume(0);
