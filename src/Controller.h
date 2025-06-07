@@ -12,25 +12,28 @@
 #define RESERVATIONS_UNPACK_REQ(p)      ((((p) >> 5) & 0x07) + 1)
 #define RESERVATIONS_UNPACK_BYTES(p)    (((p) & 0x1f)*8)
 
-#define PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) (sizeOfQueue(maxStreams, uint8_t))
-#define FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)    (sizeOfQueue(maxStreams, uint8_t))
-#define WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)         (sizeOfQueue(writeBufferSize, uint8_t))
-#define RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)     (sizeOfQueue(maxTasks, uint8_t))
-#define REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)     (sizeOfQueue(maxTasks, uint8_t))
-#define WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)         (0)
-#define READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)    (sizeOfArray(maxStreams, ByteStream))
+#define PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)    (sizeOfQueue(maxStreams, uint8_t))
+#define COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)       (sizeOfQueue(maxStreams, uint8_t))
+#define FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)       (sizeOfQueue(maxStreams, uint8_t))
+#define WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)            (sizeOfQueue(writeBufferSize, uint8_t))
+#define RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)        (sizeOfQueue(maxTasks, uint8_t))
+#define REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)        (sizeOfQueue(maxTasks, uint8_t))
+#define WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)            (0)
+#define READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)       (sizeOfArray(maxStreams, ByteStream))
 
-#define PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize) (0)
-#define FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)    (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize)         (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize)     (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize)     (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define WRITE_STREAM_OFFS(maxStreams, maxTasks, writeBufferSize)         (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize) + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize)    (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize) + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)    (0)
+#define COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)       (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)       (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize)            (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize)        (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize)        (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define WRITE_STREAM_OFFS(maxStreams, maxTasks, writeBufferSize)            (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize) + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize)       (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize) + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize))
 
 // Use this macro to allocate space for all the queues and buffers in the controller
 #define sizeOfControllerBuffer(maxStreams, maxTasks, writeBufferSize) (0\
         + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)/* pendingReadStreams */ \
+        + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)/* completedStreams */ \
         + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)/* freeReadStreams */ \
         + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)/* writeBuffer */ \
         + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)/* reservationLock */ \
@@ -39,20 +42,26 @@
         + READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)/* readStreamTable actual read streams added to queues */ \
       )
 
+
+#define CTR_FLAGS_REQ_AUTO_START      (0x01)          // auto start requests when process request is called, default
+
 class Controller : public Task {
 protected:
     Queue pendingReadStreams; // requests waiting to be handleProcessedRequest
+    Queue completedStreams;   // requests already processed
     Queue freeReadStreams; // requests for processing available
     Queue writeBuffer; // shared write byte buffer
     Mutex reservationLock; // reservationLock for requests and buffer writes
     Queue requirementList; // byte queue of requirementList: max 8 reservationLock and 31*8 buffer, b7:b5+1 is reservationLock, B4:b0*8 = 248 bytes see Note below.
     Stream writeStream; // write stream, must be requested and released in the same task invocation or pending data will not be handleProcessedRequest
     Stream *readStreamTable; // pointer to first element in array of ByteSteam entries FIFO basis, first task will
-    // resume when resources needed become available
-
+    //     resume when resources needed become available
+    
     uint8_t maxStreams;
     uint8_t maxTasks;
     uint8_t writeBufferSize;
+    uint8_t lastProcessedHead; // where next processing head position is  
+    uint8_t flags;
 
 public:
     /**
@@ -62,15 +71,16 @@ public:
      * @param maxTasks          maximum number of tasks making reservationLock and possibly being suspended
      * @param writeBufferSize   maximum buffer for write requests, at least max of bytes in willRequire() calls
      */
-    Controller(uint8_t *pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize)
+    Controller(uint8_t *pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize, uint8_t flags = CTR_FLAGS_REQ_AUTO_START)
 
             : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
               freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
               writeBuffer(pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)),
               reservationLock(pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)),
               requirementList(pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)),
               writeStream(&writeBuffer, 0), readStreamTable(reinterpret_cast<Stream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))),
-              maxStreams(maxStreams), maxTasks(maxTasks), writeBufferSize(writeBufferSize) {
+              maxStreams(maxStreams), maxTasks(maxTasks), writeBufferSize(writeBufferSize), flags(flags) {
         // now initialize all the read Streams
 
         //printf("pendingReadStreams %p 0x%4.4lx %p\n", pendingReadStreams.pData, PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize), pendingReadStreams.pData + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize));
@@ -85,10 +95,16 @@ public:
             Stream::construct(pStream, &writeBuffer, 0);
             freeReadStreams.addTail(i);
         }
+        lastProcessedHead = writeBuffer.nHead;
     }
 
     void reset() {
+        cli();
+        
         pendingReadStreams.reset();
+        completedStreams.reset();
+        sei();
+        
         freeReadStreams.reset();
 
         writeBuffer.reset();
@@ -101,10 +117,23 @@ public:
             Stream::construct(pStream, &writeBuffer, 0);
             freeReadStreams.addTail(i);
         }
+        lastProcessedHead = writeBuffer.nHead;
     }
 
     uint8_t getReadStreamId(Stream *pStream) {
         return pStream - readStreamTable;
+    }
+    
+    [[nodiscard]] uint8_t isRequestAutoStart() const {
+        return flags & CTR_FLAGS_REQ_AUTO_START;
+    }
+    
+    void setRequestAutoStart() {
+        flags |= CTR_FLAGS_REQ_AUTO_START;
+    }
+
+    void clrRequestAutoStart() {
+        flags &= ~CTR_FLAGS_REQ_AUTO_START;
     }
 
     Stream *getReadStream(uint8_t id) {
@@ -176,42 +205,68 @@ public:
     void begin() override {
     }
 
-    // to be implemented by subclasses, will be called from the default loop()
-    virtual void checkForCompletedRequests() = 0;
-
-    // start processing the given request
+    /**
+     * Start processing given request. This should start the interrupt calls for handling TWI data. 
+     * Any request in the pending request queue will automatically start when this request is completed.
+     * 
+     * @param pStream 
+     */
     virtual void startProcessingRequest(Stream *pStream) = 0;
 
-    void handleProcessedRequest(Stream *pStream) {
-        // put its handled info back to writeBuffer and it back in the free queue
-        // unless it is an own buffer request
-        if (pStream->pData == writeBuffer.pData) {
-            writeBuffer.updateStreamed(pStream);
-        }
-        pStream->flags = 0;
-
+    /**
+     * mark end of request processing by the interrupt, called from interrupt, this should be the 
+     * first request in the pending streams. 
+     * 
+     * @param pStream   stream processed
+     */
+    void endProcessingRequest(Stream *pStream) {
         // this should be the one completed
-        cli();
-        pendingReadStreams.removeHead();
-        sei();
-        
-        freeReadStreams.addTail(getReadStreamId(pStream));
+        if (pStream->pData == writeBuffer.pData) {
+            lastProcessedHead = pStream->nHead;
+        }
+
+        uint8_t head = pendingReadStreams.removeHead();
+        completedStreams.addTail(head);
+
+        if (isRequestAutoStart() && !pendingReadStreams.isEmpty()) {
+            // start processing next request
+            head = pendingReadStreams.peekHead();
+            Stream *pNextStream = getReadStream(head);
+            pNextStream->flags |= STREAM_FLAGS_PENDING;
+            startProcessingRequest(pNextStream);
+        }
     }
 
-    void loop() override {
-        uint8_t pendingCount;
-        uint8_t peekHead;
-        
-        // NOTE: protect pendingReadStreams from mods in interrupts
+    void handleCompletedRequests() {
+        // TODO: can reduce interrupt disable time by wrapping only isEmpty and removeHead in interrupt disable code for 
+        //     completedStreams
         cli();
-        pendingCount = pendingReadStreams.getCount();
-        peekHead = pendingReadStreams.peekHead();
+        while (!completedStreams.isEmpty()) {
+            const uint8_t head = completedStreams.removeHead();
+            Stream *pendingStream = getReadStream(head);
+            // put its handled info back to writeBuffer and it back in the free queue
+            // unless it is an own buffer request
+            pendingStream->flags = 0;
+            freeReadStreams.addTail(getReadStreamId(pendingStream));
+        }
         sei();
-        
-        if (pendingCount) {
-            checkForCompletedRequests();
 
-            if (pendingCount) {
+        // reset the write buffer, at this point we have no more completed requests, so the head is whatever the last
+        // processed request head.
+        writeBuffer.nHead = lastProcessedHead;
+    }
+
+
+    void loop() override {
+        // disable interrupts around access to pendingReadStreams, it is called from interrupts
+        uint8_t pendingCount = 0;
+
+        cli();
+        if (pendingReadStreams.getCount()) {
+            handleCompletedRequests();
+
+            if (pendingReadStreams.getCount()) {
+                uint8_t peekHead = pendingReadStreams.peekHead();
                 Stream *pStream = readStreamTable + peekHead;
                 if (!(pStream->isPending())) {
                     // its ready for processing and not already being processed
@@ -220,6 +275,9 @@ public:
                 }
             }
         }
+
+        pendingCount = pendingReadStreams.getCount();
+        sei();
 
         if (!requirementList.isEmpty()) {
             // have some waiting
@@ -234,7 +292,7 @@ public:
             }
         }
 
-        if (!pendingCount && requirementList.isEmpty()) {
+        if (pendingCount && requirementList.isEmpty()) {
             // can suspend until there is something to check for.
             suspend();
         } else {
@@ -271,23 +329,28 @@ public:
 
         // NOTE: protect from mods in interrupts mid-way through this code
         cli();
-        if (!pendingReadStreams.isEmpty() && writeStream->pData == writeBuffer.pData) {
-            // copy last request's tail to this one's head to have this one not include
-            // previous request's data. If this is the first pending request or own-buffer stream then there is no such
-            // issue to address.
-            uint8_t tail = pendingReadStreams.peekTail();
-            Stream *pPrevRequest = readStreamTable + tail;
-            pStream->nHead = pPrevRequest->nTail;
+        if (writeStream->pData == writeBuffer.pData) {
+            if (!pendingReadStreams.isEmpty()) {
+                // copy last request's tail to this one's head to have this one not include
+                // previous request's data. If this is the first pending request or own-buffer stream then there is no such
+                // issue to address.
+                uint8_t tail = pendingReadStreams.peekTail();
+                Stream *pPrevRequest = readStreamTable + tail;
+                pStream->nHead = pPrevRequest->nTail;
+            } else {
+                // pending is empty, need to copy lastProcessedHead
+                pStream->nHead = lastProcessedHead;
+            }
         }
 
         // queue it for processing
         pendingReadStreams.addTail(head);
-        if (pendingReadStreams.getCount() == 1) {
+        if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
             // first one, then no-one to start it up but here
             pStream->flags |= STREAM_FLAGS_PENDING;
             startProcessingRequest(pStream);
         } else {
-            // otherwise checking will be done in loop() for completed previous requests
+            // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
             // and new request processing started if needed
         }
         sei();
@@ -302,8 +365,10 @@ public:
 
 #ifdef CONSOLE_DEBUG
 
-    // print out queue for testing
-    virtual void dump(uint8_t indent, uint8_t compact);
+// print out queue for testing
+    virtual
+
+    void dump(uint8_t indent, uint8_t compact);
 
 #endif
 };
