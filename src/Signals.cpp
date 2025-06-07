@@ -1,11 +1,11 @@
 #include "Signals.h"
 #include "Scheduler.h"
 
-Signals::Signals(uint8_t *queueBuffer, uint8_t queueSize)
+Signal::Signal(uint8_t *queueBuffer, uint8_t queueSize)
         : queue(queueBuffer, queueSize) {
 }
 
-uint8_t Signals::wait(Task *pTask) {
+uint8_t Signal::wait(Task *pTask) {
     if (!queue.isFull()) {
         queue.addTail(pTask->getIndex());
 
@@ -20,14 +20,35 @@ uint8_t Signals::wait(Task *pTask) {
     return 1;
 }
 
-void Signals::trigger() {
+void Signal::trigger() {
     while (!queue.isEmpty()) {
         // give to this task
-        Task *pNextTask = scheduler.getTask(queue.removeHead());
+        uint8_t head = queue.removeHead();
+        Task *pNextTask = scheduler.getTask(head);
 
         if (pNextTask) {
             pNextTask->resume(0);
         }
     }
 }
+#ifdef CONSOLE_DEBUG
 
+#include "tests/FileTestResults_AddResult.h"
+
+// print out queue for testing
+void Signal::dump(uint8_t indent, uint8_t compact) {
+    char indentStr[32];
+    memset(indentStr, ' ', sizeof indentStr);
+    indentStr[indent] = '\0';
+
+    // Output: Queue { nSize:%d, nHead:%d, nTail:%d
+    // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
+    // }
+    addActualOutput("%s", indentStr);
+
+    addActualOutput("%sMutex {\n", indentStr);
+    queue.dump(indent + 2, compact);
+    addActualOutput("%s}\n", indentStr);
+}
+
+#endif

@@ -24,7 +24,7 @@ void Controller::dump(uint8_t indent, uint8_t compact) {
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
     addActualOutput("%sController { maxStreams:%d, maxTasks:%d, writeBufferSize:%d\n", indentStr, maxStreams, maxTasks, writeBufferSize);
-    addActualOutput("%s  requestCapacity() = %d byteCapacity() = %d\n", indentStr, requestCapacity(), byteCapacity());
+    addActualOutput("%s  lastFreeHead = %d, requestCapacity() = %d byteCapacity() = %d\n", indentStr, lastFreeHead, requestCapacity(), byteCapacity());
     addActualOutput("%s  pendingReadStreams ", indentStr);
 
     this->pendingReadStreams.dump(indent + 2, 1);

@@ -38,11 +38,7 @@ uint8_t Mutex::reserve(uint8_t taskId) {
     return NULL_TASK;
 }
 
-uint8_t Mutex::release(uint8_t taskId) {
-    return queue.removeHead();
-}
-
-void Mutex::release() {
+uint8_t Mutex::release() {
     // remove owner from head and give to next in line
     while (!queue.isEmpty()) {
         queue.removeHead();
@@ -52,9 +48,10 @@ void Mutex::release() {
 
         if (pNextTask) {
             pNextTask->resume(0);
-            return;
+            break;
         }
     }
+    return queue.peekHead();
 }
 
 uint8_t Mutex::transfer(uint8_t fromTaskId, uint8_t toTaskId) {

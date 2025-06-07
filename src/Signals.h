@@ -6,11 +6,11 @@
 
 // allows tasks to wait for signal from other tasks/locations
 
-class Signals {
+class Signal {
     Queue queue;
 
 public:
-    Signals(uint8_t *queueBuffer, uint8_t queueSize);
+    Signal(uint8_t *queueBuffer, uint8_t queueSize);
 
     /**
      * Wait for signal to trigger
@@ -20,11 +20,20 @@ public:
      */
     uint8_t wait(Task *pTask);
 
+    inline uint8_t wait() {
+        return wait(scheduler.getTask());
+    }
+
     /**
      * Resume all tasks waiting for signal
      *
      */
     void trigger();
+
+#ifdef CONSOLE_DEBUG
+    // print out queue for testing
+    void dump(uint8_t indent, uint8_t compact);
+#endif
 };
 
 #endif //SCHEDULER_SIGNALS_H

@@ -32,14 +32,14 @@
 
 // Use this macro to allocate space for all the queues and buffers in the controller
 #define sizeOfControllerBuffer(maxStreams, maxTasks, writeBufferSize) (0\
-        + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)/* pendingReadStreams */ \
-        + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)/* completedStreams */ \
-        + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)/* freeReadStreams */ \
-        + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)/* writeBuffer */ \
-        + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)/* reservationLock */ \
-        + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)/* requirementList */      \
-        + WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)/* writeStream actual read streams added to queues */ \
-        + READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)/* readStreamTable actual read streams added to queues */ \
+        + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)  /* pendingReadStreams */ \
+        + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)     /* completedStreams */ \
+        + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)     /* freeReadStreams */ \
+        + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)          /* writeBuffer */ \
+        + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)      /* reservationLock */ \
+        + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)      /* requirementList */      \
+        + WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)          /* writeStream actual read streams added to queues */ \
+        + READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)     /* readStreamTable actual read streams added to queues */ \
       )
 
 
@@ -47,20 +47,19 @@
 
 class Controller : public Task {
 protected:
-    Queue pendingReadStreams; // requests waiting to be handleProcessedRequest
-    Queue completedStreams;   // requests already processed
-    Queue freeReadStreams; // requests for processing available
-    Queue writeBuffer; // shared write byte buffer
-    Mutex reservationLock; // reservationLock for requests and buffer writes
-    Queue requirementList; // byte queue of requirementList: max 8 reservationLock and 31*8 buffer, b7:b5+1 is reservationLock, B4:b0*8 = 248 bytes see Note below.
-    Stream writeStream; // write stream, must be requested and released in the same task invocation or pending data will not be handleProcessedRequest
-    Stream *readStreamTable; // pointer to first element in array of ByteSteam entries FIFO basis, first task will
-    //     resume when resources needed become available
+    Queue pendingReadStreams;   // requests waiting to be handleProcessedRequest
+    Queue completedStreams;     // requests already processed
+    Queue freeReadStreams;      // requests for processing available
+    Queue writeBuffer;          // shared write byte buffer
+    Mutex reservationLock;      // reservationLock for requests and buffer write, first task will resume when resources it requested in willRequire() become available
+    Queue requirementList;      // byte queue of requirementList: max 8 reservationLock and 31*8 buffer, b7:b5+1 is reservationLock, B4:b0*8 = 248 bytes see Note below.
+    Stream writeStream;         // write stream, must be requested and released in the same task invocation or pending data will not be handleProcessedRequest
+    Stream *readStreamTable;    // pointer to first element in array of ByteSteam entries FIFO basis
     
     uint8_t maxStreams;
     uint8_t maxTasks;
     uint8_t writeBufferSize;
-    uint8_t lastProcessedHead; // where next processing head position is  
+    uint8_t lastFreeHead;  // where next processing head position is  
     uint8_t flags;
 
 public:
@@ -95,7 +94,7 @@ public:
             Stream::construct(pStream, &writeBuffer, 0);
             freeReadStreams.addTail(i);
         }
-        lastProcessedHead = writeBuffer.nHead;
+        lastFreeHead = writeBuffer.nHead;
     }
 
     void reset() {
@@ -117,7 +116,7 @@ public:
             Stream::construct(pStream, &writeBuffer, 0);
             freeReadStreams.addTail(i);
         }
-        lastProcessedHead = writeBuffer.nHead;
+        lastFreeHead = writeBuffer.nHead;
     }
 
     uint8_t getReadStreamId(Stream *pStream) {
@@ -206,6 +205,65 @@ public:
     }
 
     /**
+     * Accept given byte stream for processing.
+     *
+     * NOTE: the new read stream created from this write stream will have its head set to previous read request's tail
+     *     so that it will send only what the previous request will not send. This only applies to non-own buffer
+     *     streams which provide a block of data to send, outside the shared writeBuffer.
+     *
+     * @param writeStream       pointer to stream to process, will be reset to new reality if needed
+     * @return                  pointer to writeStream or NULL if not handleProcessedRequest because of lack of readStreams
+     *                          as made in the willRequire() call.
+     */
+    Stream *processStream(Stream *writeStream) {
+        uint8_t nextFreeHead;       // where next request head position should start
+        
+        if (freeReadStreams.isEmpty()) {
+            return NULL;
+        }
+
+        uint8_t head = freeReadStreams.removeHead();
+        Stream *pStream = readStreamTable + head;
+
+        // incorporate tail into buffer if not own buffered stream
+        bool isSharedBuffer = writeStream->pData == writeBuffer.pData;
+        if (isSharedBuffer) {
+            writeBuffer.updateStreamed(writeStream);
+            nextFreeHead = writeStream->nTail;
+        }
+
+        // copy the write stream info into read stream for processing
+        writeStream->getStream(pStream, STREAM_FLAGS_RD);
+
+        if (isSharedBuffer) {
+            // new read stream starts where last read stream left off
+            pStream->nHead = lastFreeHead;
+            lastFreeHead = nextFreeHead;
+        }
+
+        // NOTE: protect from mods in interrupts mid-way through this code
+        cli();
+        // queue it for processing
+        pendingReadStreams.addTail(head);
+        if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
+            // first one, then no-one to start it up but here
+            pStream->flags |= STREAM_FLAGS_PENDING;
+            startProcessingRequest(pStream);
+        } else {
+            // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
+            // and new request processing started if needed
+        }
+        sei();
+
+        // make sure loop task is enabled start our loop task to monitor its completion
+        this->resume(0);
+
+        // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
+        writeBuffer.getStream(writeStream, STREAM_FLAGS_WR);
+        return writeStream;
+    }
+
+/**
      * Start processing given request. This should start the interrupt calls for handling TWI data. 
      * Any request in the pending request queue will automatically start when this request is completed.
      * 
@@ -220,9 +278,9 @@ public:
      * @param pStream   stream processed
      */
     void endProcessingRequest(Stream *pStream) {
-        // this should be the one completed
         if (pStream->pData == writeBuffer.pData) {
-            lastProcessedHead = pStream->nHead;
+            // at this point the buffer used by this request is no longer needed, so the buffer head can be moved to processed request tail.
+            writeBuffer.nHead = pStream->nTail;
         }
 
         uint8_t head = pendingReadStreams.removeHead();
@@ -238,27 +296,22 @@ public:
     }
 
     void handleCompletedRequests() {
-        // TODO: can reduce interrupt disable time by wrapping only isEmpty and removeHead in interrupt disable code for 
-        //     completedStreams
+        // TODO: can reduce interrupt disable time by wrapping only isEmpty and removeHead in interrupt disable code
         cli();
         while (!completedStreams.isEmpty()) {
             const uint8_t head = completedStreams.removeHead();
             Stream *pendingStream = getReadStream(head);
+            
             // put its handled info back to writeBuffer and it back in the free queue
             // unless it is an own buffer request
             pendingStream->flags = 0;
             freeReadStreams.addTail(getReadStreamId(pendingStream));
         }
         sei();
-
-        // reset the write buffer, at this point we have no more completed requests, so the head is whatever the last
-        // processed request head.
-        writeBuffer.nHead = lastProcessedHead;
     }
 
 
     void loop() override {
-        // disable interrupts around access to pendingReadStreams, it is called from interrupts
         uint8_t pendingCount = 0;
 
         cli();
@@ -298,69 +351,6 @@ public:
         } else {
             resume(0);
         }
-    }
-
-    /**
-     * Accept given byte stream for processing.
-     *
-     * NOTE: the new read stream created from this write stream will have its head set to previous read request's tail
-     *     so that it will send only what the previous request will not send. This only applies to non-own buffer
-     *     streams which provide a block of data to send, outside the shared writeBuffer.
-     *
-     * @param writeStream       pointer to stream to process, will be reset to new reality if needed
-     * @return                  pointer to writeStream or NULL if not handleProcessedRequest because of lack of readStreams
-     *                          as made in the willRequire() call.
-     */
-    Stream *processStream(Stream *writeStream) {
-        if (freeReadStreams.isEmpty()) {
-            return NULL;
-        }
-
-        uint8_t head = freeReadStreams.removeHead();
-        Stream *pStream = readStreamTable + head;
-
-        // incorporate tail into buffer if not own buffered stream
-        if (writeStream->pData == writeBuffer.pData) {
-            writeBuffer.updateStreamed(writeStream);
-        }
-
-        // copy the write stream info into read stream for processing
-        writeStream->getStream(pStream, STREAM_FLAGS_RD);
-
-        // NOTE: protect from mods in interrupts mid-way through this code
-        cli();
-        if (writeStream->pData == writeBuffer.pData) {
-            if (!pendingReadStreams.isEmpty()) {
-                // copy last request's tail to this one's head to have this one not include
-                // previous request's data. If this is the first pending request or own-buffer stream then there is no such
-                // issue to address.
-                uint8_t tail = pendingReadStreams.peekTail();
-                Stream *pPrevRequest = readStreamTable + tail;
-                pStream->nHead = pPrevRequest->nTail;
-            } else {
-                // pending is empty, need to copy lastProcessedHead
-                pStream->nHead = lastProcessedHead;
-            }
-        }
-
-        // queue it for processing
-        pendingReadStreams.addTail(head);
-        if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
-            // first one, then no-one to start it up but here
-            pStream->flags |= STREAM_FLAGS_PENDING;
-            startProcessingRequest(pStream);
-        } else {
-            // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
-            // and new request processing started if needed
-        }
-        sei();
-
-        // make sure loop task is enabled start our loop task to monitor its completion
-        this->resume(0);
-
-        // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
-        writeBuffer.getStream(writeStream, STREAM_FLAGS_WR);
-        return writeStream;
     }
 
 #ifdef CONSOLE_DEBUG

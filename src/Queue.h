@@ -29,7 +29,10 @@ class Queue {
     friend class Controller;
 
     uint8_t nSize;
-    uint8_t nHead;
+    
+    // CAVEAT: nHead is modified in code called from interrupt routine, if size changed from a byte, then code accessing 
+    //      nHead in write buffer will need to be protected with cli()/sei() wrapper
+    uint8_t nHead;                  
     uint8_t nTail;
     uint8_t *pData;
 
@@ -42,32 +45,32 @@ public:
         nHead = nTail = 0;
     }
 
-    uint8_t getCount() const;
-    uint8_t peekHead(uint8_t offset) const;
-    uint8_t peekTail(uint8_t offset) const;
+    [[nodiscard]] uint8_t getCount() const;
+    [[nodiscard]] uint8_t peekHead(uint8_t offset) const;
+    [[nodiscard]] uint8_t peekTail(uint8_t offset) const;
 
-    uint8_t peekHead() const { return peekHead(0); }
+    [[nodiscard]] uint8_t peekHead() const { return peekHead(0); }
 
-    uint8_t peekTail() const { return peekTail(0); }
+    [[nodiscard]] uint8_t peekTail() const { return peekTail(0); }
 
     // enqueue/dequeue methods
     uint8_t addTail(uint8_t data);
     uint8_t addHead(uint8_t data);
     uint8_t removeTail();
     uint8_t removeHead();
+    
+    [[nodiscard]] inline uint8_t getSize() const { return nSize - 1; }
 
-    inline uint8_t getSize() const { return nSize - 1; }
+    [[nodiscard]] inline uint8_t getCapacity() const { return nSize - getCount() - 1; }
 
-    inline uint8_t getCapacity() const { return nSize - getCount() - 1; }
+    [[nodiscard]] inline uint8_t isEmpty() const { return nHead == nTail; }
 
-    inline uint8_t isEmpty() const { return nHead == nTail; }
-
-    inline uint8_t isFull() const { return getCount() + 1 == nSize; }
+    [[nodiscard]] inline uint8_t isFull() const { return getCount() + 1 == nSize; }
 
     // version which allows testing if there is enough room for given number of bytes
-    inline uint8_t isFull(uint8_t toAdd) const { return getCount() + toAdd == nSize; }
+    [[nodiscard]] inline uint8_t isFull(uint8_t toAdd) const { return getCount() + toAdd == nSize; }
 
-    inline uint8_t isEmpty(uint8_t toRemove) const { return toRemove ? getCount() < toRemove : isEmpty(); }
+    [[nodiscard]] inline uint8_t isEmpty(uint8_t toRemove) const { return toRemove ? getCount() < toRemove : isEmpty(); }
 
     inline uint8_t enqueue(uint8_t data) { return addTail(data); }
 
@@ -163,7 +166,6 @@ public:
     Stream *getStream(Stream *pOther, uint8_t flags);
 
 #ifdef CONSOLE_DEBUG
-
     // print out queue for testing
     void dump(uint8_t indent, uint8_t compact);
 #endif

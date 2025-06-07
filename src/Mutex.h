@@ -35,8 +35,7 @@ public:
      * Release resource from the current task and resume next task in line giving it the resource
      *
      */
-    void release();
-    uint8_t release(uint8_t taskId);
+    uint8_t release();
 
     /**
      * Transfer ownership of the resource to the given task if the mutex is owned by the task at the
