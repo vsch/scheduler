@@ -46,7 +46,7 @@ void Signal::dump(uint8_t indent, uint8_t compact) {
     // }
     addActualOutput("%s", indentStr);
 
-    addActualOutput("%sMutex {\n", indentStr);
+    addActualOutput("%sSignal {\n", indentStr);
     queue.dump(indent + 2, compact);
     addActualOutput("%s}\n", indentStr);
 }
