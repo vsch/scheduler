@@ -27,6 +27,7 @@ extern "C" {
 extern uint8_t stream_is_empty(const CByteStream_t* thizz); // test if any more data to read
 extern uint8_t stream_is_full(const CByteStream_t* thizz); // test if room for more data to write
 extern uint8_t stream_capacity(const CByteStream_t* thizz); // capacity to accept written bytes
+extern uint8_t stream_count(const CByteStream_t* thizz); // capacity to accept written bytes
 extern uint8_t stream_get(CByteStream_t* thizz); // read byte
 extern uint8_t stream_peek(const CByteStream_t* thizz); // get the next byte, but leave it in the stream
 extern uint8_t stream_put(CByteStream_t* thizz, uint8_t data); // write byte

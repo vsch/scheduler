@@ -16,7 +16,8 @@ struct ByteStream : protected Queue {
     friend class Queue;
     friend class Controller;
     uint8_t flags;
-    uint8_t addr;
+    /** Slave address byte (with read/write bit). in case of Twi */
+    uint8_t addr; 
 
 public:
     ByteStream(Queue *pByteQueue, uint8_t streamFlags) : Queue(*pByteQueue) {
@@ -59,6 +60,8 @@ public:
     inline uint8_t is_full() const { return isFull(); }
 
     inline uint8_t capacity() const { return getCapacity(); }
+    
+    inline uint8_t count() const { return getCount(); }
 
     inline uint8_t get() { return can_read() ? removeHead() : NULL_BYTE; }
 
@@ -92,6 +95,9 @@ public:
     static ByteStream *construct(void *pBlock, Queue *pByteQueue, uint8_t flags) {
         return new(pBlock) ByteStream(pByteQueue, flags);
     }
+
+    void pgmByteList(const uint8_t *bytes, uint16_t count);
+
 
 #ifdef CONSOLE_DEBUG
     // print out queue for testing

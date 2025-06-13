@@ -33,6 +33,10 @@ uint8_t stream_capacity(const CByteStream_t *thizz) {
     return ((ByteStream *) thizz)->capacity();
 }
 
+uint8_t stream_count(const CByteStream_t *thizz) {
+    return ((ByteStream *) thizz)->count();
+}
+
 // read byte
 uint8_t stream_get(CByteStream_t *thizz) {
     if (((ByteStream *) thizz)->can_read()) {
@@ -68,6 +72,12 @@ uint8_t stream_can_read(const CByteStream_t *thizz) {
 // get address from flags
 uint8_t stream_address(const CByteStream_t *thizz) {
     return ((ByteStream *) thizz)->address();
+}
+
+void ByteStream::pgmByteList(const uint8_t *bytes, uint16_t count) {
+    while (count-- > 0) {
+        put(pgm_read_byte(bytes++));
+    }
 }
 
 #ifdef CONSOLE_DEBUG

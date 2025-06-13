@@ -30,6 +30,8 @@ set(${PROJECT_NAME}_SRCS
         src/TinySwitcher.S
         src/Scheduler.cpp
         src/Controller.cpp
+        src/TwiController.cpp
+        src/twiint.c
         )
 set(${PROJECT_NAME}_HDRS
         src/Queue.h
@@ -40,6 +42,8 @@ set(${PROJECT_NAME}_HDRS
         src/TinySwitcher.h
         src/Scheduler.h
         src/Controller.h
+        src/TwiController.h
+        src/twiint.h
         )
 
 #add_compile_definitions(SERIAL_DEBUG)
