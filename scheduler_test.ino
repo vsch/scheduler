@@ -5,7 +5,6 @@
 
 // ---------------------------------------------------------------------------
 // INCLUDES
-#include <Arduino.h>
 #include "src/Scheduler.h"
 #include "src/Mutex.h"
 #include "src/ByteStream.h"
@@ -96,8 +95,8 @@ public:
     }
 };
 
-uint8_t flasherStack1[128];
-uint8_t flasherStack2[128];
+uint8_t flasherStack1[64];
+uint8_t flasherStack2[64];
 
 LedFlasher ledFlasher1 = LedFlasher(2, 250, flasherStack1, lengthof(flasherStack1));
 LedFlasher ledFlasher2 = LedFlasher(4, 125, flasherStack2, lengthof(flasherStack2));
