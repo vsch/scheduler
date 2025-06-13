@@ -1,14 +1,14 @@
 #include "Arduino.h"
-#include "Streams.h"
+#include "ByteStream.h"
 
-uint8_t Stream::setFlags(uint8_t flags, uint8_t mask) {
+uint8_t ByteStream::setFlags(uint8_t flags, uint8_t mask) {
     mask &= ~(STREAM_FLAGS_RD_WR);
     this->flags &= ~mask;
     this->flags |= flags & mask;
     return this->flags;
 }
 
-uint8_t Stream::setOwnBuffer(uint8_t *pData, uint8_t nSize) {
+uint8_t ByteStream::setOwnBuffer(uint8_t *pData, uint8_t nSize) {
     if (can_write()) {
         this->nTail = this->nSize = nSize;
         this->nHead = 0;
@@ -19,55 +19,55 @@ uint8_t Stream::setOwnBuffer(uint8_t *pData, uint8_t nSize) {
 }
 
 // test if any more data to read
-uint8_t stream_is_empty(const ByteStream_t *thizz) {
-    return ((Stream *) thizz)->is_empty();
+uint8_t stream_is_empty(const CByteStream_t *thizz) {
+    return ((ByteStream *) thizz)->is_empty();
 }
 
 // test if room for more data to write
-uint8_t stream_is_full(const ByteStream_t *thizz) {
-    return ((Stream *) thizz)->is_full();
+uint8_t stream_is_full(const CByteStream_t *thizz) {
+    return ((ByteStream *) thizz)->is_full();
 }
 
 // capacity to accept written bytes
-uint8_t stream_capacity(const ByteStream_t *thizz) {
-    return ((Stream *) thizz)->capacity();
+uint8_t stream_capacity(const CByteStream_t *thizz) {
+    return ((ByteStream *) thizz)->capacity();
 }
 
 // read byte
-uint8_t stream_get(ByteStream_t *thizz) {
-    if (((Stream *) thizz)->can_read()) {
-        return ((Stream *) thizz)->get();
+uint8_t stream_get(CByteStream_t *thizz) {
+    if (((ByteStream *) thizz)->can_read()) {
+        return ((ByteStream *) thizz)->get();
     }
     return NULL_BYTE;
 }
 
 // get the next byte, but leave it in the stream
-uint8_t stream_peek(const ByteStream_t *thizz) {
-    if (((Stream *) thizz)->can_read()) {
-        return ((Stream *) thizz)->peek();
+uint8_t stream_peek(const CByteStream_t *thizz) {
+    if (((ByteStream *) thizz)->can_read()) {
+        return ((ByteStream *) thizz)->peek();
     }
     return NULL_BYTE;
 }
 
 // write byte
-uint8_t stream_put(ByteStream_t *thizz, uint8_t data) {
-    if (((Stream *) thizz)->can_write()) {
-        return ((Stream *) thizz)->put(data);
+uint8_t stream_put(CByteStream_t *thizz, uint8_t data) {
+    if (((ByteStream *) thizz)->can_write()) {
+        return ((ByteStream *) thizz)->put(data);
     }
     return NULL_BYTE;
 }
 
-uint8_t stream_can_write(const ByteStream_t *thizz) {
-    return ((Stream *) thizz)->can_write();
+uint8_t stream_can_write(const CByteStream_t *thizz) {
+    return ((ByteStream *) thizz)->can_write();
 }
 
-uint8_t stream_can_read(const ByteStream_t *thizz) {
-    return ((Stream *) thizz)->can_read();
+uint8_t stream_can_read(const CByteStream_t *thizz) {
+    return ((ByteStream *) thizz)->can_read();
 }
 
 // get address from flags
-uint8_t stream_address(const ByteStream_t *thizz) {
-    return ((Stream *) thizz)->address();
+uint8_t stream_address(const CByteStream_t *thizz) {
+    return ((ByteStream *) thizz)->address();
 }
 
 #ifdef CONSOLE_DEBUG
@@ -75,7 +75,7 @@ uint8_t stream_address(const ByteStream_t *thizz) {
 #include "tests/FileTestResults_AddResult.h"
 
 // print out queue for testing
-void Stream::dump(uint8_t indent, uint8_t compact) {
+void ByteStream::dump(uint8_t indent, uint8_t compact) {
     char indentStr[32];
     memset(indentStr, ' ', sizeof indentStr);
     indentStr[indent] = '\0';

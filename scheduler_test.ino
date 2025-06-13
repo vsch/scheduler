@@ -8,8 +8,7 @@
 #include <Arduino.h>
 #include "src/Scheduler.h"
 #include "src/Mutex.h"
-#include "src/Streams.h"
-#include "src/Stream.h"
+#include "src/ByteStream.h"
 
 #define LED (13)
 

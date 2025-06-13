@@ -1,6 +1,6 @@
 #include "Queue.h"
-#include "Stream.h"
-#include "Streams.h"
+#include "CByteStream.h"
+#include "ByteStream.h"
 
 Queue::Queue(uint8_t *pData, uint8_t nSize) : pData(pData) {
     this->nSize = nSize;
@@ -68,7 +68,7 @@ uint8_t Queue::updateQueued(Queue *pOther, uint8_t flags) {
     return NULL_BYTE;
 }
 
-uint8_t Queue::updateStreamed(Stream *pOther) {
+uint8_t Queue::updateStreamed(ByteStream *pOther) {
     return updateQueued(pOther, pOther->flags);
 }
 
@@ -243,7 +243,7 @@ uint16_t Queue::peekHeadW() const {
 
 #endif
 
-Stream *Queue::getStream(Stream *pOther, uint8_t flags) {
+ByteStream *Queue::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->nSize = nSize;
     pOther->nHead = nHead;
     pOther->nTail = nTail;

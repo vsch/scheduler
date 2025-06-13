@@ -1,6 +1,6 @@
 
-#ifndef SCHEDULER_STREAMS_H
-#define SCHEDULER_STREAMS_H
+#ifndef SCHEDULER_BYTESTREAM_H
+#define SCHEDULER_BYTESTREAM_H
 
 #include "Arduino.h"
 #ifdef CONSOLE_DEBUG
@@ -9,17 +9,17 @@
 #else
 #include <new.h>
 #endif
-#include "Stream.h"
+#include "CByteStream.h"
 #include "Queue.h"
 
-struct Stream : protected Queue {
+struct ByteStream : protected Queue {
     friend class Queue;
     friend class Controller;
     uint8_t flags;
     uint8_t addr;
 
 public:
-    Stream(Queue *pByteQueue, uint8_t streamFlags) : Queue(*pByteQueue) {
+    ByteStream(Queue *pByteQueue, uint8_t streamFlags) : Queue(*pByteQueue) {
         flags = streamFlags;
         addr = 0;
     }
@@ -89,8 +89,8 @@ public:
     inline uint8_t can_write() const { return canWrite(); }
 
     // block must be at least sizeof(ByteStream) in size
-    static Stream *construct(void *pBlock, Queue *pByteQueue, uint8_t flags) {
-        return new(pBlock) Stream(pByteQueue, flags);
+    static ByteStream *construct(void *pBlock, Queue *pByteQueue, uint8_t flags) {
+        return new(pBlock) ByteStream(pByteQueue, flags);
     }
 
 #ifdef CONSOLE_DEBUG
@@ -99,4 +99,4 @@ public:
 #endif
 };
 
-#endif //SCHEDULER_STREAMS_H
+#endif //SCHEDULER_BYTESTREAM_H

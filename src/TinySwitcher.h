@@ -2,6 +2,8 @@
 #ifndef SCHEDULER_TINYSWITCHER_H
 #define SCHEDULER_TINYSWITCHER_H
 
+typedef void (*EntryFunction)(void *arg);
+
 #ifdef CONSOLE_DEBUG
 #include <boost/context/fiber.hpp>
 #include <boost/context/continuation.hpp>
@@ -9,8 +11,6 @@
 #include <functional>
 
 namespace ctx = boost::context;
-
-typedef void (*EntryFunction)(void *arg);
 
 struct AsyncContext {
     uint8_t stackUsed;

@@ -17,7 +17,7 @@
 #endif
 #endif
 
-class Stream;
+class ByteStream;
 class Controller;
 
 /**
@@ -25,7 +25,7 @@ class Controller;
  */
 
 class Queue {
-    friend class Stream;
+    friend class ByteStream;
     friend class Controller;
 
     uint8_t nSize;
@@ -161,9 +161,9 @@ public:
 #endif // QUEUE_WORD_FUNCS
 
     uint8_t updateQueued(Queue *pOther, uint8_t flags);
-    uint8_t updateStreamed(Stream *pOther);
+    uint8_t updateStreamed(ByteStream *pOther);
 
-    Stream *getStream(Stream *pOther, uint8_t flags);
+    ByteStream *getStream(ByteStream *pOther, uint8_t flags);
 
 #ifdef CONSOLE_DEBUG
     // print out queue for testing

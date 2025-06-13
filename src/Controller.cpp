@@ -41,7 +41,7 @@ void Controller::dump(uint8_t indent, uint8_t compact) {
         for (int i = 0; i < iMax; i++) {
             const uint8_t head = pendingReadStreams.peekHead(i);
             addActualOutput("%s  readStream[%d]:", indentStr, head);
-            Stream *pStream = getReadStream(head);
+            ByteStream *pStream = getReadStream(head);
             pStream->dump(indent + 2, 1);
         }
     }

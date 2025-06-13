@@ -1,6 +1,12 @@
 #include "Signals.h"
 #include "Scheduler.h"
 
+#ifdef CONSOLE_DEBUG
+
+#include "../tests/FileTestResults_AddResult.h"
+
+#endif // CONSOLE_DEBUG
+
 Signal::Signal(uint8_t *queueBuffer, uint8_t queueSize)
         : queue(queueBuffer, queueSize) {
 }
@@ -27,10 +33,14 @@ void Signal::trigger() {
         Task *pNextTask = scheduler.getTask(head);
 
         if (pNextTask) {
+#ifdef CONSOLE_DEBUG
+            addActualOutput("Resuming task %d\n", pNextTask->getIndex());
+#endif // CONSOLE_DEBUG
             pNextTask->resume(0);
         }
     }
 }
+
 #ifdef CONSOLE_DEBUG
 
 #include "tests/FileTestResults_AddResult.h"

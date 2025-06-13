@@ -2,7 +2,7 @@
 #define SCHEDULER_CONTROLLER_H
 
 #include "Arduino.h"
-#include "Streams.h"
+#include "ByteStream.h"
 #include "Queue.h"
 #include "Mutex.h"
 
@@ -53,8 +53,8 @@ protected:
     Queue writeBuffer;          // shared write byte buffer
     Mutex reservationLock;      // reservationLock for requests and buffer write, first task will resume when resources it requested in willRequire() become available
     Queue requirementList;      // byte queue of requirementList: max 8 reservationLock and 31*8 buffer, b7:b5+1 is reservationLock, B4:b0*8 = 248 bytes see Note below.
-    Stream writeStream;         // write stream, must be requested and released in the same task invocation or pending data will not be handleProcessedRequest
-    Stream *readStreamTable;    // pointer to first element in array of ByteSteam entries FIFO basis
+    ByteStream writeStream;         // write stream, must be requested and released in the same task invocation or pending data will not be handleProcessedRequest
+    ByteStream *readStreamTable;    // pointer to first element in array of ByteSteam entries FIFO basis
     
     uint8_t maxStreams;
     uint8_t maxTasks;
@@ -78,7 +78,7 @@ public:
               writeBuffer(pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)),
               reservationLock(pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)),
               requirementList(pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              writeStream(&writeBuffer, 0), readStreamTable(reinterpret_cast<Stream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))),
+              writeStream(&writeBuffer, 0), readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))),
               maxStreams(maxStreams), maxTasks(maxTasks), writeBufferSize(writeBufferSize), flags(flags) {
         // now initialize all the read Streams
 
@@ -90,8 +90,8 @@ public:
         //printf("readStreamTable %p 0x%4.4lx %p\n", readStreamTable, READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize), (uint8_t *)(readStreamTable) + READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize));
 
         for (int i = 0; i < maxStreams; i++) {
-            Stream *pStream = readStreamTable + i;
-            Stream::construct(pStream, &writeBuffer, 0);
+            ByteStream *pStream = readStreamTable + i;
+            ByteStream::construct(pStream, &writeBuffer, 0);
             freeReadStreams.addTail(i);
         }
         lastFreeHead = writeBuffer.nHead;
@@ -112,14 +112,14 @@ public:
         writeStream.reset();
 
         for (int i = 0; i < maxStreams; i++) {
-            Stream *pStream = readStreamTable + i;
-            Stream::construct(pStream, &writeBuffer, 0);
+            ByteStream *pStream = readStreamTable + i;
+            ByteStream::construct(pStream, &writeBuffer, 0);
             freeReadStreams.addTail(i);
         }
         lastFreeHead = writeBuffer.nHead;
     }
 
-    uint8_t getReadStreamId(Stream *pStream) {
+    uint8_t getReadStreamId(ByteStream *pStream) {
         return pStream - readStreamTable;
     }
     
@@ -135,7 +135,7 @@ public:
         flags &= ~CTR_FLAGS_REQ_AUTO_START;
     }
 
-    Stream *getReadStream(uint8_t id) {
+    ByteStream *getReadStream(uint8_t id) {
         return readStreamTable + id;
     }
 
@@ -197,7 +197,7 @@ public:
         return reservationLock.reserve();
     }
 
-    Stream *getWriteStream() {
+    ByteStream *getWriteStream() {
         return writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
     }
 
@@ -215,7 +215,7 @@ public:
      * @return                  pointer to writeStream or NULL if not handleProcessedRequest because of lack of readStreams
      *                          as made in the willRequire() call.
      */
-    Stream *processStream(Stream *writeStream) {
+    ByteStream *processStream(ByteStream *writeStream) {
         uint8_t nextFreeHead;       // where next request head position should start
         
         if (freeReadStreams.isEmpty()) {
@@ -223,7 +223,7 @@ public:
         }
 
         uint8_t head = freeReadStreams.removeHead();
-        Stream *pStream = readStreamTable + head;
+        ByteStream *pStream = readStreamTable + head;
 
         // incorporate tail into buffer if not own buffered stream
         bool isSharedBuffer = writeStream->pData == writeBuffer.pData;
@@ -269,7 +269,7 @@ public:
      * 
      * @param pStream 
      */
-    virtual void startProcessingRequest(Stream *pStream) = 0;
+    virtual void startProcessingRequest(ByteStream *pStream) = 0;
 
     /**
      * mark end of request processing by the interrupt, called from interrupt, this should be the 
@@ -277,7 +277,7 @@ public:
      * 
      * @param pStream   stream processed
      */
-    void endProcessingRequest(Stream *pStream) {
+    void endProcessingRequest(ByteStream *pStream) {
         if (pStream->pData == writeBuffer.pData) {
             // at this point the buffer used by this request is no longer needed, so the buffer head can be moved to processed request tail.
             writeBuffer.nHead = pStream->nTail;
@@ -289,7 +289,7 @@ public:
         if (isRequestAutoStart() && !pendingReadStreams.isEmpty()) {
             // start processing next request
             head = pendingReadStreams.peekHead();
-            Stream *pNextStream = getReadStream(head);
+            ByteStream *pNextStream = getReadStream(head);
             pNextStream->flags |= STREAM_FLAGS_PENDING;
             startProcessingRequest(pNextStream);
         }
@@ -300,7 +300,7 @@ public:
         cli();
         while (!completedStreams.isEmpty()) {
             const uint8_t head = completedStreams.removeHead();
-            Stream *pendingStream = getReadStream(head);
+            ByteStream *pendingStream = getReadStream(head);
             
             // put its handled info back to writeBuffer and it back in the free queue
             // unless it is an own buffer request
@@ -320,7 +320,7 @@ public:
 
             if (pendingReadStreams.getCount()) {
                 uint8_t peekHead = pendingReadStreams.peekHead();
-                Stream *pStream = readStreamTable + peekHead;
+                ByteStream *pStream = readStreamTable + peekHead;
                 if (!(pStream->isPending())) {
                     // its ready for processing and not already being processed
                     pStream->flags |= STREAM_FLAGS_PENDING;

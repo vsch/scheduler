@@ -25,7 +25,7 @@ project(${PROJECT_NAME} LANGUAGES C CXX ASM)
 set(${PROJECT_NAME}_SRCS
         src/Queue.cpp
         src/Mutex.cpp
-        src/Streams.cpp
+        src/ByteStream.cpp
         src/Signals.cpp
         src/TinySwitcher.S
         src/Scheduler.cpp
@@ -34,8 +34,8 @@ set(${PROJECT_NAME}_SRCS
 set(${PROJECT_NAME}_HDRS
         src/Queue.h
         src/Mutex.h
-        src/Stream.h
-        src/Streams.h
+        src/CByteStream.h
+        src/ByteStream.h
         src/Signals.h
         src/TinySwitcher.h
         src/Scheduler.h
