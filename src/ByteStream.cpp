@@ -1,5 +1,6 @@
 #include "Arduino.h"
 #include "ByteStream.h"
+#include "Scheduler.h"
 
 uint8_t ByteStream::setFlags(uint8_t flags, uint8_t mask) {
     mask &= ~(STREAM_FLAGS_RD_WR);
@@ -77,6 +78,24 @@ uint8_t stream_address(const CByteStream_t *thizz) {
 void ByteStream::pgmByteList(const uint8_t *bytes, uint16_t count) {
     while (count-- > 0) {
         put(pgm_read_byte(bytes++));
+    }
+}
+
+
+
+void ByteStream::waitComplete() {
+    Task *pTask = scheduler.getTask();
+    if (pTask) {
+        scheduler.suspend(pTask);
+        waitingTask = pTask->getIndex();
+    }
+}
+
+void ByteStream::triggerComplete() {
+    if (waitingTask != NULL_TASK) {
+        Task *pTask = scheduler.getTask(waitingTask);
+        waitingTask = NULL_TASK;
+        scheduler.resume(pTask, 0);
     }
 }
 

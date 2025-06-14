@@ -42,7 +42,6 @@
         + READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)     /* readStreamTable actual read streams added to queues */ \
       )
 
-
 #define CTR_FLAGS_REQ_AUTO_START      (0x01)          // auto start requests when process request is called, default
 
 class Controller : public Task {
@@ -55,7 +54,7 @@ protected:
     Queue requirementList;      // byte queue of requirementList: max 8 reservationLock and 31*8 buffer, b7:b5+1 is reservationLock, B4:b0*8 = 248 bytes see Note below.
     ByteStream writeStream;         // write stream, must be requested and released in the same task invocation or pending data will not be handleProcessedRequest
     ByteStream *readStreamTable;    // pointer to first element in array of ByteSteam entries FIFO basis
-    
+
     uint8_t maxStreams;
     uint8_t maxTasks;
     uint8_t writeBufferSize;
@@ -72,14 +71,15 @@ public:
      */
     Controller(uint8_t *pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize, uint8_t flags = CTR_FLAGS_REQ_AUTO_START)
 
-            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              writeBuffer(pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              reservationLock(pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              requirementList(pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              writeStream(&writeBuffer, 0), readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))),
-              maxStreams(maxStreams), maxTasks(maxTasks), writeBufferSize(writeBufferSize), flags(flags) {
+            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+              , completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+              , freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)), writeBuffer(
+                    pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)), reservationLock(
+                    pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)), requirementList(
+                    pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)), writeStream(&writeBuffer,
+                                                                                                                                                                     0)
+              , readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))), maxStreams(maxStreams), maxTasks(maxTasks)
+              , writeBufferSize(writeBufferSize), flags(flags) {
         // now initialize all the read Streams
 
         //printf("pendingReadStreams %p 0x%4.4lx %p\n", pendingReadStreams.pData, PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize), pendingReadStreams.pData + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize));
@@ -99,11 +99,11 @@ public:
 
     void reset() {
         cli();
-        
+
         pendingReadStreams.reset();
         completedStreams.reset();
         sei();
-        
+
         freeReadStreams.reset();
 
         writeBuffer.reset();
@@ -122,11 +122,11 @@ public:
     uint8_t getReadStreamId(ByteStream *pStream) {
         return pStream - readStreamTable;
     }
-    
+
     [[nodiscard]] uint8_t isRequestAutoStart() const {
         return flags & CTR_FLAGS_REQ_AUTO_START;
     }
-    
+
     void setRequestAutoStart() {
         flags |= CTR_FLAGS_REQ_AUTO_START;
     }
@@ -204,6 +204,65 @@ public:
     void begin() override {
     }
 
+    ByteStream *getStreamRequest() {
+        uint8_t head = freeReadStreams.removeHead();
+        ByteStream *pStream = readStreamTable + head;
+        return pStream;
+    }
+
+    /**
+     * Send given buffered data as multiple self-buffered twi requests.
+     * 
+     * CAVEAT: This will not work correctly for TWI writes, since the first byte contains C/O:D/C which is not 
+     *     duplicated in the subsequent chunks. Therefore the data should already have these bytes inserted in the data.
+     * 
+     * @param addr   twi address, including read flag
+     * @param pData  pointer to byte buffer
+     * @param len    length of data to send
+     * @return       pointer to last request, can be used to wait for completion of the send
+     */
+    ByteStream *processRequest(uint8_t addr, uint8_t *pData, uint16_t len, int maxSize) {
+        uint8_t *pChunk = pData;
+        uint8_t chunkSize = len;
+        ByteStream *pStream = NULL;
+
+        while (chunkSize) {
+            uint8_t head = freeReadStreams.removeHead();
+            pStream = readStreamTable + head;
+            pStream->set_address(addr);
+            pStream->pData = pChunk;
+            pStream->nHead = 0;
+            if (chunkSize > maxSize) {
+                pStream->nTail = maxSize;
+                pChunk += maxSize;
+                chunkSize -= maxSize;
+            } else {
+                pStream->nTail = chunkSize;
+                pChunk += chunkSize;
+                chunkSize -= chunkSize;
+            }
+
+            // NOTE: protect from mods in interrupts mid-way through this code
+            cli();
+            // queue it for processing
+            pendingReadStreams.addTail(head);
+            if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
+                // first one, then no-one to start it up but here
+                pStream->flags |= STREAM_FLAGS_PENDING;
+                startProcessingRequest(pStream);
+            } else {
+                // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
+                // and new request processing started if needed
+            }
+            sei();
+        }
+        
+        // make sure loop task is enabled start our loop task to monitor its completion
+        this->resume(0);
+
+        return pStream;
+    }
+
     /**
      * Accept given byte stream for processing.
      *
@@ -217,7 +276,7 @@ public:
      */
     ByteStream *processStream(ByteStream *writeStream) {
         uint8_t nextFreeHead;       // where next request head position should start
-        
+
         if (freeReadStreams.isEmpty()) {
             return NULL;
         }
@@ -263,12 +322,12 @@ public:
         return writeStream;
     }
 
-/**
-     * Start processing given request. This should start the interrupt calls for handling TWI data. 
-     * Any request in the pending request queue will automatically start when this request is completed.
-     * 
-     * @param pStream 
-     */
+    /**
+         * Start processing given request. This should start the interrupt calls for handling TWI data. 
+         * Any request in the pending request queue will automatically start when this request is completed.
+         * 
+         * @param pStream 
+         */
     virtual void startProcessingRequest(ByteStream *pStream) = 0;
 
     /**
@@ -300,16 +359,16 @@ public:
         cli();
         while (!completedStreams.isEmpty()) {
             const uint8_t head = completedStreams.removeHead();
-            ByteStream *pendingStream = getReadStream(head);
-            
+            ByteStream *completedStream = getReadStream(head);
+
             // put its handled info back to writeBuffer and it back in the free queue
             // unless it is an own buffer request
-            pendingStream->flags = 0;
-            freeReadStreams.addTail(getReadStreamId(pendingStream));
+            completedStream->triggerComplete();
+            completedStream->flags = 0;
+            freeReadStreams.addTail(getReadStreamId(completedStream));
         }
         sei();
     }
-
 
     void loop() override {
         uint8_t pendingCount = 0;
@@ -355,10 +414,10 @@ public:
 
 #ifdef CONSOLE_DEBUG
 
-// print out queue for testing
-    virtual
-
-    void dump(uint8_t indent, uint8_t compact);
+    // print out queue for testing
+        virtual
+    
+        void dump(uint8_t indent, uint8_t compact);
 
 #endif
 };

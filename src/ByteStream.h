@@ -18,11 +18,13 @@ struct ByteStream : protected Queue {
     uint8_t flags;
     /** Slave address byte (with read/write bit). in case of Twi */
     uint8_t addr; 
+    uint8_t waitingTask; // if not NULL_TASK then index of task waiting for this request to complete
 
 public:
     ByteStream(Queue *pByteQueue, uint8_t streamFlags) : Queue(*pByteQueue) {
         flags = streamFlags;
         addr = 0;
+        waitingTask = NULL_TASK;
     }
 
     inline void setAddress(uint8_t addr) {
@@ -31,6 +33,13 @@ public:
 
     inline uint8_t getAddress() const {
         return addr;
+    }
+    
+    void waitComplete();
+    void triggerComplete();
+    
+    inline uint8_t getWaitingTask() const {
+        return waitingTask;
     }
 
     // set flags other than address and rd/wr permissions

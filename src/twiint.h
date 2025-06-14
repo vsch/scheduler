@@ -10,6 +10,11 @@
  * MIT License
  *
  * Copyright (c) 2018 Sebastian Goessl
+ * 
+ * Modified for CByteStream and TwiController handling
+ * Author:     Vladimir Schneider
+ * 
+ * Copyright (c) 2025 Vladimir Schneider
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -35,17 +40,14 @@
 #ifndef TWIINT_H_
 #define TWIINT_H_
 
-
-
 #include <stdbool.h>    //bool type
 #include <stddef.h>     //size_t type
 #include <stdint.h>     //uint8_t type
-
-
+#include "CByteStream.h"
 
 //default to Fast Mode
 #ifndef TWI_FREQUENCY
-    #define TWI_FREQUENCY 400000
+#define TWI_FREQUENCY 400000
 #endif
 
 /** Slave address with write intend. */
@@ -53,11 +55,14 @@
 /** Slave address with read intend. */
 #define TWI_ADDRESS_R(x)    (((x) << 1) | 0x01)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Errors during interrupt processing will increment twiint_errors
  */
 extern uint16_t twiint_errors;
-
 
 /**
  * Initializes the TWI hardware for master mode operating at TWI_FREQUENCY.
@@ -72,6 +77,7 @@ void twiint_init(void);
  * @return if currently a transmission is ongoing
  */
 bool twiint_busy(void);
+
 /**
  * Blocks until the transmission is completed.
  */
@@ -96,8 +102,35 @@ void twiint_flush(void);
  * or location for the read in bytes to be written to
  * @param len number of bytes to write/read
  */
-void twiint_start(uint8_t address, uint8_t *data, size_t len);
+void twiint_start(CByteStream_t *pStream);
 
+/**
+ * Implemented by TwiController as a C callable function
+ * 
+ * @param pStream pointer to stream whose processing was completed 
+ */
+void complete_request(CByteStream_t *pStream);
+
+#define TWI_CO_0_DC_1 (0x40) // Co = 0, D/C = 1
+#define TWI_CO_0_DC_0 (0x00) // Co = 0, D/C = 0
+
+CByteStream_t *twi_get_write_buffer(uint8_t addr, uint8_t coDC);
+
+/**
+ * Send given buffered data as multiple self-buffered twi requests
+ * 
+ * @param addr   twi address, including read flag
+ * @param pData  pointer to byte buffer
+ * @param len    length of data to send
+ * @return       pointer to last request, can be used to wait for completion of the send
+ */
+CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint16_t len, int maxSize);
+
+CByteStream_t * twi_process(CByteStream_t *pStream);
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* TWIINT_H_ */

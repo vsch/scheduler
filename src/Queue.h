@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include "common_defs.h"
 
+#define QUEUE_MAX_SIZE      (254)
+
 #define sizeOfQueue(s, t)            (sizeOfArray((s)+1, t))
 #define sizeOfByteQueue(s)          (sizeOfQueue((s), uint8_t))
 

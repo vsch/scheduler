@@ -8,6 +8,7 @@
 #include "src/Scheduler.h"
 #include "src/Mutex.h"
 #include "src/ByteStream.h"
+#include "src/TwiController.h"
 
 #define LED (13)
 
@@ -17,6 +18,15 @@
 
 uint8_t qData[sizeOfQueue(32, uint8_t)];
 Queue qRequests(qData, sizeof(qData));
+
+#define  TWI_MAX_STREAMS 8
+#define  TWI_MAX_TASKS 4
+#define  TWI_MAX_BUFFER 248
+
+#define STREAM_QUEUE_SIZE  (PENDING_READ_STREAMS_SIZE(TWI_MAX_STREAMS, TWI_MAX_TASKS, TWI_MAX_BUFFER))
+
+uint8_t controllerBuffer[sizeOfControllerBuffer(TWI_MAX_STREAMS, TWI_MAX_TASKS, TWI_MAX_BUFFER)];
+TwiController twiController(controllerBuffer, TWI_MAX_STREAMS, TWI_MAX_TASKS, TWI_MAX_BUFFER, 0);
 
 /*
   SerialEvent occurs whenever a new data comes in the hardware serial RX. This
