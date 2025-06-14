@@ -270,11 +270,11 @@ public:
      *     so that it will send only what the previous request will not send. This only applies to non-own buffer
      *     streams which provide a block of data to send, outside the shared writeBuffer.
      *
-     * @param writeStream       pointer to stream to process, will be reset to new reality if needed
+     * @param pWriteStream       pointer to stream to process, will be reset to new reality if needed
      * @return                  pointer to writeStream or NULL if not handleProcessedRequest because of lack of readStreams
      *                          as made in the willRequire() call.
      */
-    ByteStream *processStream(ByteStream *writeStream) {
+    ByteStream *processStream(ByteStream *pWriteStream) {
         uint8_t nextFreeHead;       // where next request head position should start
 
         if (freeReadStreams.isEmpty()) {
@@ -285,14 +285,14 @@ public:
         ByteStream *pStream = readStreamTable + head;
 
         // incorporate tail into buffer if not own buffered stream
-        bool isSharedBuffer = writeStream->pData == writeBuffer.pData;
+        bool isSharedBuffer = pWriteStream->pData == writeBuffer.pData;
         if (isSharedBuffer) {
-            writeBuffer.updateStreamed(writeStream);
-            nextFreeHead = writeStream->nTail;
+            writeBuffer.updateStreamed(pWriteStream);
+            nextFreeHead = pWriteStream->nTail;
         }
 
         // copy the write stream info into read stream for processing
-        writeStream->getStream(pStream, STREAM_FLAGS_RD);
+        pWriteStream->getStream(pStream, STREAM_FLAGS_RD);
 
         if (isSharedBuffer) {
             // new read stream starts where last read stream left off
@@ -318,8 +318,8 @@ public:
         this->resume(0);
 
         // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
-        writeBuffer.getStream(writeStream, STREAM_FLAGS_WR);
-        return writeStream;
+        writeBuffer.getStream(pWriteStream, STREAM_FLAGS_WR);
+        return pWriteStream;
     }
 
     /**
