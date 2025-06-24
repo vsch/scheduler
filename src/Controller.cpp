@@ -4,6 +4,7 @@
 #ifdef CONSOLE_DEBUG
 
 #include "tests/FileTestResults_AddResult.h"
+#include "tests/FileTestResults.h"
 
 // print out queue for testing
 void Controller::dump(uint8_t indent, uint8_t compact) {
@@ -68,5 +69,47 @@ void Controller::dump(uint8_t indent, uint8_t compact) {
 
     addActualOutput("\n%s}\n", indentStr);
 }
+
+#ifdef RESOURCE_TRACE
+
+void Controller::startResourceTrace() {
+    startStreams = freeReadStreams.getCount();
+    startTasks = reservationLock.queue.getCapacity();
+    startBufferSize = writeBuffer.getCapacity();
+}
+
+void Controller::updateResourceTrace() {
+    int16_t tmpStreams = startStreams - freeReadStreams.getCount();
+    int16_t tmpBufferSize = startBufferSize - writeBuffer.getCapacity();
+
+    if (usedStreams < tmpStreams) { usedStreams = tmpStreams; }
+    if (usedBufferSize < tmpBufferSize) { usedBufferSize = tmpBufferSize; }
+    
+    updateResourceLockTrace();
+}
+
+void Controller::updateResourceLockTrace() {
+    int16_t tmpTasks = startTasks - reservationLock.queue.getCapacity();
+    if (usedTasks < tmpTasks) { usedTasks = tmpTasks; }
+}
+
+void Controller::updateResourcePreLockTrace() {
+    int16_t tmpTasks = startTasks - reservationLock.queue.getCapacity() + 1;
+    if (usedTasks < tmpTasks) { usedTasks = tmpTasks; }
+}
+
+void Controller::dumpResourceTrace() {
+    updateResourceTrace();
+
+#ifdef CONSOLE_DEBUG
+    ADD_RESULT("Controller::resources usedStreams:%d, usedTasks:%d, usedBufferSize:%d\n", usedStreams, usedTasks, usedBufferSize);
+#elif defined(SERIAL_DEBUG)
+#include "Serial.h"
+    // TODO: add trace code
+    Serial.print();
+#endif
+}
+
+#endif
 
 #endif // CONSOLE_DEBUG

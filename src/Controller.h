@@ -62,6 +62,17 @@ protected:
     uint8_t flags;
 
 public:
+#ifdef RESOURCE_TRACE
+    // allow tracing of resource requirements
+    uint8_t startStreams;
+    uint8_t startTasks;
+    uint8_t startBufferSize;
+
+    uint8_t usedStreams;
+    uint8_t usedTasks;
+    uint8_t usedBufferSize;
+#endif
+
     /**
      * Construct a controller
      * @param pData             pointer to block of data for controller needs, one data block chopped up for all needs
@@ -71,15 +82,14 @@ public:
      */
     Controller(uint8_t *pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize, uint8_t flags = CTR_FLAGS_REQ_AUTO_START)
 
-            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-              , completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-              , freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)), writeBuffer(
+            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)), writeBuffer(
                     pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)), reservationLock(
                     pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)), requirementList(
                     pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)), writeStream(&writeBuffer,
-                                                                                                                                                                     0)
-              , readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))), maxStreams(maxStreams), maxTasks(maxTasks)
-              , writeBufferSize(writeBufferSize), flags(flags) {
+                                                                                                                                                                     0),
+              readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))), maxStreams(maxStreams), maxTasks(maxTasks), writeBufferSize(writeBufferSize), flags(flags) {
         // now initialize all the read Streams
 
         //printf("pendingReadStreams %p 0x%4.4lx %p\n", pendingReadStreams.pData, PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize), pendingReadStreams.pData + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize));
@@ -95,6 +105,15 @@ public:
             freeReadStreams.addTail(i);
         }
         lastFreeHead = writeBuffer.nHead;
+
+#ifdef RESOURCE_TRACE
+        startStreams = 0;
+        startTasks = 0;
+        startBufferSize = 0;
+        usedStreams = 0;
+        usedTasks = 0;
+        usedBufferSize = 0;
+#endif
     }
 
     void reset() {
@@ -118,6 +137,20 @@ public:
         }
         lastFreeHead = writeBuffer.nHead;
     }
+
+#ifdef RESOURCE_TRACE
+    void startResourceTrace();
+    void updateResourceTrace();
+    void updateResourcePreLockTrace();
+    void updateResourceLockTrace();
+    void dumpResourceTrace();
+#else
+    inline void startResourceTrace() { }
+    inline void updateResourceTrace() { }
+    inline void updateResourcePreLockTrace() { }
+    inline void updateResourceLockTrace() { }
+    inline void dumpResourceTrace() { }
+#endif
 
     uint8_t getReadStreamId(ByteStream *pStream) {
         return pStream - readStreamTable;
@@ -184,16 +217,19 @@ public:
             if (requests <= freeReadStreams.getCount() && adjBytes <= writeBuffer.getCapacity()) {
                 // can proceed now, overwrite whatever was uncommitted in the write stream
                 writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
+                updateResourcePreLockTrace();
                 reservationLock.reserve();
                 return 0;
             }
 
+            updateResourceLockTrace();
             reservationLock.reserve();
             reservationLock.transfer(scheduler.getTaskId(), this->getIndex());
         }
 
         // add to the queue of waiters
         requirementList.addTail(RESERVATIONS_PACK(requests, adjBytes));
+        updateResourcePreLockTrace();
         return reservationLock.reserve();
     }
 
@@ -206,6 +242,7 @@ public:
 
     ByteStream *getStreamRequest() {
         uint8_t head = freeReadStreams.removeHead();
+        updateResourceTrace();
         ByteStream *pStream = readStreamTable + head;
         return pStream;
     }
@@ -228,6 +265,7 @@ public:
 
         while (chunkSize) {
             uint8_t head = freeReadStreams.removeHead();
+            updateResourceTrace();
             pStream = readStreamTable + head;
             pStream->set_address(addr);
             pStream->pData = pChunk;
@@ -256,7 +294,7 @@ public:
             }
             sei();
         }
-        
+
         // make sure loop task is enabled start our loop task to monitor its completion
         this->resume(0);
 
@@ -298,8 +336,11 @@ public:
             // new read stream starts where last read stream left off
             pStream->nHead = lastFreeHead;
             lastFreeHead = nextFreeHead;
+            
+            updateResourceTrace();
         }
 
+        
         // NOTE: protect from mods in interrupts mid-way through this code
         cli();
         // queue it for processing
@@ -415,9 +456,9 @@ public:
 #ifdef CONSOLE_DEBUG
 
     // print out queue for testing
-        virtual
-    
-        void dump(uint8_t indent, uint8_t compact);
+    virtual
+
+    void dump(uint8_t indent, uint8_t compact);
 
 #endif
 };
