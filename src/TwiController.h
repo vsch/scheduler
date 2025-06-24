@@ -1,6 +1,7 @@
 
 #ifndef SCHEDULER_TWICONTROLLER_H
 #define SCHEDULER_TWICONTROLLER_H
+
 #include "Controller.h"
 #include "twiint.h"
 
@@ -18,6 +19,5 @@ public:
 };
 
 extern TwiController twiController;
-
 
 #endif //SCHEDULER_TWICONTROLLER_H

@@ -4,12 +4,17 @@
 
 void TwiController::startProcessingRequest(ByteStream *pStream) {
     // output stream content and call endProcessingRequest
+#ifndef CONSOLE_DEBUG
     twiint_start((CByteStream_t *) pStream);
+#endif
 }
 
 void complete_request(CByteStream_t *pStream) {
     // force waiting for completion of processing of the request
+#ifndef CONSOLE_DEBUG   
     twiint_flush();
+#endif    
+    
     twiController.endProcessingRequest((ByteStream *) pStream);
 }
 
