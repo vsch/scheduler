@@ -5,6 +5,8 @@
 
 #include "tests/FileTestResults_AddResult.h"
 #include "tests/FileTestResults.h"
+// #else
+// #define addActualOutput(fmt, ...)  ((void)0)
 
 // print out queue for testing
 void Controller::dump(uint8_t indent, uint8_t compact) {
@@ -69,6 +71,7 @@ void Controller::dump(uint8_t indent, uint8_t compact) {
 
     addActualOutput("\n%s}\n", indentStr);
 }
+#endif // CONSOLE_DEBUG
 
 #ifdef RESOURCE_TRACE
 
@@ -107,9 +110,7 @@ void Controller::dumpResourceTrace() {
 #include "Serial.h"
     // TODO: add trace code
     Serial.print();
-#endif
+#endif // CONSOLE_DEBUG
 }
 
-#endif
-
-#endif // CONSOLE_DEBUG
+#endif // RESOURCE_TRACE

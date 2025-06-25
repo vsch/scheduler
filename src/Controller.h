@@ -456,9 +456,7 @@ public:
 #ifdef CONSOLE_DEBUG
 
     // print out queue for testing
-    virtual
-
-    void dump(uint8_t indent, uint8_t compact);
+    virtual void dump(uint8_t indent, uint8_t compact);
 
 #endif
 };

@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 // GLOBAL DEFINES
 #include "Arduino.h"
-#include "HardwareSerial.h"
+#include <HardwareSerial.h>
 
 // ---------------------------------------------------------------------------
 // INCLUDES
@@ -22,8 +22,6 @@ Queue qRequests(qData, sizeof(qData));
 #define  TWI_MAX_STREAMS 8
 #define  TWI_MAX_TASKS 4
 #define  TWI_MAX_BUFFER 248
-
-#define STREAM_QUEUE_SIZE  (PENDING_READ_STREAMS_SIZE(TWI_MAX_STREAMS, TWI_MAX_TASKS, TWI_MAX_BUFFER))
 
 uint8_t controllerBuffer[sizeOfControllerBuffer(TWI_MAX_STREAMS, TWI_MAX_TASKS, TWI_MAX_BUFFER)];
 TwiController twiController(controllerBuffer, TWI_MAX_STREAMS, TWI_MAX_TASKS, TWI_MAX_BUFFER, 0);

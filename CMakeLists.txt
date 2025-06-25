@@ -21,6 +21,11 @@ endif ()
 # Enable ASM language
 project(${PROJECT_NAME} LANGUAGES C CXX ASM)
 
+# Config defines for ssd1306 with TwiController
+add_compile_definitions(GFX_PAGED_UPDATES)
+add_compile_definitions(GFX_UPDATE_PAGES=1)
+add_compile_definitions(INCLUDE_TWI_INT)
+
 # Define additional source and header files or default arduino sketch files
 set(${PROJECT_NAME}_SRCS
         src/Queue.cpp
