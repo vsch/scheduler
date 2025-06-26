@@ -47,13 +47,13 @@ public:
         nHead = nTail = 0;
     }
 
-    [[nodiscard]] uint8_t getCount() const;
-    [[nodiscard]] uint8_t peekHead(uint8_t offset) const;
-    [[nodiscard]] uint8_t peekTail(uint8_t offset) const;
+    NO_DISCARD uint8_t getCount() const;
+    NO_DISCARD uint8_t peekHead(uint8_t offset) const;
+    NO_DISCARD uint8_t peekTail(uint8_t offset) const;
 
-    [[nodiscard]] uint8_t peekHead() const { return peekHead(0); }
+    NO_DISCARD uint8_t peekHead() const { return peekHead(0); }
 
-    [[nodiscard]] uint8_t peekTail() const { return peekTail(0); }
+    NO_DISCARD uint8_t peekTail() const { return peekTail(0); }
 
     // enqueue/dequeue methods
     uint8_t addTail(uint8_t data);
@@ -61,18 +61,18 @@ public:
     uint8_t removeTail();
     uint8_t removeHead();
     
-    [[nodiscard]] inline uint8_t getSize() const { return nSize - 1; }
+    NO_DISCARD inline uint8_t getSize() const { return nSize - 1; }
 
-    [[nodiscard]] inline uint8_t getCapacity() const { return nSize - getCount() - 1; }
+    NO_DISCARD inline uint8_t getCapacity() const { return nSize - getCount() - 1; }
 
-    [[nodiscard]] inline uint8_t isEmpty() const { return nHead == nTail; }
+    NO_DISCARD inline uint8_t isEmpty() const { return nHead == nTail; }
 
-    [[nodiscard]] inline uint8_t isFull() const { return getCount() + 1 == nSize; }
+    NO_DISCARD inline uint8_t isFull() const { return getCount() + 1 == nSize; }
 
     // version which allows testing if there is enough room for given number of bytes
-    [[nodiscard]] inline uint8_t isFull(uint8_t toAdd) const { return getCount() + toAdd == nSize; }
+    NO_DISCARD inline uint8_t isFull(uint8_t toAdd) const { return getCount() + toAdd == nSize; }
 
-    [[nodiscard]] inline uint8_t isEmpty(uint8_t toRemove) const { return toRemove ? getCount() < toRemove : isEmpty(); }
+    NO_DISCARD inline uint8_t isEmpty(uint8_t toRemove) const { return toRemove ? getCount() < toRemove : isEmpty(); }
 
     inline uint8_t enqueue(uint8_t data) { return addTail(data); }
 

@@ -139,10 +139,48 @@ public:
     }
 
 #ifdef RESOURCE_TRACE
-    void startResourceTrace();
-    void updateResourceTrace();
-    void updateResourcePreLockTrace();
-    void updateResourceLockTrace();
+//    void startResourceTrace();
+//    void updateResourceTrace();
+//    void updateResourcePreLockTrace();
+//    void updateResourceLockTrace();
+    void startResourceTrace() {
+        startStreams = freeReadStreams.getCount();
+        startTasks = reservationLock.queue.getCapacity();
+        startBufferSize = writeBuffer.getCapacity();
+    }
+
+    void updateResourceTrace() {
+        uint8_t tmp = freeReadStreams.getCount();
+        if (tmp < startStreams) {
+            tmp = startStreams - tmp;
+            if (usedStreams < tmp) { usedStreams = tmp; }
+        }
+
+        tmp = writeBuffer.getCapacity();
+        if (tmp < startBufferSize) {
+            tmp = startBufferSize - tmp;
+            if (usedBufferSize < tmp) { usedBufferSize = tmp; }
+        }
+
+        updateResourceLockTrace();
+    }
+
+    void updateResourceLockTrace() {
+        uint8_t tmp = reservationLock.queue.getCapacity();
+        if (tmp < startTasks) {
+            tmp = startTasks - tmp;
+            if (usedTasks < tmp) { usedTasks = tmp; }
+        }
+    }
+
+    void updateResourcePreLockTrace() {
+        uint8_t tmp = reservationLock.queue.getCapacity();
+        if (tmp < startTasks + 1) {
+            tmp = startTasks - tmp + 1;
+            if (usedTasks < tmp) { usedTasks = tmp; }
+        }
+    }
+
     void dumpResourceTrace();
 #else
     inline void startResourceTrace() { }
@@ -156,7 +194,7 @@ public:
         return pStream - readStreamTable;
     }
 
-    [[nodiscard]] uint8_t isRequestAutoStart() const {
+    NO_DISCARD uint8_t isRequestAutoStart() const {
         return flags & CTR_FLAGS_REQ_AUTO_START;
     }
 
@@ -172,11 +210,11 @@ public:
         return readStreamTable + id;
     }
 
-    [[nodiscard]] uint8_t requestCapacity() const {
+    NO_DISCARD uint8_t requestCapacity() const {
         return freeReadStreams.getCount();
     }
 
-    [[nodiscard]] uint8_t byteCapacity() const {
+    NO_DISCARD uint8_t byteCapacity() const {
         return writeBuffer.getCapacity();
     }
 

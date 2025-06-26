@@ -18,4 +18,11 @@
 #define sizeOfArray(b, e)    (sizeof(e)*(b))
 #define sizeOfPlus(t, b, e)    (sizeof(t)+sizeof(e)*(b))
 
+
+#ifndef CONSOLE_DEBUG
+#define NO_DISCARD      [[nodiscard]]
+#else
+#define NO_DISCARD
+#endif
+
 #endif //SCHEDULER_COMMON_DEFS_H

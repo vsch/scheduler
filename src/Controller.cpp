@@ -71,35 +71,10 @@ void Controller::dump(uint8_t indent, uint8_t compact) {
 
     addActualOutput("\n%s}\n", indentStr);
 }
+
 #endif // CONSOLE_DEBUG
 
 #ifdef RESOURCE_TRACE
-
-void Controller::startResourceTrace() {
-    startStreams = freeReadStreams.getCount();
-    startTasks = reservationLock.queue.getCapacity();
-    startBufferSize = writeBuffer.getCapacity();
-}
-
-void Controller::updateResourceTrace() {
-    int16_t tmpStreams = startStreams - freeReadStreams.getCount();
-    int16_t tmpBufferSize = startBufferSize - writeBuffer.getCapacity();
-
-    if (usedStreams < tmpStreams) { usedStreams = tmpStreams; }
-    if (usedBufferSize < tmpBufferSize) { usedBufferSize = tmpBufferSize; }
-    
-    updateResourceLockTrace();
-}
-
-void Controller::updateResourceLockTrace() {
-    int16_t tmpTasks = startTasks - reservationLock.queue.getCapacity();
-    if (usedTasks < tmpTasks) { usedTasks = tmpTasks; }
-}
-
-void Controller::updateResourcePreLockTrace() {
-    int16_t tmpTasks = startTasks - reservationLock.queue.getCapacity() + 1;
-    if (usedTasks < tmpTasks) { usedTasks = tmpTasks; }
-}
 
 void Controller::dumpResourceTrace() {
     updateResourceTrace();
