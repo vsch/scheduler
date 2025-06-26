@@ -7,10 +7,6 @@
 
 #endif // CONSOLE_DEBUG
 
-Signal::Signal(uint8_t *queueBuffer, uint8_t queueSize)
-        : queue(queueBuffer, queueSize) {
-}
-
 uint8_t Signal::wait(Task *pTask) {
     if (!queue.isFull()) {
         queue.addTail(pTask->getIndex());

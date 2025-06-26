@@ -2,18 +2,6 @@
 #include "Mutex.h"
 #include "Scheduler.h"
 
-Mutex::Mutex(uint8_t *queueBuffer, uint8_t queueSize)
-        : queue(queueBuffer, queueSize) {
-}
-
-void Mutex::reset() {
-    queue.reset();
-}
-
-uint8_t Mutex::isFree() const {
-    return queue.isEmpty();
-}
-
 uint8_t Mutex::reserve(uint8_t taskId) {
     if (scheduler.isValidId(taskId)) {
         if (queue.isEmpty()) {
@@ -64,10 +52,6 @@ uint8_t Mutex::transfer(uint8_t fromTaskId, uint8_t toTaskId) {
         return 0;
     }
     return NULL_TASK;
-}
-
-bool Mutex::isOwner(uint8_t taskId) {
-    return queue.peekHead() == taskId;
 }
 
 #ifdef CONSOLE_DEBUG

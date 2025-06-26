@@ -179,7 +179,10 @@ public:
      *
      * @return  currently running task or NULL if none.
      */
-    Task *getTask();
+    inline Task *getTask() {
+        return pTask;
+    }
+
 
     /**
      * Get the currently running task id or NULL_TASK if none.
@@ -196,6 +199,7 @@ public:
      * @param delayTable    pointer to task delay table in RAM
      */
     Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable);
+
 
     /**
      * Startup scheduler and call begin() of all tasks

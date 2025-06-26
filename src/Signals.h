@@ -10,7 +10,10 @@ class Signal {
     Queue queue;
 
 public:
-    Signal(uint8_t *queueBuffer, uint8_t queueSize);
+    Signal(uint8_t *queueBuffer, uint8_t queueSize)
+            : queue(queueBuffer, queueSize) {
+    }
+
 
     /**
      * Wait for signal to trigger

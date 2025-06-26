@@ -21,11 +21,7 @@ struct ByteStream : protected Queue {
     uint8_t waitingTask; // if not NULL_TASK then index of task waiting for this request to complete
 
 public:
-    ByteStream(Queue *pByteQueue, uint8_t streamFlags) : Queue(*pByteQueue) {
-        flags = streamFlags;
-        addr = 0;
-        waitingTask = NULL_TASK;
-    }
+    ByteStream(Queue *pByteQueue, uint8_t streamFlags);
 
     inline void setAddress(uint8_t addr) {
         this->addr = addr;

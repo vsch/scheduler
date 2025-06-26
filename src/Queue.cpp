@@ -2,58 +2,6 @@
 #include "CByteStream.h"
 #include "ByteStream.h"
 
-Queue::Queue(uint8_t *pData, uint8_t nSize) : pData(pData) {
-    this->nSize = nSize;
-    nHead = nTail = 0;
-}
-
-void Queue::reset() {
-    nHead = nTail = 0;
-}
-
-uint8_t Queue::getCount() const {
-    return (nTail < nHead ? nTail + nSize : nTail) - nHead;
-}
-
-uint8_t Queue::addTail(uint8_t data) {
-    if (isFull()) return NULL_BYTE;
-
-    pData[nTail++] = data;
-    if (nTail == nSize) nTail = 0;
-    return data;
-}
-
-uint8_t Queue::removeTail() {
-    if (isEmpty()) return 0;
-
-    if (!nTail) nTail = nSize;
-    return pData[--nTail];
-}
-
-uint8_t Queue::removeHead() {
-    if (isEmpty()) return NULL_BYTE;
-
-    uint8_t data = pData[nHead++];
-    if (nHead == nSize) nHead = 0;
-    return data;
-}
-
-uint8_t Queue::addHead(uint8_t data) {
-    if (isFull()) return NULL_BYTE;
-
-    if (!nHead) nHead = nSize;
-    pData[--nHead] = data;
-    return data;
-}
-
-uint8_t Queue::peekHead(uint8_t offset) const {
-    return getCount() <= offset ? NULL_BYTE : pData[nHead + offset < nSize ? nHead + offset : nHead + offset - nSize];
-}
-
-uint8_t Queue::peekTail(uint8_t offset) const {
-    return getCount() <= offset ? NULL_BYTE : pData[nTail <= offset ? nSize - (offset - nTail) - 1 : nTail - offset - 1];
-}
-
 uint8_t Queue::updateQueued(Queue *pOther, uint8_t flags) {
     // take updated values if based on our data
     if (pOther->pData == pData) {
@@ -70,6 +18,18 @@ uint8_t Queue::updateQueued(Queue *pOther, uint8_t flags) {
 
 uint8_t Queue::updateStreamed(ByteStream *pOther) {
     return updateQueued(pOther, pOther->flags);
+}
+
+uint8_t Queue::getCount() const {
+    return (nTail < nHead ? nTail + nSize : nTail) - nHead;
+}
+
+uint8_t Queue::peekHead(uint8_t offset) const {
+    return getCount() <= offset ? NULL_BYTE : pData[nHead + offset < nSize ? nHead + offset : nHead + offset - nSize];
+}
+
+uint8_t Queue::peekTail(uint8_t offset) const {
+    return getCount() <= offset ? NULL_BYTE : pData[nTail <= offset ? nSize - (offset - nTail) - 1 : nTail - offset - 1];
 }
 
 #ifdef QUEUE_BLOCK_FUNCS
@@ -250,6 +210,42 @@ ByteStream *Queue::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->pData = pData;
     pOther->flags = flags;
     return pOther;
+}
+
+uint8_t Queue::addTail(uint8_t data) {
+    if (isFull()) return NULL_BYTE;
+
+    pData[nTail++] = data;
+    if (nTail == nSize) nTail = 0;
+    return data;
+}
+
+uint8_t Queue::removeTail() {
+    if (isEmpty()) return 0;
+
+    if (!nTail) nTail = nSize;
+    return pData[--nTail];
+}
+
+uint8_t Queue::removeHead() {
+    if (isEmpty()) return NULL_BYTE;
+
+    uint8_t data = pData[nHead++];
+    if (nHead == nSize) nHead = 0;
+    return data;
+}
+
+uint8_t Queue::addHead(uint8_t data) {
+    if (isFull()) return NULL_BYTE;
+
+    if (!nHead) nHead = nSize;
+    pData[--nHead] = data;
+    return data;
+}
+
+Queue::Queue(uint8_t *pData, uint8_t nSize) : pData(pData) {
+    this->nSize = nSize;
+    nHead = nTail = 0;
 }
 
 #ifdef CONSOLE_DEBUG

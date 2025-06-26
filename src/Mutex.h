@@ -13,9 +13,18 @@ class Mutex
     Queue queue;
 
 public:
-    Mutex(uint8_t* queueBuffer, uint8_t queueSize);
+    inline Mutex(uint8_t *queueBuffer, uint8_t queueSize)
+            : queue(queueBuffer, queueSize) {
+    }
 
-    uint8_t isFree() const;
+    inline void reset() {
+        queue.reset();
+    }
+
+    inline uint8_t isFree() const {
+        return queue.isEmpty();
+    }
+
 
     uint8_t reserve(uint8_t taskId);
     /**
@@ -46,7 +55,11 @@ public:
      * @return 0 if done, NULL_TASK if current task is not the owner
      */
     uint8_t transfer(uint8_t fromTaskId, uint8_t toTaskId);
-    bool isOwner(uint8_t taskId);
+    
+    inline bool isOwner(uint8_t taskId) {
+        return queue.peekHead() == taskId;
+    }
+
     inline bool isOwner(Task* pTask) { return isOwner(pTask->getIndex()); }
 
 #ifdef CONSOLE_DEBUG
@@ -54,7 +67,6 @@ public:
     void dump(uint8_t indent, uint8_t compact);
 #endif
 
-    void reset();
 };
 
 #endif //SCHEDULER_MUTEX_H

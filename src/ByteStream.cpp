@@ -2,6 +2,12 @@
 #include "ByteStream.h"
 #include "Scheduler.h"
 
+ByteStream::ByteStream(Queue *pByteQueue, uint8_t streamFlags) : Queue(*pByteQueue) {
+    flags = streamFlags;
+    addr = 0;
+    waitingTask = NULL_TASK;
+}
+
 uint8_t ByteStream::setFlags(uint8_t flags, uint8_t mask) {
     mask &= ~(STREAM_FLAGS_RD_WR);
     this->flags &= ~mask;

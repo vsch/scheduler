@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "Scheduler.h"
 
-Scheduler::Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable) {
+Scheduler::Scheduler(uint8_t count, const char *taskTable, uint16_t *delayTable) {
     taskCount = count;
     tasks = taskTable;
     delays = delayTable;
@@ -210,10 +210,6 @@ void Scheduler::suspend(uint8_t taskId) {
 
 uint8_t Scheduler::canLoop() const {
     return !inLoop;
-}
-
-Task *Scheduler::getTask() {
-    return pTask;
 }
 
 uint8_t Scheduler::getTaskId() {

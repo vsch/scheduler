@@ -31,17 +31,19 @@ class Queue {
     friend class Controller;
 
     uint8_t nSize;
-    
+
     // CAVEAT: nHead is modified in code called from interrupt routine, if size changed from a byte, then code accessing 
     //      nHead in write buffer will need to be protected with cli()/sei() wrapper
-    uint8_t nHead;                  
+    uint8_t nHead;
     uint8_t nTail;
     uint8_t *pData;
 
 public:
     Queue(uint8_t *pData, uint8_t nSize);
-    
-    void reset();
+
+    void reset() {
+        nHead = nTail = 0;
+    }
 
     inline void empty() {
         nHead = nTail = 0;
@@ -57,10 +59,13 @@ public:
 
     // enqueue/dequeue methods
     uint8_t addTail(uint8_t data);
-    uint8_t addHead(uint8_t data);
+
     uint8_t removeTail();
+
     uint8_t removeHead();
-    
+
+    uint8_t addHead(uint8_t data);
+
     NO_DISCARD inline uint8_t getSize() const { return nSize - 1; }
 
     NO_DISCARD inline uint8_t getCapacity() const { return nSize - getCount() - 1; }
