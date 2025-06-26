@@ -23,6 +23,7 @@ Task *Scheduler::getTask(uint8_t index) {
 void Scheduler::begin() {
     memset(delays, 0, sizeof(*delays) * taskCount);
 
+#if defined(DEBUG_MODE_SCHEDULER_VALIDATE) && defined(SERIAL_DEBUG_SCHEDULER_ERRORS)   
     for (uint8_t i = 0; i < taskCount; i++) {
         Task *pTask = getTask(i);
         if (pTask->index != NULL_TASK) {
@@ -32,10 +33,12 @@ void Scheduler::begin() {
             pTask->index = i;
         }
     }
+#endif
 
     clockTick = micros();
     for (uint8_t i = 0; i < taskCount; i++) {
         pTask = getTask(i);
+        pTask->index = i;
         pTask->begin();
         pTask = NULL;
     }
