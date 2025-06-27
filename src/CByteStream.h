@@ -6,7 +6,9 @@
 #define STREAM_FLAGS_RD         (0x01)      // marks the stream as read enabled, can get from it
 #define STREAM_FLAGS_WR         (0x02)      // marks the stream as write enabled, can put to it
 #define STREAM_FLAGS_RD_WR      (0x03)      // marks the stream as write enabled, can put to it
-#define STREAM_FLAGS_PENDING    (0x04)      // marks the stream as pending
+#define STREAM_FLAGS_PENDING    (0x04)      // marks the stream as pending or processing
+#define STREAM_FLAGS_PROCESSING (0x08)      // marks the stream as being processed
+#define STREAM_FLAGS_UNBUFFERED (0x10)      // marks the stream is unbuffered
 
 // Simple streaming both read and write for use in C interrupts and C code, provided from C/C++ code
 // has the same layout as Stream
@@ -34,6 +36,7 @@ extern uint8_t stream_put(CByteStream_t* thizz, uint8_t data); // write byte
 extern uint8_t stream_address(const CByteStream_t* thizz); // get address from flags
 extern uint8_t stream_can_write(const CByteStream_t* thizz); // get permitted ops
 extern uint8_t stream_can_read(const CByteStream_t* thizz); // get permitted ops
+extern uint8_t stream_is_unbuffered_pending(const CByteStream_t* thizz); // return true if the stream is unbuffered and not pending
 
 #ifdef __cplusplus
 }

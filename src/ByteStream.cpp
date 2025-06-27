@@ -76,6 +76,11 @@ uint8_t stream_can_read(const CByteStream_t *thizz) {
     return ((ByteStream *) thizz)->can_read();
 }
 
+// return true if the stream is unbuffered and not pending
+uint8_t stream_is_unbuffered_pending(const CByteStream_t* thizz) {
+    return thizz ? ((ByteStream *) thizz)->isUnbufferedPending() : 0;
+} 
+
 // get address from flags
 uint8_t stream_address(const CByteStream_t *thizz) {
     return ((ByteStream *) thizz)->address();
@@ -138,7 +143,7 @@ void ByteStream::dump(uint8_t indent, uint8_t compact) {
     // Output: Queue { nSize:%d, nHead:%d, nTail:%d
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
-    addActualOutput("%sStream { flags:%c%c nSize:%d, nHead:%d, nTail:%d\n", indentStr, canRead() ? 'R' : ' ', canWrite() ? 'W' : ' ', nSize, nHead, nTail);
+    addActualOutput("%sStream { flags:%s%s%s%s%s%s nSize:%d, nHead:%d, nTail:%d\n", indentStr, !flags ? "0" : "", isProcessing() ? "*" : "", canRead() ? "R" : "", canWrite() ? "W" : "", isPending() ? "P" : "", isUnbuffered() ? "U" : "", nSize, nHead, nTail);
     addActualOutput("%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n%s", indentStr, isEmpty(), isFull(), getCount(), getCapacity(), indentStr);
     uint16_t cnt = 0, last_cnt = -1;
 

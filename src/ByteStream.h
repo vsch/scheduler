@@ -50,12 +50,19 @@ public:
     inline uint8_t getFlags() const { return flags; };
 
     inline uint8_t getFlags(uint8_t mask) const { return flags & mask; };
+    inline uint8_t allFlags(uint8_t mask) const { return (flags & mask) == mask; };
 
     inline uint8_t canRead() const { return getFlags(STREAM_FLAGS_RD); }
 
     inline uint8_t canWrite() const { return getFlags(STREAM_FLAGS_WR); }
 
     inline uint8_t isPending() const { return getFlags(STREAM_FLAGS_PENDING); }
+    
+    inline uint8_t isProcessing() const { return getFlags(STREAM_FLAGS_PROCESSING); }
+    
+    inline uint8_t isUnbuffered() const { return getFlags(STREAM_FLAGS_UNBUFFERED); }
+
+    inline uint8_t isUnbufferedPending() const { return allFlags( STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED); }
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "HidingNonVirtualFunction"
@@ -113,7 +120,6 @@ public:
     }
 
     void pgmByteList(const uint8_t *bytes, uint16_t count);
-
 
 #ifdef CONSOLE_DEBUG
     // print out queue for testing

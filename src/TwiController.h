@@ -17,7 +17,9 @@ public:
     void startProcessingRequest(ByteStream *pStream) override {
         // output stream content and call endProcessingRequest
 #ifndef CONSOLE_DEBUG
+#ifdef SERIAL_DEBUG_TWI_DATA
         pStream->serialDebugDump(getReadStreamId(pStream));
+#endif
 #endif
         this->resume(0);
         

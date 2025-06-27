@@ -82,15 +82,13 @@ public:
      */
     Controller(uint8_t *pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize, uint8_t flags = CTR_FLAGS_REQ_AUTO_START)
 
-            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-              , completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-              , freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)), writeBuffer(
-                    pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)), reservationLock(
-                    pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)), requirementList(
-                    pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)), writeStream(&writeBuffer,
-                                                                                                                                                                     0)
-              , readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))), maxStreams(maxStreams), maxTasks(maxTasks)
-              , writeBufferSize(writeBufferSize), flags(flags) {
+            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              writeBuffer(pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              reservationLock(pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)),
+              requirementList(pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)), writeStream(&writeBuffer, 0),
+              readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))), maxStreams(maxStreams), maxTasks(maxTasks), writeBufferSize(writeBufferSize), flags(flags) {
         // now initialize all the read Streams
 
         //printf("pendingReadStreams %p 0x%4.4lx %p\n", pendingReadStreams.pData, PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize), pendingReadStreams.pData + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize));
@@ -305,7 +303,6 @@ public:
      */
     ByteStream *processRequest(uint8_t addr, uint8_t *pData, uint16_t len) {
         uint8_t *pChunk = pData;
-        ByteStream *pStream = NULL;
 
         if (len > QUEUE_MAX_SIZE) {
             len = QUEUE_MAX_SIZE;
@@ -313,12 +310,12 @@ public:
 
         uint8_t head = freeReadStreams.removeHead();
         updateResourceTrace();
-        pStream = readStreamTable + head;
+        ByteStream *pStream = readStreamTable + head;
         pStream->set_address(addr);
         pStream->pData = pChunk;
         pStream->nHead = 0;
         pStream->nTail = len;
-        pStream->flags = STREAM_FLAGS_RD;
+        pStream->flags = STREAM_FLAGS_RD | STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED;
 
         // NOTE: protect from mods in interrupts mid-way through this code
         cli();
@@ -326,7 +323,7 @@ public:
         pendingReadStreams.addTail(head);
         if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
             // first one, then no-one to start it up but here
-            pStream->flags |= STREAM_FLAGS_PENDING;
+            pStream->flags |= STREAM_FLAGS_PROCESSING;
             startProcessingRequest(pStream);
         } else {
             // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
@@ -374,7 +371,7 @@ public:
         }
 
         // copy the write stream info into read stream for processing
-        pWriteStream->getStream(pStream, STREAM_FLAGS_RD);
+        pWriteStream->getStream(pStream, isSharedBuffer ? STREAM_FLAGS_RD : STREAM_FLAGS_RD | STREAM_FLAGS_UNBUFFERED);
 
         if (isSharedBuffer) {
             // new read stream starts where last read stream left off
@@ -385,11 +382,12 @@ public:
         }
 
         // queue it for processing
+        pStream->flags |= STREAM_FLAGS_PENDING;
         pendingReadStreams.addTail(head);
+
         if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
             // first one, then no-one to start it up but here
             serialDebugTwiDataPrintf_P(PSTR("AutoStart\n"));
-            pStream->flags |= STREAM_FLAGS_PENDING;
             startProcessing = 1;
         } else {
             // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
@@ -401,6 +399,7 @@ public:
         sei();
 
         if (startProcessing) {
+            pStream->flags |= STREAM_FLAGS_PROCESSING;
             startProcessingRequest(pStream);
         }
 
@@ -426,8 +425,9 @@ public:
      * @param pStream   stream processed
      */
     void endProcessingRequest(ByteStream *pStream) {
-        serialDebugTwiDataPrintf_P(PSTR("endProcessing %d\n"), (int)getReadStreamId(pStream));
-        
+        // serialDebugTwiDataPrintf_P(PSTR("endProcessing %d\n"), (int)getReadStreamId(pStream));
+        pStream->flags &= ~(STREAM_FLAGS_PENDING | STREAM_FLAGS_PROCESSING);
+
         if (pStream->pData == writeBuffer.pData) {
             // at this point the buffer used by this request is no longer needed, so the buffer head can be moved to processed request tail.
             writeBuffer.nHead = pStream->nTail;
@@ -440,7 +440,7 @@ public:
             // start processing next request
             head = pendingReadStreams.peekHead();
             ByteStream *pNextStream = getReadStream(head);
-            pNextStream->flags |= STREAM_FLAGS_PENDING;
+            pNextStream->flags |= STREAM_FLAGS_PROCESSING;
             startProcessingRequest(pNextStream);
         }
     }
@@ -472,9 +472,9 @@ public:
             if (pendingReadStreams.getCount()) {
                 uint8_t peekHead = pendingReadStreams.peekHead();
                 ByteStream *pStream = readStreamTable + peekHead;
-                if (!(pStream->isPending())) {
+                if (!(pStream->isProcessing())) {
                     // its ready for processing and not already being processed
-                    pStream->flags |= STREAM_FLAGS_PENDING;
+                    pStream->flags |= STREAM_FLAGS_PROCESSING;
                     startProcessingRequest(pStream);
                 }
             }

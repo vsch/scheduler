@@ -101,4 +101,8 @@ add_compile_definitions(TWI_FREQUENCY=400000)
 ## Verbose build process
 set(${PROJECT_NAME}_AFLAGS -v)
 
+# Generate the Arduino firmware
 generate_arduino_firmware(${PROJECT_NAME})
+
+# print_board_list()
+# print_programmer_list()
