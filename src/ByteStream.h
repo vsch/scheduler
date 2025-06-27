@@ -39,7 +39,7 @@ public:
     }
     
 #ifdef SERIAL_DEBUG_TWI_DATA   
-    void serialDebugDump();
+    void serialDebugDump(uint8_t id);
 #else    
     inline void serialDebugDump() { }
 #endif

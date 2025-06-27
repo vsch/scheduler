@@ -105,14 +105,14 @@ void ByteStream::triggerComplete() {
 
 #ifdef SERIAL_DEBUG_TWI_DATA
 
-void ByteStream::serialDebugDump() {
+void ByteStream::serialDebugDump(uint8_t id) {
     uint8_t iMax = getCount();
-    serialDebugTwiDataPrintf_P(PSTR("TWI: 0x%2.2x %c {"), addr >> 1, addr & 0x01 ? 'R' : 'W');
+    serialDebugTwiDataPrintf_P(PSTR("TWI: 0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
     for (uint8_t i = 0; i < iMax; i++) {
         uint8_t byte = peekHead(i);
-        serialDebugTwiDataPrintf_P(PSTR(" 0x%2.2x"), byte);
+        serialDebugTwiDataPrintf_P(PSTR("  %2.2x"), byte);
     }
-    serialDebugTwiDataPrintf_P(PSTR(" }"));
+    serialDebugTwiDataPrintf_P(PSTR(" }\n"));
 }
 
 #endif

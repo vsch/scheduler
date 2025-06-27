@@ -318,10 +318,7 @@ public:
         pStream->pData = pChunk;
         pStream->nHead = 0;
         pStream->nTail = len;
-
-#ifndef CONSOLE_DEBUG
-        pStream->serialDebugDump();
-#endif
+        pStream->flags = STREAM_FLAGS_RD;
 
         // NOTE: protect from mods in interrupts mid-way through this code
         cli();
@@ -365,7 +362,12 @@ public:
         ByteStream *pStream = readStreamTable + head;
 
         // incorporate tail into buffer if not own buffered stream
-        bool isSharedBuffer = pWriteStream->pData == writeBuffer.pData;
+        uint8_t isSharedBuffer = pWriteStream->pData == writeBuffer.pData;
+        uint8_t startProcessing = 0;
+
+        // NOTE: protect from mods in interrupts mid-way through this code
+        cli();
+
         if (isSharedBuffer) {
             writeBuffer.updateStreamed(pWriteStream);
             nextFreeHead = pWriteStream->nTail;
@@ -382,26 +384,28 @@ public:
             updateResourceTrace();
         }
 
-
-        // NOTE: protect from mods in interrupts mid-way through this code
-        cli();
         // queue it for processing
         pendingReadStreams.addTail(head);
         if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
             // first one, then no-one to start it up but here
+            serialDebugTwiDataPrintf_P(PSTR("AutoStart\n"));
             pStream->flags |= STREAM_FLAGS_PENDING;
-            startProcessingRequest(pStream);
+            startProcessing = 1;
         } else {
             // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
             // and new request processing started if needed
         }
-        sei();
-
-        // make sure loop task is enabled start our loop task to monitor its completion
-        this->resume(0);
 
         // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
         writeBuffer.getStream(pWriteStream, STREAM_FLAGS_WR);
+        sei();
+
+        if (startProcessing) {
+            startProcessingRequest(pStream);
+        }
+
+        // make sure loop task is enabled start our loop task to monitor its completion
+        this->resume(0);
         return pWriteStream;
     }
 
@@ -414,12 +418,16 @@ public:
     virtual void startProcessingRequest(ByteStream *pStream) = 0;
 
     /**
-     * mark end of request processing by the interrupt, called from interrupt, this should be the 
+     * mark end of request processing by the interrupt, this should be the 
      * first request in the pending streams. 
+     * 
+     * IMPORTANT: called from interrupt so no cli/sei needed
      * 
      * @param pStream   stream processed
      */
     void endProcessingRequest(ByteStream *pStream) {
+        serialDebugTwiDataPrintf_P(PSTR("endProcessing %d\n"), (int)getReadStreamId(pStream));
+        
         if (pStream->pData == writeBuffer.pData) {
             // at this point the buffer used by this request is no longer needed, so the buffer head can be moved to processed request tail.
             writeBuffer.nHead = pStream->nTail;
@@ -437,12 +445,12 @@ public:
         }
     }
 
+    // IMPORTANT: called with interrupts disabled
     void handleCompletedRequests() {
-        // TODO: can reduce interrupt disable time by wrapping only isEmpty and removeHead in interrupt disable code
-        cli();
         while (!completedStreams.isEmpty()) {
             const uint8_t head = completedStreams.removeHead();
             ByteStream *completedStream = getReadStream(head);
+            serialDebugTwiDataPrintf_P(PSTR("Completing Request: %d \n"), head);
 
             // put its handled info back to writeBuffer and it back in the free queue
             // unless it is an own buffer request
@@ -450,11 +458,12 @@ public:
             completedStream->flags = 0;
             freeReadStreams.addTail(getReadStreamId(completedStream));
         }
-        sei();
     }
 
     void loop() override {
         uint8_t pendingCount = 0;
+        uint8_t writeCapacity = 0;
+        serialDebugTwiDataPrintf_P(PSTR("Loop start\n"));
 
         cli();
         if (pendingReadStreams.getCount()) {
@@ -472,6 +481,7 @@ public:
         }
 
         pendingCount = pendingReadStreams.getCount();
+        writeCapacity = writeBuffer.getCapacity();
         sei();
 
         if (!requirementList.isEmpty()) {
@@ -480,19 +490,28 @@ public:
             uint8_t requests = RESERVATIONS_UNPACK_REQ(packed);
             uint8_t bytes = RESERVATIONS_UNPACK_BYTES(packed);
 
-            if (requests <= freeReadStreams.getCount() && bytes <= writeBuffer.getCapacity()) {
+            if (requests <= freeReadStreams.getCount() && bytes <= writeCapacity) {
                 // let'er rip there are enough free resources
+                serialDebugTwiDataPrintf_P(PSTR("Loop release %d, req: %d, bytes: %d\n"), reservationLock.getOwner(), requests, bytes);
                 requirementList.removeHead();
                 reservationLock.release();
             }
         }
 
-        if (pendingCount && requirementList.isEmpty()) {
+        if (pendingCount > 1 && !requirementList.isEmpty()) {
             // can suspend until there is something to check for.
+            serialDebugTwiDataPrintf_P(PSTR("Loop resume(0)\n"));
+            resume(0);
+        } else if (pendingCount <= 1) {
+            serialDebugTwiDataPrintf_P(PSTR("Loop suspend()\n"));
             suspend();
         } else {
-            resume(0);
+            // resume just in case have completed requests
+            serialDebugTwiDataPrintf_P(PSTR("Loop resume(1)\n"));
+            resume(1);
         }
+
+        serialDebugTwiDataPrintf_P(PSTR("Loop end\n"));
     }
 
 #ifdef CONSOLE_DEBUG

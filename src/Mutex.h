@@ -61,6 +61,10 @@ public:
     }
 
     inline bool isOwner(Task* pTask) { return isOwner(pTask->getIndex()); }
+    
+    inline uint8_t getOwner() {
+        return queue.peekHead();
+    }
 
 #ifdef CONSOLE_DEBUG
     // print out queue for testing
