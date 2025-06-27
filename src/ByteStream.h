@@ -37,6 +37,12 @@ public:
     inline uint8_t getWaitingTask() const {
         return waitingTask;
     }
+    
+#ifdef SERIAL_DEBUG_TWI_DATA   
+    void serialDebugDump();
+#else    
+    inline void serialDebugDump() { }
+#endif
 
     // set flags other than address and rd/wr permissions
     uint8_t setFlags(uint8_t flags, uint8_t mask);
@@ -51,6 +57,11 @@ public:
 
     inline uint8_t isPending() const { return getFlags(STREAM_FLAGS_PENDING); }
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "HidingNonVirtualFunction"
+    ByteStream *getStream(ByteStream *pOther, uint8_t flags);
+#pragma clang diagnostic pop
+    
     /**
      * Setup write stream for own buffer.
      *

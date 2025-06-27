@@ -15,9 +15,10 @@ public:
 
     defineSchedulerTaskId("TwiController");
 
-    void startProcessingRequest(ByteStream *pStream) {
+    void startProcessingRequest(ByteStream *pStream) override {
         // output stream content and call endProcessingRequest
 #ifndef CONSOLE_DEBUG
+        pStream->serialDebugDump();
         twiint_start((CByteStream_t *) pStream);
 #endif
     }

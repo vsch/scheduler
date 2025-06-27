@@ -124,7 +124,7 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr, uint8_t coDC);
  * @param len    length of data to send
  * @return       pointer to last request, can be used to wait for completion of the send
  */
-CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint16_t len, int maxSize);
+CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint16_t len);
 
 CByteStream_t * twi_process(CByteStream_t *pStream);
 

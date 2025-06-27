@@ -25,4 +25,12 @@
 #define NO_DISCARD
 #endif
 
+#ifdef SERIAL_DEBUG_TWI_DATA
+#define serialDebugTwiDataPrintf_P(...) printf_P(__VA_ARGS__)
+#define serialDebugTwiDataPuts_P(...) puts_P(__VA_ARGS__)
+#else
+#define serialDebugTwiDataPrintf_P(...) ((void)0)
+#define serialDebugTwiDataPuts_P(...) ((void)0)
+#endif
+
 #endif //SCHEDULER_COMMON_DEFS_H

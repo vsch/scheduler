@@ -87,8 +87,6 @@ void ByteStream::pgmByteList(const uint8_t *bytes, uint16_t count) {
     }
 }
 
-
-
 void ByteStream::waitComplete() {
     Task *pTask = scheduler.getTask();
     if (pTask) {
@@ -103,6 +101,27 @@ void ByteStream::triggerComplete() {
         waitingTask = NULL_TASK;
         scheduler.resume(pTask, 0);
     }
+}
+
+#ifdef SERIAL_DEBUG_TWI_DATA
+
+void ByteStream::serialDebugDump() {
+    uint8_t iMax = getCount();
+    serialDebugTwiDataPrintf_P(PSTR("TWI: 0x%2.2x %c {"), addr >> 1, addr & 0x01 ? 'R' : 'W');
+    for (uint8_t i = 0; i < iMax; i++) {
+        uint8_t byte = peekHead(i);
+        serialDebugTwiDataPrintf_P(PSTR(" 0x%2.2x"), byte);
+    }
+    serialDebugTwiDataPrintf_P(PSTR(" }"));
+}
+
+#endif
+
+ByteStream *ByteStream::getStream(ByteStream *pOther, uint8_t flags) {
+    pOther->addr = addr;
+    pOther->waitingTask = waitingTask;
+    waitingTask = NULL_TASK;
+    return Queue::getStream(pOther, flags);
 }
 
 #ifdef CONSOLE_DEBUG

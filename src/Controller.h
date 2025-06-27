@@ -82,14 +82,15 @@ public:
      */
     Controller(uint8_t *pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize, uint8_t flags = CTR_FLAGS_REQ_AUTO_START)
 
-            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)), writeBuffer(
+            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+              , completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+              , freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)), writeBuffer(
                     pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)), reservationLock(
                     pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)), requirementList(
                     pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)), writeStream(&writeBuffer,
-                                                                                                                                                                     0),
-              readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))), maxStreams(maxStreams), maxTasks(maxTasks), writeBufferSize(writeBufferSize), flags(flags) {
+                                                                                                                                                                     0)
+              , readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))), maxStreams(maxStreams), maxTasks(maxTasks)
+              , writeBufferSize(writeBufferSize), flags(flags) {
         // now initialize all the read Streams
 
         //printf("pendingReadStreams %p 0x%4.4lx %p\n", pendingReadStreams.pData, PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize), pendingReadStreams.pData + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize));
@@ -139,55 +140,61 @@ public:
     }
 
 #ifdef RESOURCE_TRACE
-//    void startResourceTrace();
-//    void updateResourceTrace();
-//    void updateResourcePreLockTrace();
-//    void updateResourceLockTrace();
-    void startResourceTrace() {
-        startStreams = freeReadStreams.getCount();
-        startTasks = reservationLock.queue.getCapacity();
-        startBufferSize = writeBuffer.getCapacity();
-    }
-
-    void updateResourceTrace() {
-        uint8_t tmp = freeReadStreams.getCount();
-        if (tmp < startStreams) {
-            tmp = startStreams - tmp;
-            if (usedStreams < tmp) { usedStreams = tmp; }
+    //    void startResourceTrace();
+    //    void updateResourceTrace();
+    //    void updateResourcePreLockTrace();
+    //    void updateResourceLockTrace();
+        void startResourceTrace() {
+            startStreams = freeReadStreams.getCount();
+            startTasks = reservationLock.queue.getCapacity();
+            startBufferSize = writeBuffer.getCapacity();
         }
-
-        tmp = writeBuffer.getCapacity();
-        if (tmp < startBufferSize) {
-            tmp = startBufferSize - tmp;
-            if (usedBufferSize < tmp) { usedBufferSize = tmp; }
+    
+        void updateResourceTrace() {
+            uint8_t tmp = freeReadStreams.getCount();
+            if (tmp < startStreams) {
+                tmp = startStreams - tmp;
+                if (usedStreams < tmp) { usedStreams = tmp; }
+            }
+    
+            tmp = writeBuffer.getCapacity();
+            if (tmp < startBufferSize) {
+                tmp = startBufferSize - tmp;
+                if (usedBufferSize < tmp) { usedBufferSize = tmp; }
+            }
+    
+            updateResourceLockTrace();
         }
-
-        updateResourceLockTrace();
-    }
-
-    void updateResourceLockTrace() {
-        uint8_t tmp = reservationLock.queue.getCapacity();
-        if (tmp < startTasks) {
-            tmp = startTasks - tmp;
-            if (usedTasks < tmp) { usedTasks = tmp; }
+    
+        void updateResourceLockTrace() {
+            uint8_t tmp = reservationLock.queue.getCapacity();
+            if (tmp < startTasks) {
+                tmp = startTasks - tmp;
+                if (usedTasks < tmp) { usedTasks = tmp; }
+            }
         }
-    }
-
-    void updateResourcePreLockTrace() {
-        uint8_t tmp = reservationLock.queue.getCapacity();
-        if (tmp < startTasks + 1) {
-            tmp = startTasks - tmp + 1;
-            if (usedTasks < tmp) { usedTasks = tmp; }
+    
+        void updateResourcePreLockTrace() {
+            uint8_t tmp = reservationLock.queue.getCapacity();
+            if (tmp < startTasks + 1) {
+                tmp = startTasks - tmp + 1;
+                if (usedTasks < tmp) { usedTasks = tmp; }
+            }
         }
-    }
-
-    void dumpResourceTrace();
+    
+        void dumpResourceTrace();
 #else
-    inline void startResourceTrace() { }
-    inline void updateResourceTrace() { }
-    inline void updateResourcePreLockTrace() { }
-    inline void updateResourceLockTrace() { }
-    inline void dumpResourceTrace() { }
+
+    inline void startResourceTrace() {}
+
+    inline void updateResourceTrace() {}
+
+    inline void updateResourcePreLockTrace() {}
+
+    inline void updateResourceLockTrace() {}
+
+    inline void dumpResourceTrace() {}
+
 #endif
 
     uint8_t getReadStreamId(ByteStream *pStream) {
@@ -296,42 +303,39 @@ public:
      * @param len    length of data to send
      * @return       pointer to last request, can be used to wait for completion of the send
      */
-    ByteStream *processRequest(uint8_t addr, uint8_t *pData, uint16_t len, int maxSize) {
+    ByteStream *processRequest(uint8_t addr, uint8_t *pData, uint16_t len) {
         uint8_t *pChunk = pData;
-        uint8_t chunkSize = len;
         ByteStream *pStream = NULL;
 
-        while (chunkSize) {
-            uint8_t head = freeReadStreams.removeHead();
-            updateResourceTrace();
-            pStream = readStreamTable + head;
-            pStream->set_address(addr);
-            pStream->pData = pChunk;
-            pStream->nHead = 0;
-            if (chunkSize > maxSize) {
-                pStream->nTail = maxSize;
-                pChunk += maxSize;
-                chunkSize -= maxSize;
-            } else {
-                pStream->nTail = chunkSize;
-                pChunk += chunkSize;
-                chunkSize -= chunkSize;
-            }
-
-            // NOTE: protect from mods in interrupts mid-way through this code
-            cli();
-            // queue it for processing
-            pendingReadStreams.addTail(head);
-            if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
-                // first one, then no-one to start it up but here
-                pStream->flags |= STREAM_FLAGS_PENDING;
-                startProcessingRequest(pStream);
-            } else {
-                // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
-                // and new request processing started if needed
-            }
-            sei();
+        if (len > QUEUE_MAX_SIZE) {
+            len = QUEUE_MAX_SIZE;
         }
+
+        uint8_t head = freeReadStreams.removeHead();
+        updateResourceTrace();
+        pStream = readStreamTable + head;
+        pStream->set_address(addr);
+        pStream->pData = pChunk;
+        pStream->nHead = 0;
+        pStream->nTail = len;
+
+#ifndef CONSOLE_DEBUG
+        pStream->serialDebugDump();
+#endif
+
+        // NOTE: protect from mods in interrupts mid-way through this code
+        cli();
+        // queue it for processing
+        pendingReadStreams.addTail(head);
+        if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
+            // first one, then no-one to start it up but here
+            pStream->flags |= STREAM_FLAGS_PENDING;
+            startProcessingRequest(pStream);
+        } else {
+            // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
+            // and new request processing started if needed
+        }
+        sei();
 
         // make sure loop task is enabled start our loop task to monitor its completion
         this->resume(0);
@@ -374,11 +378,11 @@ public:
             // new read stream starts where last read stream left off
             pStream->nHead = lastFreeHead;
             lastFreeHead = nextFreeHead;
-            
+
             updateResourceTrace();
         }
 
-        
+
         // NOTE: protect from mods in interrupts mid-way through this code
         cli();
         // queue it for processing
