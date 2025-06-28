@@ -347,14 +347,14 @@ public:
      *     streams which provide a block of data to send, outside the shared writeBuffer.
      *
      * @param pWriteStream       pointer to stream to process, will be reset to new reality if needed
-     * @return                  pointer to writeStream or NULL if not handleProcessedRequest because of lack of readStreams
+     * @return                  pointer to read stream or NULL if not handleProcessedRequest because of lack of readStreams
      *                          as made in the willRequire() call.
      */
-    void processStream(ByteStream *pWriteStream) {
+    ByteStream *processStream(ByteStream *pWriteStream) {
         uint8_t nextFreeHead;       // where next request head position should start
 
         if (freeReadStreams.isEmpty()) {
-            return;
+            return NULL;
         }
 
         uint8_t head = freeReadStreams.removeHead();
@@ -408,6 +408,7 @@ public:
 
         // make sure loop task is enabled start our loop task to monitor its completion
         this->resume(0);
+        return pStream;
     }
 
     /**
@@ -427,7 +428,7 @@ public:
      * @param pStream   stream processed
      */
     void endProcessingRequest(ByteStream *pStream) {
-// #ifdef SERIAL_DEBUG_GFX_TWI_STATS
+// #ifdef SERIAL_DEBUG_DETAIL_TWI_STATS
 //         // PRINTF_SERIAL_DEBUG_GFX_TWI_STATS(PSTR("%8ld: TWI %d next update in %ld usec %d\n"), start / 1000L, gfx_send_bytes, gfx_send_time, gfx_send_errors);
 //         serialDebugGfxTwiStatsPrintf_P(PSTR("%8ld: endProcessing %d\n"), micros() / 1000L, getReadStreamId(pStream));
 // #endif

@@ -15,7 +15,7 @@
 struct ByteStream : protected Queue {
     friend class Queue;
     friend class Controller;
-    uint8_t flags;
+    volatile uint8_t flags;
     /** Slave address byte (with read/write bit). in case of Twi */
     uint8_t addr; 
     uint8_t waitingTask; // if not NULL_TASK then index of task waiting for this request to complete

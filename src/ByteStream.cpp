@@ -76,9 +76,22 @@ uint8_t stream_can_read(const CByteStream_t *thizz) {
     return ((ByteStream *) thizz)->can_read();
 }
 
+// NOTE: the following can take a NULL for byte stream pointer
 // return true if the stream is unbuffered and not pending
 uint8_t stream_is_unbuffered_pending(const CByteStream_t* thizz) {
-    return thizz ? ((ByteStream *) thizz)->isUnbufferedPending() : 0;
+    return thizz && ((ByteStream *) thizz)->isUnbufferedPending();
+} 
+
+uint8_t stream_is_pending(const CByteStream_t* thizz) {
+    return thizz && ((ByteStream *) thizz)->isPending();
+} 
+
+uint8_t stream_is_processing(const CByteStream_t* thizz) {
+    return thizz && ((ByteStream *) thizz)->isProcessing();
+} 
+
+uint8_t stream_is_unbuffered(const CByteStream_t* thizz) {
+    return thizz && ((ByteStream *) thizz)->isUnbuffered();
 } 
 
 // get address from flags

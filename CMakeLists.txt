@@ -48,6 +48,7 @@ set(${PROJECT_NAME}_HDRS
         src/Scheduler.h
         src/Controller.h
         src/TwiController.h
+        src/CTwiController.h
         src/twiint.h
         )
 

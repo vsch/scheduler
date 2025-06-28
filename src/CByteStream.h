@@ -38,6 +38,10 @@ extern uint8_t stream_can_write(const CByteStream_t* thizz); // get permitted op
 extern uint8_t stream_can_read(const CByteStream_t* thizz); // get permitted ops
 extern uint8_t stream_is_unbuffered_pending(const CByteStream_t* thizz); // return true if the stream is unbuffered and not pending
 
+extern uint8_t stream_is_pending(const CByteStream_t* thizz); // return true if the stream is unbuffered and not pending
+extern uint8_t stream_is_processing(const CByteStream_t* thizz); // return true if the stream is unbuffered and not pending
+extern uint8_t stream_is_unbuffered(const CByteStream_t* thizz); // return true if the stream is unbuffered and not pending
+
 #ifdef __cplusplus
 }
 

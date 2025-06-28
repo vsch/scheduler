@@ -126,7 +126,7 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr, uint8_t coDC);
  */
 CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint16_t len);
 
-void twi_process(CByteStream_t *pStream);
+CByteStream_t * twi_process(CByteStream_t *pStream);
 
 #ifdef __cplusplus
 }

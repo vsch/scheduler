@@ -33,7 +33,7 @@
 #define serialDebugTwiDataPuts_P(...) ((void)0)
 #endif
 
-#ifdef SERIAL_DEBUG_GFX_TWI_STATS
+#ifdef SERIAL_DEBUG_DETAIL_TWI_STATS
 #define serialDebugGfxTwiStatsPrintf_P(...) printf_P(__VA_ARGS__)
 #define serialDebugGfxTwiStatsPuts_P(...) puts_P(__VA_ARGS__)
 #else
