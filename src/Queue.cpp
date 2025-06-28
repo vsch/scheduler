@@ -210,7 +210,7 @@ ByteStream *Queue::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->pData = pData;
     pOther->flags = flags;
     
-    if ((flags & (STREAM_FLAGS_WR | STREAM_FLAGS_RD)) == STREAM_FLAGS_WR) {
+    if ((flags & (STREAM_FLAGS_WR | STREAM_FLAGS_RD | STREAM_FLAGS_APPEND)) == STREAM_FLAGS_WR) {
         // reset to empty at tail if it is a write only stream    
         pOther->nHead = pOther->nTail;
     }

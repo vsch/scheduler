@@ -9,6 +9,7 @@
 #define STREAM_FLAGS_PENDING    (0x04)      // marks the stream as pending or processing
 #define STREAM_FLAGS_PROCESSING (0x08)      // marks the stream as being processed
 #define STREAM_FLAGS_UNBUFFERED (0x10)      // marks the stream is unbuffered
+#define STREAM_FLAGS_APPEND     (0x20)      // used in getStream to disable resetting content to 0 for write streams
 
 // Simple streaming both read and write for use in C interrupts and C code, provided from C/C++ code
 // has the same layout as Stream

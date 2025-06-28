@@ -19,7 +19,7 @@
 #define sizeOfPlus(t, b, e)    (sizeof(t)+sizeof(e)*(b))
 
 
-#ifndef CONSOLE_DEBUG
+#ifdef CONSOLE_DEBUG
 #define NO_DISCARD      [[nodiscard]]
 #else
 #define NO_DISCARD

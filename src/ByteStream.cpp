@@ -149,14 +149,26 @@ ByteStream *ByteStream::getStream(ByteStream *pOther, uint8_t flags) {
 // print out queue for testing
 void ByteStream::dump(uint8_t indent, uint8_t compact) {
     char indentStr[32];
+    char flagStr[9];
+    char *pFlag = flagStr;
     memset(indentStr, ' ', sizeof indentStr);
     indentStr[indent] = '\0';
 
+    memset(flagStr, 0, sizeof flagStr);
+    flagStr[0] = '1';
+    flagStr[1] = '\0';
+
+    if (isProcessing()) *pFlag++ = '*';
+    if (canRead()) *pFlag++ = 'R';
+    if (canWrite()) *pFlag++ = 'W';
+    if (isAppend()) *pFlag++ = 'A';
+    if (isPending()) *pFlag++ = 'P';
+    if (isUnbuffered()) *pFlag++ = 'U';
 
     // Output: Queue { nSize:%d, nHead:%d, nTail:%d
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
-    addActualOutput("%sStream { flags:%s%s%s%s%s%s nSize:%d, nHead:%d, nTail:%d\n", indentStr, !flags ? "0" : "", isProcessing() ? "*" : "", canRead() ? "R" : "", canWrite() ? "W" : "", isPending() ? "P" : "", isUnbuffered() ? "U" : "", nSize, nHead, nTail);
+    addActualOutput("%sStream { flags:%s nSize:%d, nHead:%d, nTail:%d\n", indentStr, flagStr, nSize, nHead, nTail);
     addActualOutput("%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n%s", indentStr, isEmpty(), isFull(), getCount(), getCapacity(), indentStr);
     uint16_t cnt = 0, last_cnt = -1;
 
