@@ -209,6 +209,12 @@ ByteStream *Queue::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->nTail = nTail;
     pOther->pData = pData;
     pOther->flags = flags;
+    
+    if ((flags & (STREAM_FLAGS_WR | STREAM_FLAGS_RD)) == STREAM_FLAGS_WR) {
+        // reset to empty at tail if it is a write only stream    
+        pOther->nHead = pOther->nTail;
+    }
+    
     return pOther;
 }
 

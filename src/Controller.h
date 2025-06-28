@@ -82,13 +82,15 @@ public:
      */
     Controller(uint8_t *pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize, uint8_t flags = CTR_FLAGS_REQ_AUTO_START)
 
-            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              writeBuffer(pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              reservationLock(pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)),
-              requirementList(pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)), writeStream(&writeBuffer, 0),
-              readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))), maxStreams(maxStreams), maxTasks(maxTasks), writeBufferSize(writeBufferSize), flags(flags) {
+            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+              , completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+              , freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)), writeBuffer(
+                    pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)), reservationLock(
+                    pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)), requirementList(
+                    pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)), writeStream(&writeBuffer,
+                                                                                                                                                                     0)
+              , readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize))), maxStreams(maxStreams), maxTasks(maxTasks)
+              , writeBufferSize(writeBufferSize), flags(flags) {
         // now initialize all the read Streams
 
         //printf("pendingReadStreams %p 0x%4.4lx %p\n", pendingReadStreams.pData, PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize), pendingReadStreams.pData + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize));
@@ -425,7 +427,10 @@ public:
      * @param pStream   stream processed
      */
     void endProcessingRequest(ByteStream *pStream) {
-        // serialDebugTwiDataPrintf_P(PSTR("endProcessing %d\n"), (int)getReadStreamId(pStream));
+// #ifdef SERIAL_DEBUG_GFX_TWI_STATS
+//         // PRINTF_SERIAL_DEBUG_GFX_TWI_STATS(PSTR("%8ld: TWI %d next update in %ld usec %d\n"), start / 1000L, gfx_send_bytes, gfx_send_time, gfx_send_errors);
+//         serialDebugGfxTwiStatsPrintf_P(PSTR("%8ld: endProcessing %d\n"), micros() / 1000L, getReadStreamId(pStream));
+// #endif
         pStream->flags &= ~(STREAM_FLAGS_PENDING | STREAM_FLAGS_PROCESSING);
 
         if (pStream->pData == writeBuffer.pData) {

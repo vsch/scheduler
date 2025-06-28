@@ -33,4 +33,20 @@
 #define serialDebugTwiDataPuts_P(...) ((void)0)
 #endif
 
+#ifdef SERIAL_DEBUG_GFX_TWI_STATS
+#define serialDebugGfxTwiStatsPrintf_P(...) printf_P(__VA_ARGS__)
+#define serialDebugGfxTwiStatsPuts_P(...) puts_P(__VA_ARGS__)
+#else
+#define serialDebugGfxTwiStatsPrintf_P(...) ((void)0)
+#define serialDebugGfxTwiStatsPuts_P(...) ((void)0)
+#endif
+
+#ifdef SERIAL_DEBUG_GFX_STATS
+#define serialDebugGfxStatsPrintf_P(...) printf_P(__VA_ARGS__)
+#define serialDebugGfxStatsPuts_P(...) puts_P(__VA_ARGS__)
+#else
+#define serialDebugGfxStatsPrintf_P(...) ((void)0)
+#define serialDebugGfxStatsPuts_P(...) ((void)0)
+#endif
+
 #endif //SCHEDULER_COMMON_DEFS_H
