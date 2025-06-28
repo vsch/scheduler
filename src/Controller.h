@@ -350,11 +350,11 @@ public:
      * @return                  pointer to writeStream or NULL if not handleProcessedRequest because of lack of readStreams
      *                          as made in the willRequire() call.
      */
-    ByteStream *processStream(ByteStream *pWriteStream) {
+    void processStream(ByteStream *pWriteStream) {
         uint8_t nextFreeHead;       // where next request head position should start
 
         if (freeReadStreams.isEmpty()) {
-            return NULL;
+            return;
         }
 
         uint8_t head = freeReadStreams.removeHead();
@@ -397,7 +397,8 @@ public:
         }
 
         // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
-        writeBuffer.getStream(pWriteStream, STREAM_FLAGS_WR);
+        pWriteStream->nHead = pWriteStream->nTail;
+        
         sei();
 
         if (startProcessing) {
@@ -407,7 +408,6 @@ public:
 
         // make sure loop task is enabled start our loop task to monitor its completion
         this->resume(0);
-        return pWriteStream;
     }
 
     /**
