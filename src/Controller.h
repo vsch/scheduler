@@ -428,10 +428,6 @@ public:
      * @param pStream   stream processed
      */
     void endProcessingRequest(ByteStream *pStream) {
-// #ifdef SERIAL_DEBUG_DETAIL_TWI_STATS
-//         // PRINTF_SERIAL_DEBUG_GFX_TWI_STATS(PSTR("%8ld: TWI %d next update in %ld usec %d\n"), start / 1000L, gfx_send_bytes, gfx_send_time, gfx_send_errors);
-//         serialDebugGfxTwiStatsPrintf_P(PSTR("%8ld: endProcessing %d\n"), micros() / 1000L, getReadStreamId(pStream));
-// #endif
         pStream->flags &= ~(STREAM_FLAGS_PENDING | STREAM_FLAGS_PROCESSING);
 
         if (pStream->pData == writeBuffer.pData) {

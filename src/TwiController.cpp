@@ -4,11 +4,6 @@
 #include "twiint.h"
 
 void complete_request(CByteStream_t *pStream) {
-    // force waiting for completion of processing of the request
-#ifndef CONSOLE_DEBUG
-    twiint_flush();
-#endif
-
     twiController.endProcessingRequest((ByteStream *) pStream);
 }
 
@@ -21,7 +16,7 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr, uint8_t coDC) {
     return (CByteStream_t *) pStream;
 }
 
-CByteStream_t * twi_process(CByteStream_t *pStream) {
+CByteStream_t *twi_process(CByteStream_t *pStream) {
     return (CByteStream_t *) twiController.processStream((ByteStream *) pStream);
 }
 
@@ -47,10 +42,10 @@ void twi_add_byte(uint8_t byte) {
     stream_put(twiStream, byte);
 }
 
-CByteStream_t * twi_end_frame() {
+CByteStream_t *twi_end_frame() {
     // send the accumulated buffer
     CByteStream_t *pStream = NULL;
-    
+
     START_SERIAL_DEBUG_GFX_TWI_STATS();
 #ifdef SERIAL_DEBUG_DETAIL_TWI_STATS
     uint16_t reqSize = stream_count(twiStream);
@@ -59,7 +54,7 @@ CByteStream_t * twi_end_frame() {
     pStream = twi_process(twiStream);
     // stream_put(twiStream, TWI_CO_0_DC_0);
     twiStream = twi_get_write_buffer(TWI_ADDRESS_W(DISPLAY_ADDRESS), TWI_CO_0_DC_0);
-    
+
     END_SERIAL_DEBUG_GFX_TWI_STATS(reqSize);
 
     PRINTF_SERIAL_DEBUG_GFX_TWI_STATS(PSTR("%8ld: TWI %d command bytes, new bytes %d in %ld usec %d\n"),
@@ -77,14 +72,15 @@ void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count) {
 }
 
 // send command frame
-CByteStream_t * twi_send_cmd(uint8_t cmd) {
+CByteStream_t *twi_send_cmd(uint8_t cmd) {
     twi_start_cmd_frame();
     twi_add_byte(cmd);
     return twi_end_frame();
 }
 
-// IMPORTANT: interrupts should be enabled
+// IMPORTANT: assumes: interrupts are enabled, processing of requests should be done by interrupt 
+//            routine sequentially sending all pending requests. 
+//            i.e. set CTR_FLAGS_REQ_AUTO_START in controller constructor flags
 void twi_wait_sent(CByteStream_t *pStream) {
     while (stream_is_pending(pStream));
 }
-
