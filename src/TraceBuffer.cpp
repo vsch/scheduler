@@ -41,7 +41,7 @@ PGM_P const trcStrings[] PROGMEM = {
 void TraceBuffer::dump() {
     startRead();
     
-    serialDebugPrintf_P(PSTR("TWI Trc: %d {"), getCount());
+    serialDebugPrintf_P(PSTR("TWI Trc: %d {"), getReadCapacity());
     while (!isAllRead()) {
         // make a copy of the queue
         readEntry();

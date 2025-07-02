@@ -40,6 +40,10 @@ public:
         return traceCount;
     }
 
+    NO_DISCARD inline uint8_t getReadCapacity() const {
+        return nReadCapacity;
+    }
+
     void reset() {
         pPos = data;
         nCapacity = TWI_TRACE_SIZE;
