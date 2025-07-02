@@ -1,5 +1,5 @@
 #include "ByteQueue.h"
-#include "CByteStream.h"
+#include "CByteQueue.h"
 #include "ByteStream.h"
 
 uint8_t ByteQueue::updateQueued(ByteQueue *pOther, uint8_t flags) {
@@ -30,6 +30,50 @@ uint8_t ByteQueue::peekHead(uint8_t offset) const {
 
 uint8_t ByteQueue::peekTail(uint8_t offset) const {
     return getCount() <= offset ? NULL_BYTE : pData[nTail <= offset ? nSize - (offset - nTail) - 1 : nTail - offset - 1];
+}
+
+void ByteQueue::trace(uint8_t data) {
+    data &= 0x3f;
+    if (getCount() > 1) {
+        // take -1 from the back to see if it matches 0..7 bits
+        uint8_t prevCnt = peekTail();
+        if (prevCnt & 0x80) {
+            // have count
+            uint8_t prev = peekTail(1);
+            if (prev & 0x40) {
+                // this one is counted
+                if ((prev & 0x3f) == data) {
+                    // add one to count and exit
+                    uint8_t count = removeTail() & 0x7f;
+                    if (count < 127) {
+                        count++;
+                    }
+                    addTail(count | 0x80);
+                    return;
+                }
+            }
+        }
+    }
+
+    if (!isEmpty()) {
+        uint8_t prev = peekTail();
+        if (prev == data) {
+            // add one to count and exit
+            if (isFull()) {
+                // count won't fit, don't add the last one
+                removeTail();
+            } else {
+                removeTail();
+                prev |= 0x40;
+                addTail(prev);
+                addTail(2 | 0x80);
+            }
+            return;
+        }
+    }
+
+    // just add it 
+    addTail(data);
 }
 
 #ifdef QUEUE_BLOCK_FUNCS
@@ -209,12 +253,12 @@ ByteStream *ByteQueue::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->nTail = nTail;
     pOther->pData = pData;
     pOther->flags = flags;
-    
+
     if ((flags & (STREAM_FLAGS_WR | STREAM_FLAGS_RD | STREAM_FLAGS_APPEND)) == STREAM_FLAGS_WR) {
         // reset to empty at tail if it is a write only stream    
         pOther->nHead = pOther->nTail;
     }
-    
+
     return pOther;
 }
 
@@ -254,12 +298,63 @@ ByteQueue::ByteQueue(uint8_t *pData, uint8_t nSize) : pData(pData) {
     nHead = nTail = 0;
 }
 
+// test if any more data to read
+uint8_t queue_is_empty(const CByteQueue_t *thizz) {
+    return ((ByteQueue *) thizz)->isEmpty();
+}
+
+// test if room for more data to write
+uint8_t queue_is_full(const CByteQueue_t *thizz) {
+    return ((ByteQueue *) thizz)->isFull();
+}
+
+// capacity to accept written bytes
+uint8_t queue_capacity(const CByteQueue_t *thizz) {
+    return ((ByteQueue *) thizz)->getCapacity();
+}
+
+uint8_t queue_count(const CByteQueue_t *thizz) {
+    return ((ByteQueue *) thizz)->getCount();
+}
+
+uint8_t queue_get(CByteQueue_t *thizz) {
+    return ((ByteQueue *) thizz)->removeHead();
+}
+
+// get the next byte, but leave it in the queue
+uint8_t queue_peek(const CByteQueue_t *thizz) {
+    return ((ByteQueue *) thizz)->peekHead();
+}
+
+// write byte
+uint8_t queue_put(CByteQueue_t *thizz, uint8_t data) {
+    return ((ByteQueue *) thizz)->addTail(data);
+}
+
+void queue_trace(CByteQueue_t *thizz, uint8_t data) {
+    ((ByteQueue *) thizz)->trace(data);
+}
+
+#ifdef SERIAL_DEBUG
+
+void ByteQueue::serialDebugDump() {
+    uint8_t iMax = getCount();
+    serialDebugPrintf_P(PSTR("Queue: 0x%2.2x {"));
+    for (uint8_t i = 0; i < iMax; i++) {
+        uint8_t byte = peekHead(i);
+        serialDebugPrintf_P(PSTR("  %2.2x"), byte);
+    }
+    serialDebugPrintf_P(PSTR(" }\n"));
+}
+
+#endif
+
 #ifdef CONSOLE_DEBUG
 
 #include "tests/FileTestResults_AddResult.h"
 
 // print out queue for testing
-void Queue::dump(uint8_t indent, uint8_t compact) {
+void ByteQueue::dump(uint8_t indent, uint8_t compact) {
     char indentStr[32];
     memset(indentStr, ' ', sizeof indentStr);
     indentStr[indent] = '\0';

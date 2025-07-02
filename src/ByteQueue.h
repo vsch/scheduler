@@ -30,10 +30,9 @@ class ByteQueue {
     friend class ByteStream;
     friend class Controller;
 
-    uint8_t nSize;
-
     // CAVEAT: nHead is modified in code called from interrupt routine, if size changed from a byte, then code accessing 
     //      nHead in write buffer will need to be protected with cli()/sei() wrapper
+    uint8_t nSize;
     uint8_t nHead;
     uint8_t nTail;
     uint8_t *pData;
@@ -86,8 +85,15 @@ public:
     inline uint8_t push(uint8_t data) { return addTail(data); }
 
     inline uint8_t pop() { return removeTail(); }
+    
+#ifdef SERIAL_DEBUG
+    void serialDebugDump();
+#else
+    inline void serialDebugDump() { }
+#endif
 
-    /*
+
+/*
      * multi-byte versions of methods, the data will be stored in the queue in such a way as to
      * preserve it on removal with a corresponding multi-byte get and compatible with little-endian memory storage. However
      * AT328p push/pop results in big-endian format for data stored on the stack. Low byte pushed first. So queue's push/pop are not
@@ -176,6 +182,7 @@ public:
     // print out queue for testing
     void dump(uint8_t indent, uint8_t compact);
 #endif
+    void trace(uint8_t data);
 };
 
 #endif //SCHEDULER_QUEUE_H
