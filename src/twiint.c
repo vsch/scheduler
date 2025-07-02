@@ -16,7 +16,7 @@
  * 
  * Copyright (c) 2025 Vladimir Schneider
  *
-* Permission is hereby granted, free of charge, to any person obtaining a
+ * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation
  * the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -107,39 +107,14 @@ void twiint_start(CByteStream_t *pStream) {
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
 
-const char sSTR_START[] PROGMEM = STR_TRC_START;
-const char sSTR_REP_START[] PROGMEM = STR_TRC_REP_START;
-const char sSTR_MT_SLA_ACK[] PROGMEM = STR_TRC_MT_SLA_ACK;
-const char sSTR_MT_DATA_ACK[] PROGMEM = STR_TRC_MT_DATA_ACK;
-const char sSTR_MR_DATA_ACK[] PROGMEM = STR_TRC_MR_DATA_ACK;
-const char sSTR_MR_SLA_ACK[] PROGMEM = STR_TRC_MR_SLA_ACK;
-const char sSTR_MR_DATA_NACK[] PROGMEM = STR_TRC_MR_DATA_NACK;
-const char sSTR_MT_ARB_LOST[] PROGMEM = STR_TRC_MT_ARB_LOST;
-const char sSTR_MT_SLA_NACK[] PROGMEM = STR_TRC_MT_SLA_NACK;
-const char sSTR_MT_DATA_NACK[] PROGMEM = STR_TRC_MT_DATA_NACK;
-const char sSTR_MR_SLA_NACK[] PROGMEM = STR_TRC_MR_SLA_NACK;
+CTwiTraceBuffer_t *twi_trace_buffer;
 
-PGM_P const trcStrings[] PROGMEM = {
-        sSTR_START,
-        sSTR_REP_START,
-        sSTR_MT_SLA_ACK,
-        sSTR_MT_DATA_ACK,
-        sSTR_MR_DATA_ACK,
-        sSTR_MR_SLA_ACK,
-        sSTR_MR_DATA_NACK,
-        sSTR_MT_ARB_LOST,
-        sSTR_MT_SLA_NACK,
-        sSTR_MT_DATA_NACK,
-        sSTR_MR_SLA_NACK,
-};
-
-CByteQueue_t *twi_trace;
 #endif
 
 uint16_t twiint_errors;
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-#define twi_tracer(d) queue_trace(twi_trace, d)
+#define twi_tracer(d) twi_trace(twi_trace_buffer, d)
 #else
 #define twi_tracer(d) ((void)0)
 #endif
@@ -147,16 +122,28 @@ uint16_t twiint_errors;
 ISR(TWI_vect) {
     switch (TW_STATUS) {
         case TW_START:
+            twi_tracer(TRC_START);
+            goto start;
         case TW_REP_START:
+            twi_tracer(TRC_REP_START);
+        start:            
             TWDR = pTwiStream->addr;
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
             break;
 
         case TW_MT_SLA_ACK:
+            twi_tracer(TRC_MT_SLA_ACK);
+            goto ack;
         case TW_MT_DATA_ACK:
+            twi_tracer(TRC_MT_DATA_ACK);
+        ack:
             if (!stream_is_empty(pTwiStream)) {
                 TWDR = stream_get(pTwiStream);
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
+                // } else if (pTwiStream->pRcvQ) {
+                //     // do a repeated start then read into the rcv queue
+                //     pRdQueue = pTwiStream->pRcvQ;
+                //     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
             } else {
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
                 complete_request(pTwiStream);
@@ -164,12 +151,32 @@ ISR(TWI_vect) {
             break;
 
         case TW_MR_DATA_ACK:
-            if (!stream_is_full(pTwiStream)) {
-                stream_put(pTwiStream, TWDR);
+            twi_tracer(TRC_MR_DATA_ACK);
+            if (!queue_is_full(pRdQueue)) {
+                queue_put(pRdQueue, TWDR);
             } else {
                 // TODO: handle buffer full condition
             }
+            // twi_tracer(TRC_MR_DATA_ACK);
+            // if (pRdQueue) {
+            //     uint8_t capacity = queue_capacity(pRdQueue);
+            //     if (capacity > 1) {
+            //         queue_put(pRdQueue, TWDR);
+            //         TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA);
+            //     } else if (capacity == 1) {
+            //         queue_put(pRdQueue, TWDR);
+            //         TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA) | (1 << TWSTO);
+            //     } else {
+            //         TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
+            //     }
+            // } else {
+            //     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
+            // }
+            //break;
+
+
         case TW_MR_SLA_ACK:
+            twi_tracer(TRC_MR_SLA_ACK);
             // TODO: validate the end condition is correct
             if (stream_count(pTwiStream) > 1) {
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA);
@@ -179,10 +186,12 @@ ISR(TWI_vect) {
             break;
 
         case TW_MR_DATA_NACK:
+            twi_tracer(TRC_MR_DATA_NACK);
             if (!stream_is_full(pTwiStream)) {
                 stream_put(pTwiStream, TWDR);
             } else {
                 // TODO: handle buffer full condition
+                twiint_errors++;
             }
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
             break;
@@ -194,9 +203,17 @@ ISR(TWI_vect) {
             break;
 
         case TW_MT_SLA_NACK:
+            twi_tracer(TRC_MT_SLA_NACK);
+            goto nack;
         case TW_MT_DATA_NACK:
+            twi_tracer(TRC_MT_DATA_NACK);
+            goto nack;
         case TW_MR_SLA_NACK:
+            twi_tracer(TRC_MR_SLA_NACK);
+            goto nack;
         default:
+            twi_tracer(TW_STATUS);
+        nack:
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
             twiint_errors++;
     }

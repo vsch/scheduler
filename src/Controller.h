@@ -6,6 +6,12 @@
 #include "ByteQueue.h"
 #include "Mutex.h"
 
+#ifdef SERIAL_DEBUG_TWI_TRACER
+#include "TraceBuffer.h"
+
+extern TraceBuffer twiTraceBuffer;
+#endif
+
 #define DIV_ROUNDED_UP(v, d)            (((v)+(d)-1)/(d))
 #define RESERVATIONS_PACK(r, b)         ((((r & 0x07) - 1) << 5) | (DIV_ROUNDED_UP(b,8) > 0x1f ? 0x1f : DIV_ROUNDED_UP(b,8)))
 #define RESERVATIONS_BYTES(b)           ((DIV_ROUNDED_UP(b,8) > 0x1f ? 0x1f : DIV_ROUNDED_UP(b,8))*8)
@@ -43,6 +49,7 @@
       )
 
 #define CTR_FLAGS_REQ_AUTO_START      (0x01)          // auto start requests when process request is called, default
+#define CTR_FLAGS_TRC_PENDING     (0x02)          // auto start requests when process request is called, default
 
 class Controller : public Task {
 protected:
@@ -50,7 +57,7 @@ protected:
     ByteQueue completedStreams;     // requests already processed
     ByteQueue freeReadStreams;      // requests for processing available
     ByteQueue writeBuffer;          // shared write byte buffer
-    Mutex reservationLock;      // reservationLock for requests and buffer write, first task will resume when resources it requested in willRequire() become available
+    Mutex reservationLock;          // reservationLock for requests and buffer write, first task will resume when resources it requested in willRequire() become available
     ByteQueue requirementList;      // byte queue of requirementList: max 8 reservationLock and 31*8 buffer, b7:b5+1 is reservationLock, B4:b0*8 = 248 bytes see Note below.
     ByteStream writeStream;         // write stream, must be requested and released in the same task invocation or pending data will not be handleProcessedRequest
     ByteStream *readStreamTable;    // pointer to first element in array of ByteSteam entries FIFO basis
@@ -199,16 +206,23 @@ public:
 
     inline void updateResourceLockTrace() {}
 
-    inline void dumpResourceTrace() {}
 
 #endif
 
+#ifdef SERIAL_DEBUG_TWI_TRACER
+    void dumpTwiTrace();
+#endif
+    
     uint8_t getReadStreamId(ByteStream *pStream) {
         return pStream - readStreamTable;
     }
 
     NO_DISCARD uint8_t isRequestAutoStart() const {
         return flags & CTR_FLAGS_REQ_AUTO_START;
+    }
+
+    NO_DISCARD uint8_t isTracePending() const {
+        return flags & CTR_FLAGS_TRC_PENDING;
     }
 
     void setRequestAutoStart() {
@@ -324,16 +338,14 @@ public:
         pStream->pRcvQ = NULL;
 
         // configure twi flags
-		pStream->flags = STREAM_FLAGS_RD | STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED;
+        pStream->flags = STREAM_FLAGS_RD | STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED;
 
         // NOTE: protect from mods in interrupts mid-way through this code
         cli();
         // queue it for processing
         pendingReadStreams.addTail(head);
         if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
-            // first one, then no-one to start it up but here
-            pStream->flags |= STREAM_FLAGS_PROCESSING;
-            startProcessingRequest(pStream);
+            startNextRequest();
         } else {
             // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
             // and new request processing started if needed
@@ -427,6 +439,17 @@ public:
          */
     virtual void startProcessingRequest(ByteStream *pStream) = 0;
 
+    void startNextRequest() {
+        if (!pendingReadStreams.isEmpty() && !isTracePending()) {
+            uint8_t nexHead = pendingReadStreams.peekHead();
+            ByteStream *pNextStream = getReadStream(nexHead);
+            if (!(pNextStream->isProcessing())) {
+                pNextStream->flags |= STREAM_FLAGS_PROCESSING;
+                startProcessingRequest(pNextStream);
+            }
+        }
+    }
+
     /**
      * mark end of request processing by the interrupt, this should be the 
      * first request in the pending streams. 
@@ -446,17 +469,21 @@ public:
         uint8_t head = pendingReadStreams.removeHead();
         completedStreams.addTail(head);
 
-        if (isRequestAutoStart() && !pendingReadStreams.isEmpty()) {
+        // don't start next request if trace processing is pending
+        if (isRequestAutoStart()) {
             // start processing next request
-            head = pendingReadStreams.peekHead();
-            ByteStream *pNextStream = getReadStream(head);
-            pNextStream->flags |= STREAM_FLAGS_PROCESSING;
-            startProcessingRequest(pNextStream);
+            startNextRequest();
         }
     }
 
+    // IMPORTANT: called with interrupts disabled, but they can be enabled inside the function 
+    //     to allow TWI processing to proceed
+    virtual void requestCompleted(ByteStream *pStream) {
+        
+    };
+
     // IMPORTANT: called with interrupts disabled
-    virtual void requestCompleted(ByteStream *pStream) = 0;
+    void dumpTrace();
 
     // IMPORTANT: called with interrupts disabled
     void handleCompletedRequests() {
@@ -479,22 +506,17 @@ public:
     void loop() override {
         uint8_t pendingCount = 0;
         uint8_t writeCapacity = 0;
-        // serialDebugTwiDataPrintf_P(PSTR("Loop start\n"));
+        // serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop start\n"));
 
         cli();
         handleCompletedRequests();
 
-        if (pendingReadStreams.getCount()) {
-            if (pendingReadStreams.getCount()) {
-                uint8_t peekHead = pendingReadStreams.peekHead();
-                ByteStream *pStream = readStreamTable + peekHead;
-                if (!(pStream->isProcessing())) {
-                    // its ready for processing and not already being processed
-                    pStream->flags |= STREAM_FLAGS_PROCESSING;
-                    startProcessingRequest(pStream);
-                }
-            }
-        }
+#ifdef SERIAL_DEBUG_TWI_TRACER
+        // twiTraceBuffer.reset();
+        dumpTwiTrace();
+#endif
+        
+        startNextRequest();
 
         pendingCount = pendingReadStreams.getCount();
         writeCapacity = writeBuffer.getCapacity();
@@ -516,18 +538,24 @@ public:
 
         if (pendingCount > 1 && !requirementList.isEmpty()) {
             // can suspend until there is something to check for.
-            serialDebugTwiDataPrintf_P(PSTR("Loop resume(0)\n"));
+            serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop resume(0)\n"));
             resume(0);
         } else if (pendingCount <= 1) {
-            serialDebugTwiDataPrintf_P(PSTR("Loop suspend()\n"));
+            serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop suspend()\n"));
             suspend();
         } else {
             // resume just in case have completed requests
-            //serialDebugTwiDataPrintf_P(PSTR("Loop resume(1)\n"));
+#ifdef SERIAL_DEBUG_TWI_DATA
+            if (isSuspended()) {
+                serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop resume(1)\n"));
+                resume(1);
+            }
+#else
             resume(1);
+#endif
         }
 
-//        serialDebugTwiDataPrintf_P(PSTR("Loop end\n"));
+        //        serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop end\n"));
     }
 
 #ifdef CONSOLE_DEBUG

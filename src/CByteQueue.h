@@ -24,7 +24,6 @@ extern uint8_t queue_count(const CByteQueue_t* thizz); // capacity to accept wri
 extern uint8_t queue_get(CByteQueue_t* thizz); // read byte
 extern uint8_t queue_peek(const CByteQueue_t* thizz); // get the next byte, but leave it in the queue
 extern uint8_t queue_put(CByteQueue_t* thizz, uint8_t data); // write byte
-extern void queue_trace(CByteQueue_t* thizz, uint8_t data); // write byte 7 bits, and add count if repeating
 
 #ifdef __cplusplus
 }

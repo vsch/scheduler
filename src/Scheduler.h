@@ -285,8 +285,12 @@ public:
 #define serialDebugPrintf_P(...) printf_P(__VA_ARGS__)
 #define serialDebugPuts_P(...) puts_P(__VA_ARGS__)
 #else
+#ifdef CONSOLE_DEBUG
+#define serialDebugPrintf_P(...) addActualOutput(__VA_ARGS__)
+#else
 #define serialDebugPrintf_P(...) ((void)0)
 #define serialDebugPuts_P(...) ((void)0)
+#endif
 #endif
 
 #ifdef SERIAL_DEBUG_SCHEDULER_DELAYS

@@ -157,7 +157,7 @@ void ByteStream::dump(uint8_t indent, uint8_t compact) {
     indentStr[indent] = '\0';
 
     memset(flagStr, 0, sizeof flagStr);
-    flagStr[0] = '1';
+    flagStr[0] = '0';
     flagStr[1] = '\0';
 
     if (isProcessing()) *pFlag++ = '*';

@@ -1,5 +1,6 @@
 #include "Scheduler.h"
 #include "Controller.h"
+#include "twiint.h"
 
 #ifdef CONSOLE_DEBUG
 
@@ -89,3 +90,37 @@ void Controller::dumpResourceTrace() {
 }
 
 #endif // RESOURCE_TRACE
+
+// IMPORTANT: called with interrupts disabled
+#ifdef SERIAL_DEBUG_TWI_TRACER
+
+void Controller::dumpTwiTrace() {
+    if (!twiTraceBuffer.isEmpty()) {
+
+        // set trace pending and wait for TWI to be idle so we don't mess up the twi interrupt timing
+        flags |= CTR_FLAGS_TRC_PENDING;
+        
+#ifndef CONSOLE_DEBUG       
+        sei();
+        while (twiint_busy());
+        cli();
+#endif        
+
+        TraceBuffer traceBuffer;
+
+        // make a copy and clear the trace queue
+        traceBuffer.copyFrom(&twiTraceBuffer);
+        twiTraceBuffer.reset();
+
+        flags &= ~CTR_FLAGS_TRC_PENDING;
+
+        // enable interrupts so twi processing can proceed
+        sei();
+
+        traceBuffer.dump();
+
+        cli();
+    }
+}
+
+#endif

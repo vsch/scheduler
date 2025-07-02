@@ -19,6 +19,8 @@
 struct ByteStream : protected ByteQueue {
     friend class ByteQueue;
     friend class Controller;
+    friend class TwiController2;
+    
     volatile uint8_t flags;
     uint8_t addr; // Slave address byte (with read/write bit). in case of Twi
     ByteQueue *pRcvQ;

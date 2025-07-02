@@ -15,7 +15,9 @@
 
 #ifndef QUEUE_BLOCK_FUNCS
 #ifdef QUEUE_WORD_FUNCS
+#ifndef QUEUE_DEDICATED_WORD_FUNCS
 #define QUEUE_DEDICATED_WORD_FUNCS
+#endif
 #endif
 #endif
 
@@ -29,6 +31,7 @@ class Controller;
 class ByteQueue {
     friend class ByteStream;
     friend class Controller;
+    friend class TwiController2;
 
     // CAVEAT: nHead is modified in code called from interrupt routine, if size changed from a byte, then code accessing 
     //      nHead in write buffer will need to be protected with cli()/sei() wrapper
@@ -182,7 +185,6 @@ public:
     // print out queue for testing
     void dump(uint8_t indent, uint8_t compact);
 #endif
-    void trace(uint8_t data);
 };
 
 #endif //SCHEDULER_QUEUE_H

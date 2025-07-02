@@ -32,50 +32,6 @@ uint8_t ByteQueue::peekTail(uint8_t offset) const {
     return getCount() <= offset ? NULL_BYTE : pData[nTail <= offset ? nSize - (offset - nTail) - 1 : nTail - offset - 1];
 }
 
-void ByteQueue::trace(uint8_t data) {
-    data &= 0x3f;
-    if (getCount() > 1) {
-        // take -1 from the back to see if it matches 0..7 bits
-        uint8_t prevCnt = peekTail();
-        if (prevCnt & 0x80) {
-            // have count
-            uint8_t prev = peekTail(1);
-            if (prev & 0x40) {
-                // this one is counted
-                if ((prev & 0x3f) == data) {
-                    // add one to count and exit
-                    uint8_t count = removeTail() & 0x7f;
-                    if (count < 127) {
-                        count++;
-                    }
-                    addTail(count | 0x80);
-                    return;
-                }
-            }
-        }
-    }
-
-    if (!isEmpty()) {
-        uint8_t prev = peekTail();
-        if (prev == data) {
-            // add one to count and exit
-            if (isFull()) {
-                // count won't fit, don't add the last one
-                removeTail();
-            } else {
-                removeTail();
-                prev |= 0x40;
-                addTail(prev);
-                addTail(2 | 0x80);
-            }
-            return;
-        }
-    }
-
-    // just add it 
-    addTail(data);
-}
-
 #ifdef QUEUE_BLOCK_FUNCS
 
 void *Queue::addTail(void *pVoid, uint8_t count) {
@@ -331,10 +287,6 @@ uint8_t queue_put(CByteQueue_t *thizz, uint8_t data) {
     return ((ByteQueue *) thizz)->addTail(data);
 }
 
-void queue_trace(CByteQueue_t *thizz, uint8_t data) {
-    ((ByteQueue *) thizz)->trace(data);
-}
-
 #ifdef SERIAL_DEBUG
 
 void ByteQueue::serialDebugDump() {
@@ -348,6 +300,30 @@ void ByteQueue::serialDebugDump() {
 }
 
 #endif
+
+///**
+// * Copy data from another queue
+// * 
+// * CAUTION: if the source queue is longer, head and tail are not adjusted for destination size, intended to copy 
+// *          queues of same data size
+// * 
+// * @param pQueue 
+// */
+//void ByteQueue::copyFrom(const ByteQueue *pQueue) {
+//    uint8_t len = nSize;
+//    if (len > pQueue->nSize) {
+//        len = pQueue->nSize;
+//    }
+//
+//    if (len) {
+//        len--;
+//    }
+//
+//    memcpy(pData, pQueue->pData, len);
+//    nHead = pQueue->nHead;
+//    nTail = pQueue->nTail;
+//}
+
 
 #ifdef CONSOLE_DEBUG
 
