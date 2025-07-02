@@ -44,10 +44,10 @@ public:
         return waitingTask;
     }
     
-#ifdef SERIAL_DEBUG_TWI_DATA   
+#ifdef SERIAL_DEBUG   
     void serialDebugDump(uint8_t id);
 #else    
-    inline void serialDebugDump() { }
+    inline void serialDebugDump(uint8_t id) { }
 #endif
 
     // set flags other than address and rd/wr permissions

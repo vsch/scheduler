@@ -116,16 +116,6 @@ void complete_request(CByteStream_t *pStream);
 
 CByteStream_t *twi_get_write_buffer(uint8_t addr, uint8_t coDC);
 
-/**
- * Send given buffered data as multiple self-buffered twi requests
- * 
- * @param addr   twi address, including read flag
- * @param pData  pointer to byte buffer
- * @param len    length of data to send
- * @return       pointer to last request, can be used to wait for completion of the send
- */
-CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint16_t len);
-
 CByteStream_t * twi_process(CByteStream_t *pStream);
 
 #ifdef __cplusplus

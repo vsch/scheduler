@@ -19,7 +19,16 @@ extern CByteStream_t * twi_send_cmd(uint8_t cmd);
 // sending operations
 extern void twi_add_byte(uint8_t byte);
 extern void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count);
-extern void twi_wait_sent(CByteStream_t *pStream);
+extern void twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs);
+/**
+ * Send given buffered data as self-buffered twi request
+ * 
+ * @param addr   twi address, including read flag
+ * @param pData  pointer to byte buffer
+ * @param len    length of data to send
+ * @return       pointer to last request, can be used to wait for completion of the send
+ */
+extern CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteQueue_t *pRcvQ);
 
 #ifdef __cplusplus
 }

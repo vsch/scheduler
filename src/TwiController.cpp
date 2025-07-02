@@ -20,8 +20,8 @@ CByteStream_t *twi_process(CByteStream_t *pStream) {
     return (CByteStream_t *) twiController.processStream((ByteStream *) pStream);
 }
 
-CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint16_t len) {
-    return (CByteStream_t *) twiController.processRequest(addr, pData, len);
+CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteQueue_t *pRcvQ) {
+    return (CByteStream_t *) twiController.processRequest(addr, pData, nSize, (ByteQueue *) pRcvQ);
 }
 
 #ifdef SERIAL_DEBUG_DETAIL_TWI_STATS
@@ -81,6 +81,17 @@ CByteStream_t *twi_send_cmd(uint8_t cmd) {
 // IMPORTANT: assumes: interrupts are enabled, processing of requests should be done by interrupt 
 //            routine sequentially sending all pending requests. 
 //            i.e. set CTR_FLAGS_REQ_AUTO_START in controller constructor flags
-void twi_wait_sent(CByteStream_t *pStream) {
-    while (stream_is_pending(pStream));
+void twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs) {
+    uint32_t start = micros();
+    uint32_t timeoutMic = timeoutMs * 1000L;
+
+    while (stream_is_pending(pStream)) {
+        if (timeoutMs) {
+            uint32_t diff = micros() - start;
+            if (diff >= timeoutMic) {
+                PRINTF_SERIAL_DEBUG_GFX_TWI_STATS(PSTR("     Waiting last req timed out %ld.\n"), diff / 1000L);
+                break;
+            }
+        }
+    }
 }

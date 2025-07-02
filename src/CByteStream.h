@@ -36,7 +36,7 @@ extern uint8_t stream_count(const CByteStream_t* thizz); // capacity to accept w
 extern uint8_t stream_get(CByteStream_t* thizz); // read byte
 extern uint8_t stream_peek(const CByteStream_t* thizz); // get the next byte, but leave it in the stream
 extern uint8_t stream_put(CByteStream_t* thizz, uint8_t data); // write byte
-extern uint8_t stream_address(const CByteStream_t* thizz); // get address from flags
+extern uint8_t stream_try_put(CByteStream_t *thizz, uint8_t data);
 extern uint8_t stream_can_write(const CByteStream_t* thizz); // get permitted ops
 extern uint8_t stream_can_read(const CByteStream_t* thizz); // get permitted ops
 extern uint8_t stream_is_unbuffered_pending(const CByteStream_t* thizz); // return true if the stream is unbuffered and not pending
