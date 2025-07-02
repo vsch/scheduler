@@ -3,12 +3,16 @@
 #define SCHEDULER_BYTESTREAM_H
 
 #include "Arduino.h"
+
 #ifdef CONSOLE_DEBUG
 #include "stdlib.h"
 #include "new"
 #else
+
 #include <new.h>
+
 #endif
+
 #include "CByteStream.h"
 #include "ByteQueue.h"
 
@@ -16,8 +20,10 @@ struct ByteStream : protected ByteQueue {
     friend class ByteQueue;
     friend class Controller;
     volatile uint8_t flags;
-    /** Slave address byte (with read/write bit). in case of Twi */
-    uint8_t addr; 
+    uint8_t addr; // Slave address byte (with read/write bit). in case of Twi
+    ByteQueue *pRcvQ;
+    // IMPORTANT: above fields must be the same as in CByteStream
+    
     uint8_t waitingTask; // if not NULL_TASK then index of task waiting for this request to complete
 
 public:
@@ -30,10 +36,10 @@ public:
     inline uint8_t getAddress() const {
         return addr;
     }
-    
+
     void waitComplete();
     void triggerComplete();
-    
+
     inline uint8_t getWaitingTask() const {
         return waitingTask;
     }
@@ -57,20 +63,20 @@ public:
     NO_DISCARD inline uint8_t canWrite() const { return getFlags(STREAM_FLAGS_WR); }
 
     NO_DISCARD inline uint8_t isPending() const { return getFlags(STREAM_FLAGS_PENDING); }
-    
+
     NO_DISCARD inline uint8_t isProcessing() const { return getFlags(STREAM_FLAGS_PROCESSING); }
-    
+
     NO_DISCARD inline uint8_t isUnbuffered() const { return getFlags(STREAM_FLAGS_UNBUFFERED); }
 
     NO_DISCARD inline uint8_t isAppend() const { return getFlags(STREAM_FLAGS_APPEND); }
 
-    NO_DISCARD inline uint8_t isUnbufferedPending() const { return allFlags( STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED); }
+    NO_DISCARD inline uint8_t isUnbufferedPending() const { return allFlags(STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED); }
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "HidingNonVirtualFunction"
     ByteStream *getStream(ByteStream *pOther, uint8_t flags);
 #pragma clang diagnostic pop
-    
+
     /**
      * Setup write stream for own buffer.
      *
@@ -85,7 +91,7 @@ public:
     inline uint8_t is_full() const { return isFull(); }
 
     inline uint8_t capacity() const { return getCapacity(); }
-    
+
     inline uint8_t count() const { return getCount(); }
 
     inline uint8_t get() { return can_read() ? removeHead() : NULL_BYTE; }
@@ -94,13 +100,24 @@ public:
 
     inline uint8_t put(uint8_t data) { return can_write() ? addTail(data) : NULL_BYTE; }
 
+    inline uint8_t try_put(uint8_t data) {
+        if (canWrite() && isUnbuffered() && !isFull()) {
+            addTail(data);
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
 #ifdef QUEUE_WORD_FUNCS
+
     // Word versions
     inline uint16_t getW() { return can_read() ? removeHeadW() : NULL_WORD; }
 
     inline uint16_t peekW() const { return can_read() ? peekHeadW() : NULL_WORD; }
 
     inline uint16_t putW(uint16_t data) { return can_write() ? addTailW(data) : NULL_WORD; }
+
 #endif // QUEUE_WORD_FUNCS
 
     // status and maintenance functions

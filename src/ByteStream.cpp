@@ -6,6 +6,7 @@ ByteStream::ByteStream(ByteQueue *pByteQueue, uint8_t streamFlags) : ByteQueue(*
     flags = streamFlags;
     addr = 0;
     waitingTask = NULL_TASK;
+    pRcvQ  = NULL;
 }
 
 uint8_t ByteStream::setFlags(uint8_t flags, uint8_t mask) {
@@ -68,6 +69,12 @@ uint8_t stream_put(CByteStream_t *thizz, uint8_t data) {
     return NULL_BYTE;
 }
 
+// if stream is writeable, unbufferred and has room for more data to write, save the byte and turn off readable flag
+// so reading will not read the bytes written
+uint8_t stream_try_put(CByteStream_t *thizz, uint8_t data) {
+    return ((ByteStream *) thizz)->try_put(data);
+}
+
 uint8_t stream_can_write(const CByteStream_t *thizz) {
     return ((ByteStream *) thizz)->can_write();
 }
@@ -78,25 +85,20 @@ uint8_t stream_can_read(const CByteStream_t *thizz) {
 
 // NOTE: the following can take a NULL for byte stream pointer
 // return true if the stream is unbuffered and not pending
-uint8_t stream_is_unbuffered_pending(const CByteStream_t* thizz) {
+uint8_t stream_is_unbuffered_pending(const CByteStream_t *thizz) {
     return thizz && ((ByteStream *) thizz)->isUnbufferedPending();
-} 
+}
 
-uint8_t stream_is_pending(const CByteStream_t* thizz) {
+uint8_t stream_is_pending(const CByteStream_t *thizz) {
     return thizz && ((ByteStream *) thizz)->isPending();
-} 
+}
 
-uint8_t stream_is_processing(const CByteStream_t* thizz) {
+uint8_t stream_is_processing(const CByteStream_t *thizz) {
     return thizz && ((ByteStream *) thizz)->isProcessing();
-} 
+}
 
-uint8_t stream_is_unbuffered(const CByteStream_t* thizz) {
+uint8_t stream_is_unbuffered(const CByteStream_t *thizz) {
     return thizz && ((ByteStream *) thizz)->isUnbuffered();
-} 
-
-// get address from flags
-uint8_t stream_address(const CByteStream_t *thizz) {
-    return ((ByteStream *) thizz)->address();
 }
 
 void ByteStream::pgmByteList(const uint8_t *bytes, uint16_t count) {
@@ -125,12 +127,12 @@ void ByteStream::triggerComplete() {
 
 void ByteStream::serialDebugDump(uint8_t id) {
     uint8_t iMax = getCount();
-    serialDebugTwiDataPrintf_P(PSTR("TWI: 0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
+    serialDebugPrintf_P(PSTR("TWI: 0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
     for (uint8_t i = 0; i < iMax; i++) {
         uint8_t byte = peekHead(i);
-        serialDebugTwiDataPrintf_P(PSTR("  %2.2x"), byte);
+        serialDebugPrintf_P(PSTR("  %2.2x"), byte);
     }
-    serialDebugTwiDataPrintf_P(PSTR(" }\n"));
+    serialDebugPrintf_P(PSTR(" }\n"));
 }
 
 #endif

@@ -10,8 +10,8 @@
 #define sizeOfByteQueue(s)          (sizeOfQueue((s), uint8_t))
 
 // #define QUEUE_BLOCK_FUNCS
-#define QUEUE_WORD_FUNCS
-#define QUEUE_DEDICATED_WORD_FUNCS
+// #define QUEUE_WORD_FUNCS
+// #define QUEUE_DEDICATED_WORD_FUNCS
 
 #ifndef QUEUE_BLOCK_FUNCS
 #ifdef QUEUE_WORD_FUNCS

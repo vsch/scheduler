@@ -29,8 +29,8 @@ add_compile_definitions(INCLUDE_TWI_INT)
 # Define additional source and header files or default arduino sketch files
 set(${PROJECT_NAME}_SRCS
         src/ByteQueue.cpp
-        src/Mutex.cpp
         src/ByteStream.cpp
+        src/Mutex.cpp
         src/Signals.cpp
         src/TinySwitcher.S
         src/Scheduler.cpp
@@ -40,9 +40,10 @@ set(${PROJECT_NAME}_SRCS
         )
 set(${PROJECT_NAME}_HDRS
         src/ByteQueue.h
-        src/Mutex.h
-        src/CByteStream.h
         src/ByteStream.h
+        src/Mutex.h
+        src/CByteQueue.h
+        src/CByteStream.h
         src/Signals.h
         src/TinySwitcher.h
         src/Scheduler.h

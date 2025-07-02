@@ -2,6 +2,7 @@
 #define SCHEDULER_STREAM_H
 
 #include "common_defs.h"
+#include "CByteQueue.h"
 
 #define STREAM_FLAGS_RD         (0x01)      // marks the stream as read enabled, can get from it
 #define STREAM_FLAGS_WR         (0x02)      // marks the stream as write enabled, can put to it
@@ -21,6 +22,7 @@ typedef struct CByteStream
     uint8_t* pData;
     uint8_t flags;
     uint8_t addr;
+    CByteQueue_t *pRcvQ;
 } CByteStream_t;
 
 #ifdef __cplusplus
