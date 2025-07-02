@@ -1,3 +1,5 @@
+#ifdef SERIAL_DEBUG_TWI_TRACER
+
 #include "Arduino.h"
 #include "TraceBuffer.h"
 #include "twiint.h"
@@ -78,3 +80,5 @@ void TraceBuffer::dump() {
     serialDebugPrintf_P(PSTR(" }\n"));
 
 }
+
+#endif //SERIAL_DEBUG_TWI_TRACER
