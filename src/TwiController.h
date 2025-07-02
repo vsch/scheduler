@@ -24,8 +24,10 @@ public:
 
 #endif
         this->resume(0);
-
+        
+#ifndef CONSOLE_DEBUG
         twiint_start((CByteStream_t *) pStream);
+#endif        
     }
 };
 
