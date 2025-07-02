@@ -2,7 +2,7 @@
 #define SCHEDULER_MUTEX_H
 
 #include "Scheduler.h"
-#include "Queue.h"
+#include "ByteQueue.h"
 
 // sharable resource to be used in Task and AsyncTask calls
 
@@ -10,7 +10,7 @@ class Mutex
 {
     friend class Controller;
 
-    Queue queue;
+    ByteQueue queue;
 
 public:
     inline Mutex(uint8_t *queueBuffer, uint8_t queueSize)

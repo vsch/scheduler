@@ -3,7 +3,7 @@
 
 #include "Arduino.h"
 #include "ByteStream.h"
-#include "Queue.h"
+#include "ByteQueue.h"
 #include "Mutex.h"
 
 #define DIV_ROUNDED_UP(v, d)            (((v)+(d)-1)/(d))
@@ -46,12 +46,12 @@
 
 class Controller : public Task {
 protected:
-    Queue pendingReadStreams;   // requests waiting to be handleProcessedRequest
-    Queue completedStreams;     // requests already processed
-    Queue freeReadStreams;      // requests for processing available
-    Queue writeBuffer;          // shared write byte buffer
+    ByteQueue pendingReadStreams;   // requests waiting to be handleProcessedRequest
+    ByteQueue completedStreams;     // requests already processed
+    ByteQueue freeReadStreams;      // requests for processing available
+    ByteQueue writeBuffer;          // shared write byte buffer
     Mutex reservationLock;      // reservationLock for requests and buffer write, first task will resume when resources it requested in willRequire() become available
-    Queue requirementList;      // byte queue of requirementList: max 8 reservationLock and 31*8 buffer, b7:b5+1 is reservationLock, B4:b0*8 = 248 bytes see Note below.
+    ByteQueue requirementList;      // byte queue of requirementList: max 8 reservationLock and 31*8 buffer, b7:b5+1 is reservationLock, B4:b0*8 = 248 bytes see Note below.
     ByteStream writeStream;         // write stream, must be requested and released in the same task invocation or pending data will not be handleProcessedRequest
     ByteStream *readStreamTable;    // pointer to first element in array of ByteSteam entries FIFO basis
 

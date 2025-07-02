@@ -2,12 +2,12 @@
 #define SCHEDULER_SIGNALS_H
 
 #include "Scheduler.h"
-#include "Queue.h"
+#include "ByteQueue.h"
 
 // allows tasks to wait for signal from other tasks/locations
 
 class Signal {
-    Queue queue;
+    ByteQueue queue;
 
 public:
     Signal(uint8_t *queueBuffer, uint8_t queueSize)

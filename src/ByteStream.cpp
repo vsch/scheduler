@@ -2,7 +2,7 @@
 #include "ByteStream.h"
 #include "Scheduler.h"
 
-ByteStream::ByteStream(Queue *pByteQueue, uint8_t streamFlags) : Queue(*pByteQueue) {
+ByteStream::ByteStream(ByteQueue *pByteQueue, uint8_t streamFlags) : ByteQueue(*pByteQueue) {
     flags = streamFlags;
     addr = 0;
     waitingTask = NULL_TASK;
@@ -139,7 +139,7 @@ ByteStream *ByteStream::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->addr = addr;
     pOther->waitingTask = waitingTask;
     waitingTask = NULL_TASK;
-    return Queue::getStream(pOther, flags);
+    return ByteQueue::getStream(pOther, flags);
 }
 
 #ifdef CONSOLE_DEBUG
@@ -165,7 +165,7 @@ void ByteStream::dump(uint8_t indent, uint8_t compact) {
     if (isPending()) *pFlag++ = 'P';
     if (isUnbuffered()) *pFlag++ = 'U';
 
-    // Output: Queue { nSize:%d, nHead:%d, nTail:%d
+    // Output: ByteQueue { nSize:%d, nHead:%d, nTail:%d
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
     addActualOutput("%sStream { flags:%s nSize:%d, nHead:%d, nTail:%d\n", indentStr, flagStr, nSize, nHead, nTail);

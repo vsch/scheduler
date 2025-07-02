@@ -1,8 +1,8 @@
-#include "Queue.h"
+#include "ByteQueue.h"
 #include "CByteStream.h"
 #include "ByteStream.h"
 
-uint8_t Queue::updateQueued(Queue *pOther, uint8_t flags) {
+uint8_t ByteQueue::updateQueued(ByteQueue *pOther, uint8_t flags) {
     // take updated values if based on our data
     if (pOther->pData == pData) {
         if (flags & STREAM_FLAGS_RD) {
@@ -16,19 +16,19 @@ uint8_t Queue::updateQueued(Queue *pOther, uint8_t flags) {
     return NULL_BYTE;
 }
 
-uint8_t Queue::updateStreamed(ByteStream *pOther) {
+uint8_t ByteQueue::updateStreamed(ByteStream *pOther) {
     return updateQueued(pOther, pOther->flags);
 }
 
-uint8_t Queue::getCount() const {
+uint8_t ByteQueue::getCount() const {
     return (nTail < nHead ? nTail + nSize : nTail) - nHead;
 }
 
-uint8_t Queue::peekHead(uint8_t offset) const {
+uint8_t ByteQueue::peekHead(uint8_t offset) const {
     return getCount() <= offset ? NULL_BYTE : pData[nHead + offset < nSize ? nHead + offset : nHead + offset - nSize];
 }
 
-uint8_t Queue::peekTail(uint8_t offset) const {
+uint8_t ByteQueue::peekTail(uint8_t offset) const {
     return getCount() <= offset ? NULL_BYTE : pData[nTail <= offset ? nSize - (offset - nTail) - 1 : nTail - offset - 1];
 }
 
@@ -135,7 +135,7 @@ void *Queue::peekTail(void *pVoid, uint8_t count) const {
 
 #ifdef QUEUE_DEDICATED_WORD_FUNCS
 
-uint16_t Queue::addTailW(uint16_t data) {
+uint16_t ByteQueue::addTailW(uint16_t data) {
     if (!isFull(sizeof(uint16_t))) {
         addTail(data & 0xff);
         addTail(data >> 8);
@@ -144,7 +144,7 @@ uint16_t Queue::addTailW(uint16_t data) {
     return NULL_WORD;
 }
 
-uint16_t Queue::addHeadW(uint16_t data) {
+uint16_t ByteQueue::addHeadW(uint16_t data) {
     if (!isFull(sizeof(uint16_t))) {
         addHead(data >> 8);
         addHead(data & 0xff);
@@ -153,7 +153,7 @@ uint16_t Queue::addHeadW(uint16_t data) {
     return NULL_WORD;
 }
 
-uint16_t Queue::removeTailW() {
+uint16_t ByteQueue::removeTailW() {
     uint8_t count = getCount();
     if (count) {
         if (count >= sizeof(uint16_t)) {
@@ -165,7 +165,7 @@ uint16_t Queue::removeTailW() {
     return NULL_WORD;
 }
 
-uint16_t Queue::removeHeadW() {
+uint16_t ByteQueue::removeHeadW() {
     uint8_t count = getCount();
     if (count) {
         if (count >= sizeof(uint16_t)) {
@@ -177,7 +177,7 @@ uint16_t Queue::removeHeadW() {
     return NULL_WORD;
 }
 
-uint16_t Queue::peekTailW() const {
+uint16_t ByteQueue::peekTailW() const {
     uint8_t count = getCount();
     if (count) {
         if (count >= sizeof(uint16_t)) {
@@ -189,7 +189,7 @@ uint16_t Queue::peekTailW() const {
     return NULL_WORD;
 }
 
-uint16_t Queue::peekHeadW() const {
+uint16_t ByteQueue::peekHeadW() const {
     uint8_t count = getCount();
     if (count) {
         if (count >= sizeof(uint16_t)) {
@@ -203,7 +203,7 @@ uint16_t Queue::peekHeadW() const {
 
 #endif
 
-ByteStream *Queue::getStream(ByteStream *pOther, uint8_t flags) {
+ByteStream *ByteQueue::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->nSize = nSize;
     pOther->nHead = nHead;
     pOther->nTail = nTail;
@@ -218,7 +218,7 @@ ByteStream *Queue::getStream(ByteStream *pOther, uint8_t flags) {
     return pOther;
 }
 
-uint8_t Queue::addTail(uint8_t data) {
+uint8_t ByteQueue::addTail(uint8_t data) {
     if (isFull()) return NULL_BYTE;
 
     pData[nTail++] = data;
@@ -226,14 +226,14 @@ uint8_t Queue::addTail(uint8_t data) {
     return data;
 }
 
-uint8_t Queue::removeTail() {
+uint8_t ByteQueue::removeTail() {
     if (isEmpty()) return 0;
 
     if (!nTail) nTail = nSize;
     return pData[--nTail];
 }
 
-uint8_t Queue::removeHead() {
+uint8_t ByteQueue::removeHead() {
     if (isEmpty()) return NULL_BYTE;
 
     uint8_t data = pData[nHead++];
@@ -241,7 +241,7 @@ uint8_t Queue::removeHead() {
     return data;
 }
 
-uint8_t Queue::addHead(uint8_t data) {
+uint8_t ByteQueue::addHead(uint8_t data) {
     if (isFull()) return NULL_BYTE;
 
     if (!nHead) nHead = nSize;
@@ -249,7 +249,7 @@ uint8_t Queue::addHead(uint8_t data) {
     return data;
 }
 
-Queue::Queue(uint8_t *pData, uint8_t nSize) : pData(pData) {
+ByteQueue::ByteQueue(uint8_t *pData, uint8_t nSize) : pData(pData) {
     this->nSize = nSize;
     nHead = nTail = 0;
 }

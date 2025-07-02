@@ -26,7 +26,7 @@ class Controller;
  * Queuing class which stores data in byte format but has word access methods for making it a word based queue.
  */
 
-class Queue {
+class ByteQueue {
     friend class ByteStream;
     friend class Controller;
 
@@ -39,7 +39,7 @@ class Queue {
     uint8_t *pData;
 
 public:
-    Queue(uint8_t *pData, uint8_t nSize);
+    ByteQueue(uint8_t *pData, uint8_t nSize);
 
     void reset() {
         nHead = nTail = 0;
@@ -167,7 +167,7 @@ public:
 
 #endif // QUEUE_WORD_FUNCS
 
-    uint8_t updateQueued(Queue *pOther, uint8_t flags);
+    uint8_t updateQueued(ByteQueue *pOther, uint8_t flags);
     uint8_t updateStreamed(ByteStream *pOther);
 
     ByteStream *getStream(ByteStream *pOther, uint8_t flags);

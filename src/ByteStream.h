@@ -10,10 +10,10 @@
 #include <new.h>
 #endif
 #include "CByteStream.h"
-#include "Queue.h"
+#include "ByteQueue.h"
 
-struct ByteStream : protected Queue {
-    friend class Queue;
+struct ByteStream : protected ByteQueue {
+    friend class ByteQueue;
     friend class Controller;
     volatile uint8_t flags;
     /** Slave address byte (with read/write bit). in case of Twi */
@@ -21,7 +21,7 @@ struct ByteStream : protected Queue {
     uint8_t waitingTask; // if not NULL_TASK then index of task waiting for this request to complete
 
 public:
-    ByteStream(Queue *pByteQueue, uint8_t streamFlags);
+    ByteStream(ByteQueue *pByteQueue, uint8_t streamFlags);
 
     inline void setAddress(uint8_t addr) {
         this->addr = addr;
@@ -117,7 +117,7 @@ public:
     inline uint8_t can_write() const { return canWrite(); }
 
     // block must be at least sizeof(ByteStream) in size
-    static ByteStream *construct(void *pBlock, Queue *pByteQueue, uint8_t flags) {
+    static ByteStream *construct(void *pBlock, ByteQueue *pByteQueue, uint8_t flags) {
         return new(pBlock) ByteStream(pByteQueue, flags);
     }
 
