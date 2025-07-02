@@ -79,6 +79,7 @@
 #define TWBR_VALUE ((F_CPU/TWI_FREQUENCY - 16) / (2 * TWI_PRESCALER))
 
 CByteStream_t *pTwiStream;
+CByteQueue_t *pRdQueue;
 
 void twiint_init(void) {
     TWBR = TWBR_VALUE;
@@ -99,14 +100,50 @@ void twiint_start(CByteStream_t *pStream) {
     twiint_flush();
 
     pTwiStream = pStream;
+    pRdQueue = pStream->pRcvQ;
 
     TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN) | (1 << TWIE);
 }
 
+#ifdef SERIAL_DEBUG_TWI_TRACER
+
+const char sSTR_START[] PROGMEM = STR_TRC_START;
+const char sSTR_REP_START[] PROGMEM = STR_TRC_REP_START;
+const char sSTR_MT_SLA_ACK[] PROGMEM = STR_TRC_MT_SLA_ACK;
+const char sSTR_MT_DATA_ACK[] PROGMEM = STR_TRC_MT_DATA_ACK;
+const char sSTR_MR_DATA_ACK[] PROGMEM = STR_TRC_MR_DATA_ACK;
+const char sSTR_MR_SLA_ACK[] PROGMEM = STR_TRC_MR_SLA_ACK;
+const char sSTR_MR_DATA_NACK[] PROGMEM = STR_TRC_MR_DATA_NACK;
+const char sSTR_MT_ARB_LOST[] PROGMEM = STR_TRC_MT_ARB_LOST;
+const char sSTR_MT_SLA_NACK[] PROGMEM = STR_TRC_MT_SLA_NACK;
+const char sSTR_MT_DATA_NACK[] PROGMEM = STR_TRC_MT_DATA_NACK;
+const char sSTR_MR_SLA_NACK[] PROGMEM = STR_TRC_MR_SLA_NACK;
+
+PGM_P const trcStrings[] PROGMEM = {
+        sSTR_START,
+        sSTR_REP_START,
+        sSTR_MT_SLA_ACK,
+        sSTR_MT_DATA_ACK,
+        sSTR_MR_DATA_ACK,
+        sSTR_MR_SLA_ACK,
+        sSTR_MR_DATA_NACK,
+        sSTR_MT_ARB_LOST,
+        sSTR_MT_SLA_NACK,
+        sSTR_MT_DATA_NACK,
+        sSTR_MR_SLA_NACK,
+};
+
+CByteQueue_t *twi_trace;
+#endif
+
 uint16_t twiint_errors;
 
-// added to introduce delays that exist in the non-interrupt driven version
-// interrupt driven version does not initialize OLED-091 unless delays are introduced.
+#ifdef SERIAL_DEBUG_TWI_TRACER
+#define twi_tracer(d) queue_trace(twi_trace, d)
+#else
+#define twi_tracer(d) ((void)0)
+#endif
+
 ISR(TWI_vect) {
     switch (TW_STATUS) {
         case TW_START:
@@ -135,7 +172,7 @@ ISR(TWI_vect) {
         case TW_MR_SLA_ACK:
             // TODO: validate the end condition is correct
             if (stream_count(pTwiStream) > 1) {
-                TWCR = (1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE);
+                TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA);
             } else {
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
             }

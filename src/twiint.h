@@ -40,9 +40,11 @@
 #ifndef TWIINT_H_
 #define TWIINT_H_
 
+#include "Arduino.h"
 #include <stdbool.h>    //bool type
 #include <stddef.h>     //size_t type
 #include <stdint.h>     //uint8_t type
+#include "CByteQueue.h"
 #include "CByteStream.h"
 
 //default to Fast Mode
@@ -117,6 +119,37 @@ void complete_request(CByteStream_t *pStream);
 CByteStream_t *twi_get_write_buffer(uint8_t addr, uint8_t coDC);
 
 CByteStream_t * twi_process(CByteStream_t *pStream);
+
+#ifdef SERIAL_DEBUG_TWI_TRACER
+
+#define TRC_START        (0x00)   
+#define TRC_REP_START    (0x01)   
+#define TRC_MT_SLA_ACK   (0x02)   
+#define TRC_MT_DATA_ACK  (0x03)   
+#define TRC_MR_DATA_ACK  (0x04)   
+#define TRC_MR_SLA_ACK   (0x05)   
+#define TRC_MR_DATA_NACK (0x06)   
+#define TRC_MT_ARB_LOST  (0x07)   
+#define TRC_MT_SLA_NACK  (0x08)   
+#define TRC_MT_DATA_NACK (0x09)   
+#define TRC_MR_SLA_NACK  (0x0A)   
+#define TRC_MAX          (0x0B)   
+
+#define STR_TRC_START        "START"   
+#define STR_TRC_REP_START    "REP_START"   
+#define STR_TRC_MT_SLA_ACK   "MT_SLA_ACK"   
+#define STR_TRC_MT_DATA_ACK  "MT_DATA_ACK"   
+#define STR_TRC_MR_DATA_ACK  "MR_DATA_ACK"   
+#define STR_TRC_MR_SLA_ACK   "MR_SLA_ACK"   
+#define STR_TRC_MR_DATA_NACK "MR_DATA_NACK"   
+#define STR_TRC_MT_ARB_LOST  "MT_ARB_LOST"   
+#define STR_TRC_MT_SLA_NACK  "MT_SLA_NACK"   
+#define STR_TRC_MT_DATA_NACK "MT_DATA_NACK"   
+#define STR_TRC_MR_SLA_NACK  "MR_SLA_NACK"   
+
+extern PGM_P const trcStrings[TRC_MAX] PROGMEM;
+extern CByteQueue_t *twi_trace;
+#endif
 
 #ifdef __cplusplus
 }
