@@ -19,7 +19,10 @@ extern CByteStream_t *twi_process_stream();            // processes the twiStrea
 // sending operations
 extern void gfx_add_byte(uint8_t byte);
 extern void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count);
-extern void twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs);
+
+// wait for stream to be sent, if timeout !=0 then wait that many ms before giving up
+// return 0 if timeed out, 1 if sent (may be with twiint_errors)
+extern uint8_t twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs);
 /**
  * Send given buffered data as self-buffered twi request
  * 

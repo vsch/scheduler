@@ -39,7 +39,7 @@ void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count) {
 // IMPORTANT: assumes: interrupts are enabled, processing of requests should be done by interrupt 
 //            routine sequentially sending all pending requests. 
 //            i.e. set CTR_FLAGS_REQ_AUTO_START in controller constructor flags
-void twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs) {
+uint8_t twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs) {
     uint32_t start = micros();
     uint32_t timeoutMic = timeoutMs * 1000L;
 
@@ -48,10 +48,11 @@ void twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs) {
             uint32_t diff = micros() - start;
             if (diff >= timeoutMic) {
                 PRINTF_SERIAL_DEBUG_TWI_STATS(PSTR("     Waiting last req timed out %ld.\n"), diff / 1000L);
-                break;
+                return 0;
             }
         }
     }
+    return 1;
 }
 
 CByteStream_t *twi_process_stream() {
