@@ -123,11 +123,18 @@ ISR(TWI_vect) {
     switch (TW_STATUS) {
         case TW_START:
             twi_tracer(TRC_START);
+            TWDR = pTwiStream->addr;
             goto start;
+            
         case TW_REP_START:
             twi_tracer(TRC_REP_START);
-        start:            
-            TWDR = pTwiStream->addr;
+            if (pRdQueue) {
+                TWDR = pTwiStream->addr | 0x01;     // make it a read
+            }   else {
+                TWDR = pTwiStream->addr;
+            }
+            
+        start:
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
             break;
 
@@ -140,10 +147,9 @@ ISR(TWI_vect) {
             if (!stream_is_empty(pTwiStream)) {
                 TWDR = stream_get(pTwiStream);
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
-                // } else if (pTwiStream->pRcvQ) {
-                //     // do a repeated start then read into the rcv queue
-                //     pRdQueue = pTwiStream->pRcvQ;
-                //     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
+            } else if (pRdQueue) {
+                // do a repeated start then read into the rcv queue
+                TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
             } else {
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
                 complete_request(pTwiStream);
@@ -151,32 +157,36 @@ ISR(TWI_vect) {
             break;
 
         case TW_MR_DATA_ACK:
+#if 0            
             twi_tracer(TRC_MR_DATA_ACK);
             if (!queue_is_full(pRdQueue)) {
                 queue_put(pRdQueue, TWDR);
             } else {
                 // TODO: handle buffer full condition
             }
-            // twi_tracer(TRC_MR_DATA_ACK);
-            // if (pRdQueue) {
-            //     uint8_t capacity = queue_capacity(pRdQueue);
-            //     if (capacity > 1) {
-            //         queue_put(pRdQueue, TWDR);
-            //         TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA);
-            //     } else if (capacity == 1) {
-            //         queue_put(pRdQueue, TWDR);
-            //         TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA) | (1 << TWSTO);
-            //     } else {
-            //         TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
-            //     }
-            // } else {
-            //     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
-            // }
-            //break;
-
-
+#else            
+            twi_tracer(TRC_MR_DATA_ACK);
+            if (pRdQueue) {
+                uint8_t capacity = queue_capacity(pRdQueue);
+                if (capacity > 1) {
+                    queue_put(pRdQueue, TWDR);
+                    TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA);
+                } else if (capacity == 1) {
+                    queue_put(pRdQueue, TWDR);
+                    TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA) | (1 << TWSTO);
+                } else {
+                    TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
+                }
+            } else {
+                TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
+            }
+#endif            
+            goto sla_ack;
+            
         case TW_MR_SLA_ACK:
             twi_tracer(TRC_MR_SLA_ACK);
+            
+        sla_ack:
             // TODO: validate the end condition is correct
             if (stream_count(pTwiStream) > 1) {
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA);

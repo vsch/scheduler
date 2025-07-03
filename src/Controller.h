@@ -335,10 +335,12 @@ public:
         pStream->nSize = nSize;
         pStream->nHead = 0;
         pStream->nTail = nSize ? nSize - 1 : 0;
-        pStream->pRcvQ = NULL;
+        pStream->pRcvQ = pRcvQ;
 
         // configure twi flags
-        pStream->flags = STREAM_FLAGS_RD | STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED;
+        // serialDebugPrintf_P(PSTR("addr 0x%2.2x\n"), addr);
+        pStream->flags = (addr & 0x01 ? STREAM_FLAGS_WR : STREAM_FLAGS_RD) | STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED;
+        // pStream->flags = STREAM_FLAGS_RD | STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED;
 
         // NOTE: protect from mods in interrupts mid-way through this code
         cli();

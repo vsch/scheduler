@@ -116,7 +116,7 @@ void complete_request(CByteStream_t *pStream);
 #define TWI_CO_0_DC_1 (0x40) // Co = 0, D/C = 1
 #define TWI_CO_0_DC_0 (0x00) // Co = 0, D/C = 0
 
-CByteStream_t *twi_get_write_buffer(uint8_t addr, uint8_t coDC);
+CByteStream_t *twi_get_write_buffer(uint8_t addr);
 
 CByteStream_t * twi_process(CByteStream_t *pStream);
 
