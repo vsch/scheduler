@@ -14,6 +14,7 @@
 #endif
 
 #include "CByteStream.h"
+#include "CByteBuffer.h"
 #include "ByteQueue.h"
 
 struct ByteStream : protected ByteQueue {
@@ -23,7 +24,7 @@ struct ByteStream : protected ByteQueue {
     
     volatile uint8_t flags;
     uint8_t addr; // Slave address byte (with read/write bit). in case of Twi
-    ByteQueue *pRcvQ;
+    CByteBuffer_t *pRcvBuffer;
     // IMPORTANT: above fields must be the same as in CByteStream
     
     uint8_t waitingTask; // if not NULL_TASK then index of task waiting for this request to complete

@@ -41,6 +41,7 @@
 #include <avr/interrupt.h>  //interrupt vectors
 #include <util/twi.h>       //TWI status masks
 #include "twiint.h"
+#include "CByteBuffer.h"
 
 //default to Arduino oscillator
 #ifndef F_CPU
@@ -79,7 +80,7 @@
 #define TWBR_VALUE ((F_CPU/TWI_FREQUENCY - 16) / (2 * TWI_PRESCALER))
 
 CByteStream_t *pTwiStream;
-CByteQueue_t *pRdQueue;
+CByteBuffer_t *pRdBuffer;
 
 void twiint_init(void) {
     TWBR = TWBR_VALUE;
@@ -100,7 +101,7 @@ void twiint_start(CByteStream_t *pStream) {
     twiint_flush();
 
     pTwiStream = pStream;
-    pRdQueue = pStream->pRcvQ;
+    pRdBuffer = pStream->pRcvBuffer;
 
     TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN) | (1 << TWIE);
 }
@@ -143,7 +144,7 @@ ISR(TWI_vect) {
 #endif
         case TW_REP_START:
             twi_tracer(TRC_REP_START);
-            if (pRdQueue) {
+            if (pRdBuffer) {
                 TWDR = pTwiStream->addr | 0x01;     // make it a read
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
                 break;
@@ -171,7 +172,7 @@ ISR(TWI_vect) {
             if (!stream_is_empty(pTwiStream)) {
                 TWDR = stream_get(pTwiStream);
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
-            } else if (pRdQueue) {
+            } else if (pRdBuffer) {
                 // do a repeated start then read into the rcv queue
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
             } else {
@@ -183,15 +184,15 @@ ISR(TWI_vect) {
             
         case TW_MR_DATA_ACK:
             twi_tracer(TRC_MR_DATA_ACK);
-            if (pRdQueue) {
-                uint8_t capacity = queue_capacity(pRdQueue);
+            if (pRdBuffer) {
+                uint8_t capacity = buffer_capacity(pRdBuffer);
                 if (capacity > 1) {
-                    queue_put(pRdQueue, TWDR);
+                    buffer_put(pRdBuffer, TWDR);
                     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA);
                     break;
                 } else {
                     if (capacity) {
-                        queue_put(pRdQueue, TWDR);
+                        buffer_put(pRdBuffer, TWDR);
                         complete_request(pTwiStream);
                     }
                 }

@@ -49,7 +49,8 @@ extern TraceBuffer twiTraceBuffer;
       )
 
 #define CTR_FLAGS_REQ_AUTO_START      (0x01)          // auto start requests when process request is called, default
-#define CTR_FLAGS_TRC_PENDING     (0x02)          // auto start requests when process request is called, default
+#define CTR_FLAGS_TRC_PENDING         (0x02)          // auto start requests when process request is called, default
+#define CTR_FLAGS_TRC_HAD_EMPTY       (0x04)          // only dump empty if had non-empty before
 
 class Controller : public Task {
 protected:
@@ -100,7 +101,7 @@ public:
 			, readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize)))
             , maxStreams(maxStreams)
             , maxTasks(maxTasks)
-            , writeBufferSize(writeBufferSize), flags(flags) {
+            , writeBufferSize(writeBufferSize), flags(flags | CTR_FLAGS_TRC_HAD_EMPTY) {
     /* @formatter:on */
         // now initialize all the read Streams
 
@@ -314,10 +315,10 @@ public:
      * @param addr      twi address, including read flag
      * @param pData     pointer to byte buffer, needs to be 1 byte longer than used.
      * @param nSize     length of data buffer, sent data will be nSize-1
-     * @param pRcvQ   extra bytes at end of buffer available for accumulating received data
+     * @param pRcvBuffer   extra bytes at end of buffer available for accumulating received data
      * @return          pointer to last request, can be used to wait for completion of the send
      */
-    ByteStream *processRequest(uint8_t addr, uint8_t *pData, uint8_t nSize, ByteQueue *pRcvQ = NULL) {
+    ByteStream *processRequest(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer = NULL) {
 
         if (nSize > QUEUE_MAX_SIZE) {
             nSize = QUEUE_MAX_SIZE;
@@ -331,7 +332,7 @@ public:
         pStream->nSize = nSize;
         pStream->nHead = 0;
         pStream->nTail = nSize ? nSize - 1 : 0;
-        pStream->pRcvQ = pRcvQ;
+        pStream->pRcvBuffer = pRcvBuffer;
 
         // configure twi flags
         // serialDebugPrintf_P(PSTR("addr 0x%2.2x\n"), addr);
@@ -367,7 +368,7 @@ public:
      * @return                  pointer to read stream or NULL if not handleProcessedRequest because of lack of readStreams
      *                          as made in the willRequire() call.
      */
-    ByteStream *processStream(ByteStream *pWriteStream, ByteQueue *pRcvQ = NULL) {
+    ByteStream *processStream(ByteStream *pWriteStream, CByteBuffer_t *pRcvBuffer = NULL) {
         uint8_t nextFreeHead;       // where next request head position should start
 
         if (freeReadStreams.isEmpty()) {
@@ -402,7 +403,7 @@ public:
 
         // queue it for processing
         pStream->flags |= STREAM_FLAGS_PENDING;
-        pStream->pRcvQ = pRcvQ;
+        pStream->pRcvBuffer = pRcvBuffer;
         pendingReadStreams.addTail(head);
 
         if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
@@ -499,7 +500,7 @@ public:
             // unless it is an own buffer request
             completedStream->triggerComplete();
             completedStream->flags = 0;
-            completedStream->pRcvQ = NULL;
+            completedStream->pRcvBuffer = NULL;
             freeReadStreams.addTail(getReadStreamId(completedStream));
         }
     }

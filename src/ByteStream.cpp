@@ -6,7 +6,7 @@ ByteStream::ByteStream(ByteQueue *pByteQueue, uint8_t streamFlags) : ByteQueue(*
     flags = streamFlags;
     addr = 0;
     waitingTask = NULL_TASK;
-    pRcvQ  = NULL;
+    pRcvBuffer  = NULL;
 }
 
 uint8_t ByteStream::setFlags(uint8_t flags, uint8_t mask) {

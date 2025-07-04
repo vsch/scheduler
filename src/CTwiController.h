@@ -17,10 +17,10 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 extern CByteStream_t *twi_process_stream();            // processes the twiStream and requests a new twiStream without the need to call gfx_start_twi_cmd_frame() after the call
 
 CByteStream_t *twi_process(CByteStream_t *pStream);
-CByteStream_t *twi_process_rcv(CByteStream_t *pStream, CByteQueue_t *pRcvQ);
+CByteStream_t *twi_process_rcv(CByteStream_t *pStream, CByteBuffer_t *pRcvBuffer);
 
 // sending operations
-extern void gfx_add_byte(uint8_t byte);
+extern void twi_add_byte(uint8_t byte);
 extern void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count);
 
 // wait for stream to be sent, if timeout !=0 then wait that many ms before giving up
@@ -34,7 +34,7 @@ extern uint8_t twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs);
  * @param len    length of data to send
  * @return       pointer to last request, can be used to wait for completion of the send
  */
-extern CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteQueue_t *pRcvQ);
+extern CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer);
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
 extern void twi_dump_trace(uint8_t force);

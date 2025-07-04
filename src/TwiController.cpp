@@ -17,12 +17,12 @@ CByteStream_t *twi_process(CByteStream_t *pStream) {
     return (CByteStream_t *) twiController.processStream((ByteStream *) pStream);
 }
 
-CByteStream_t *twi_process_rcv(CByteStream_t *pStream, CByteQueue_t *pRcvQ) {
-    return (CByteStream_t *) twiController.processStream((ByteStream *) pStream, (ByteQueue *)pRcvQ);
+CByteStream_t *twi_process_rcv(CByteStream_t *pStream, CByteBuffer_t *pRcvBuffer) {
+    return (CByteStream_t *) twiController.processStream((ByteStream *) pStream, pRcvBuffer);
 }
 
-CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteQueue_t *pRcvQ) {
-    return (CByteStream_t *) twiController.processRequest(addr, pData, nSize, (ByteQueue *) pRcvQ);
+CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer) {
+    return (CByteStream_t *) twiController.processRequest(addr, pData, nSize, pRcvBuffer);
 }
 
 void twi_dump_trace(uint8_t force) {
@@ -39,6 +39,10 @@ uint16_t twi_send_bytes = 0;
 uint8_t twi_send_errors = 0;
 
 CByteStream_t *twiStream;
+
+void twi_add_byte(uint8_t byte) {
+    stream_put(twiStream, byte);
+}
 
 void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count) {
     while (count--) {

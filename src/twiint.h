@@ -44,7 +44,6 @@
 #include <stdbool.h>    //bool type
 #include <stddef.h>     //size_t type
 #include <stdint.h>     //uint8_t type
-#include "CByteQueue.h"
 #include "CByteStream.h"
 
 //default to Fast Mode
