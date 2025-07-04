@@ -5,16 +5,18 @@
 #include "TraceBuffer.h"
 #include "twiint.h"
 
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
 
 void twi_trace(CTwiTraceBuffer_t *thizz, uint16_t data) {
     ((TraceBuffer *) thizz)->trace(data);
 }
 
 #else
+
 void twi_trace(CTwiTraceBuffer_t *thizz, uint8_t data) {
     ((TraceBuffer *) thizz)->trace(data);
 }
+
 #endif
 
 #ifndef SERIAL_DEBUG_TWI_RAW_TRACER
@@ -56,7 +58,7 @@ void TraceBuffer::dump() {
 
     serialDebugPrintf_P(PSTR("TWI Trc: %d {"), getReadCapacity());
     while (!isAllRead()) {
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
         uint16_t entry = readEntry();
         if (entry & ~TW_STATUS_MASK) {
             // have other bits
@@ -70,6 +72,13 @@ void TraceBuffer::dump() {
         uint8_t trc = getTraceByte();
         uint8_t count = getTraceCount();
 
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER
+        if (count > 1) {
+            serialDebugPrintf_P(PSTR(" 0x%2.2x(%d)"), trc, count);
+        } else {
+            serialDebugPrintf_P(PSTR("  0x%2.2x"), trc);
+        }
+#else        
         if (trc >= TRC_MAX) {
             // out of bounds
             if (count > 1) {
@@ -94,6 +103,7 @@ void TraceBuffer::dump() {
                 serialDebugPrintf_P(PSTR("  %S"), pStr);
             }
         }
+#endif
 #endif
 #endif
     }

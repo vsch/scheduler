@@ -114,12 +114,17 @@ CTwiTraceBuffer_t *twi_trace_buffer;
 uint16_t twiint_errors;
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
+#define twi_raw_tracer(s) twi_trace(twi_trace_buffer, s)
+#define twi_tracer(d) ((void)0)
+#else
 #ifdef SERIAL_DEBUG_TWI_RAW_TRACER
 #define twi_raw_tracer(s) twi_trace(twi_trace_buffer, s)
 #define twi_tracer(d) ((void)0)
 #else
 #define twi_raw_tracer(s) ((void)0)
 #define twi_tracer(d) twi_trace(twi_trace_buffer, (d))
+#endif
 #endif
 #else
 #define twi_raw_tracer(s) ((void)0)
@@ -199,7 +204,7 @@ ISR(TWI_vect) {
             break;
 
         case TW_MT_ARB_LOST:
-            //case TW_MR_ARB_LOST:
+            twi_tracer(TRC_MT_ARB_LOST);
             TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN) | (1 << TWIE);
             twiint_errors++;
             break;
