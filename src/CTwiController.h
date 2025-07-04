@@ -16,6 +16,9 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 // process accumulated twiStream, with debug stats and prep twiStream for next accumulation.
 extern CByteStream_t *twi_process_stream();            // processes the twiStream and requests a new twiStream without the need to call gfx_start_twi_cmd_frame() after the call
 
+CByteStream_t *twi_process(CByteStream_t *pStream);
+CByteStream_t *twi_process_rcv(CByteStream_t *pStream, CByteQueue_t *pRcvQ);
+
 // sending operations
 extern void gfx_add_byte(uint8_t byte);
 extern void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count);

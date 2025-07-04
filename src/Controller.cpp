@@ -94,16 +94,18 @@ void Controller::dumpResourceTrace() {
 // IMPORTANT: called with interrupts disabled
 #ifdef SERIAL_DEBUG_TWI_TRACER
 
-void Controller::dumpTwiTrace() {
+void Controller::dumpTrace(uint8_t noWait) {
     if (!twiTraceBuffer.isEmpty()) {
 
         // set trace pending and wait for TWI to be idle so we don't mess up the twi interrupt timing
         flags |= CTR_FLAGS_TRC_PENDING;
         
 #ifndef CONSOLE_DEBUG       
-        sei();
-        while (twiint_busy());
-        cli();
+        if (!noWait) {
+            sei();
+            while (twiint_busy());
+            cli();
+        }
 #endif        
 
         TraceBuffer traceBuffer;

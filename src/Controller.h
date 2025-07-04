@@ -209,10 +209,6 @@ public:
 
 #endif
 
-#ifdef SERIAL_DEBUG_TWI_TRACER
-    void dumpTwiTrace();
-#endif
-    
     uint8_t getReadStreamId(ByteStream *pStream) {
         return pStream - readStreamTable;
     }
@@ -485,7 +481,10 @@ public:
     };
 
     // IMPORTANT: called with interrupts disabled
-    void dumpTrace();
+#ifdef SERIAL_DEBUG_TWI_TRACER
+    virtual void dumpTrace(uint8_t noWait);
+#endif
+
 
     // IMPORTANT: called with interrupts disabled
     void handleCompletedRequests() {
@@ -514,8 +513,7 @@ public:
         handleCompletedRequests();
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-        // twiTraceBuffer.reset();
-        dumpTwiTrace();
+        dumpTrace(0);
 #endif
         
         startNextRequest();

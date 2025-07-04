@@ -17,6 +17,10 @@ CByteStream_t *twi_process(CByteStream_t *pStream) {
     return (CByteStream_t *) twiController.processStream((ByteStream *) pStream);
 }
 
+CByteStream_t *twi_process_rcv(CByteStream_t *pStream, CByteQueue_t *pRcvQ) {
+    return (CByteStream_t *) twiController.processStream((ByteStream *) pStream, (ByteQueue *)pRcvQ);
+}
+
 CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteQueue_t *pRcvQ) {
     return (CByteStream_t *) twiController.processRequest(addr, pData, nSize, (ByteQueue *) pRcvQ);
 }
@@ -65,8 +69,6 @@ CByteStream_t *twi_process_stream() {
 #endif
     // returns the same stream but updated head/tail, so address is unchanged
     pStream = twi_process(twiStream);
-    // stream_put(twiStream, TWI_CO_0_DC_0);
-    twiStream = twi_get_write_buffer(TWI_ADDRESS_W(DISPLAY_ADDRESS));
 
     END_SERIAL_DEBUG_TWI_STATS(reqSize);
 

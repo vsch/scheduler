@@ -17,6 +17,8 @@ typedef struct CByteQueue
 extern "C" {
 #endif
 
+extern uint8_t queue_init(CByteQueue_t* thizz, uint8_t *pData, uint8_t nSize);
+
 extern uint8_t queue_is_empty(const CByteQueue_t* thizz); // test if any more data to read
 extern uint8_t queue_is_full(const CByteQueue_t* thizz); // test if room for more data to write
 extern uint8_t queue_capacity(const CByteQueue_t* thizz); // capacity to accept written bytes

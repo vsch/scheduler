@@ -1,13 +1,23 @@
 #ifdef SERIAL_DEBUG_TWI_TRACER
 
+#include <util/twi.h>
 #include "Arduino.h"
 #include "TraceBuffer.h"
 #include "twiint.h"
 
-void twi_trace(CTwiTraceBuffer_t *thizz, uint8_t data) {
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER
+
+void twi_trace(CTwiTraceBuffer_t *thizz, uint16_t data) {
     ((TraceBuffer *) thizz)->trace(data);
 }
 
+#else
+void twi_trace(CTwiTraceBuffer_t *thizz, uint8_t data) {
+    ((TraceBuffer *) thizz)->trace(data);
+}
+#endif
+
+#ifndef SERIAL_DEBUG_TWI_RAW_TRACER
 const char sSTR_NONE[] PROGMEM = "";
 const char sSTR_START[] PROGMEM = STR_TRC_START;
 const char sSTR_REP_START[] PROGMEM = STR_TRC_REP_START;
@@ -35,6 +45,7 @@ PGM_P const trcStrings[] PROGMEM = {
         sSTR_MT_DATA_NACK,
         sSTR_MR_SLA_NACK,
 };
+#endif
 
 #ifdef CONSOLE_DEBUG
 #include "tests/FileTestResults_AddResult.h"
@@ -42,10 +53,18 @@ PGM_P const trcStrings[] PROGMEM = {
 
 void TraceBuffer::dump() {
     startRead();
-    
+
     serialDebugPrintf_P(PSTR("TWI Trc: %d {"), getReadCapacity());
     while (!isAllRead()) {
-        // make a copy of the queue
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER
+        uint16_t entry = readEntry();
+        if (entry & ~TW_STATUS_MASK) {
+            // have other bits
+            serialDebugPrintf_P(PSTR("  0x%4.4x(0x%4.4x)"), entry & TW_STATUS_MASK, entry);
+        } else {
+            serialDebugPrintf_P(PSTR("  0x%4.4x"), entry & TW_STATUS_MASK);
+        }
+#else
         readEntry();
 
         uint8_t trc = getTraceByte();
@@ -75,10 +94,10 @@ void TraceBuffer::dump() {
                 serialDebugPrintf_P(PSTR("  %S"), pStr);
             }
         }
-#endif        
+#endif
+#endif
     }
     serialDebugPrintf_P(PSTR(" }\n"));
-
 }
 
 #endif //SERIAL_DEBUG_TWI_TRACER

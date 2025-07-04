@@ -251,7 +251,15 @@ uint8_t ByteQueue::addHead(uint8_t data) {
 
 ByteQueue::ByteQueue(uint8_t *pData, uint8_t nSize) : pData(pData) {
     this->nSize = nSize;
-    nHead = nTail = 0;
+    nHead = 0;
+    nTail = 0;
+}
+
+uint8_t queue_init(CByteQueue_t *thizz, uint8_t *pData, uint8_t nSize) {
+    thizz->nSize = nSize;
+    thizz->nHead = 0;
+    thizz->nTail = 0;
+    thizz->pData = pData;
 }
 
 // test if any more data to read

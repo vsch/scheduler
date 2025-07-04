@@ -130,7 +130,7 @@ void ByteStream::serialDebugDump(uint8_t id) {
     serialDebugPrintf_P(PSTR("TWI: 0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
     for (uint8_t i = 0; i < iMax; i++) {
         uint8_t byte = peekHead(i);
-        serialDebugPrintf_P(PSTR("  %2.2x"), byte);
+        serialDebugPrintf_P(PSTR(" %2.2x"), byte);
     }
     serialDebugPrintf_P(PSTR(" }\n"));
 }

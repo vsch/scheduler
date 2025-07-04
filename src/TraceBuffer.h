@@ -33,6 +33,8 @@ public:
         return !nReadCapacity;
     }
 
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER
+#else
     NO_DISCARD inline uint8_t getTraceByte() const {
         return traceByte;
     }
@@ -40,6 +42,8 @@ public:
     NO_DISCARD inline uint8_t getTraceCount() const {
         return traceCount;
     }
+
+#endif
 
     NO_DISCARD inline uint8_t getReadCapacity() const {
         return nReadCapacity;
@@ -49,10 +53,21 @@ public:
         pPos = data;
         nCapacity = TWI_TRACE_SIZE;
         nReadCapacity = 0;
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER
+#else
         traceByte = 0;
         traceCount = 0;
+#endif
     }
 
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER       
+    void trace(uint16_t word) {
+        if (nCapacity) {
+            *pPos++ = word;
+            nCapacity--;
+        }
+    }
+#else
     void trace(uint8_t byte) {
         if (traceByte == byte) {
             if (traceCount < 255) {
@@ -81,17 +96,30 @@ public:
             traceCount = 0;
         }
     }
+#endif        
 
     void copyFrom(TraceBuffer *pOther) {
         memcpy(this, pOther, sizeof(TraceBuffer));
     }
 
     void startRead() {
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER
+#else
         storeTrace();
+#endif
         pPos = data;
         nReadCapacity = TWI_TRACE_SIZE - nCapacity;
     }
 
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER
+    uint16_t readEntry() {
+        if (nReadCapacity) {
+            nReadCapacity--;
+            return *pPos++;
+        }
+        return 0;
+    }
+#else
     void readEntry() {
         if (nReadCapacity) {
             traceByte = *pPos++;
@@ -112,6 +140,7 @@ public:
             traceCount = 0;
         }
     }
+#endif
     
     void dump();
 };

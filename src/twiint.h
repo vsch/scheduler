@@ -118,8 +118,6 @@ void complete_request(CByteStream_t *pStream);
 
 CByteStream_t *twi_get_write_buffer(uint8_t addr);
 
-CByteStream_t * twi_process(CByteStream_t *pStream);
-
 #ifdef SERIAL_DEBUG_TWI_TRACER
 #include "CTraceBuffer.h"
 
@@ -127,6 +125,7 @@ CByteStream_t * twi_process(CByteStream_t *pStream);
 #define TWI_TRACE_SIZE (32)
 #endif
 
+#ifndef SERIAL_DEBUG_TWI_RAW_TRACER
 #define TRC_START        (0x01)   
 #define TRC_REP_START    (0x02)   
 #define TRC_MT_SLA_ACK   (0x03)   
@@ -151,6 +150,7 @@ CByteStream_t * twi_process(CByteStream_t *pStream);
 #define STR_TRC_MT_SLA_NACK  "MT_SLA_NACK"   
 #define STR_TRC_MT_DATA_NACK "MT_DATA_NACK"   
 #define STR_TRC_MR_SLA_NACK  "MR_SLA_NACK"   
+#endif
 
 extern CTwiTraceBuffer_t *twi_trace_buffer;
 #endif
