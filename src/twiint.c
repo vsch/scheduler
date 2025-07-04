@@ -132,8 +132,15 @@ uint16_t twiint_errors;
 #endif
 
 ISR(TWI_vect) {
+#if SERIAL_DEBUG_TWI_TRACER
+    uint8_t twsr = TWSR;
+    
+    twi_raw_tracer(twsr);
+    switch (twsr & TW_STATUS_MASK) {
+#else
     twi_raw_tracer(TWSR);
     switch (TW_STATUS) {
+#endif
         case TW_REP_START:
             twi_tracer(TRC_REP_START);
             if (pRdQueue) {
@@ -219,7 +226,9 @@ ISR(TWI_vect) {
             twi_tracer(TRC_MR_SLA_NACK);
             goto nack;
         default:
-            twi_tracer(TW_STATUS);
+#ifdef SERIAL_DEBUG_TWI_TRACER
+        twi_tracer(twsr & TW_STATUS_MASK);
+#endif            
         nack:
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
             twiint_errors++;

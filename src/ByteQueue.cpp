@@ -255,7 +255,7 @@ ByteQueue::ByteQueue(uint8_t *pData, uint8_t nSize) : pData(pData) {
     nTail = 0;
 }
 
-uint8_t queue_init(CByteQueue_t *thizz, uint8_t *pData, uint8_t nSize) {
+void queue_init(CByteQueue_t *thizz, uint8_t *pData, uint8_t nSize) {
     thizz->nSize = nSize;
     thizz->nHead = 0;
     thizz->nTail = 0;

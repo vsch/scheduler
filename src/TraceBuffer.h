@@ -42,7 +42,6 @@ public:
     NO_DISCARD inline uint8_t getTraceCount() const {
         return traceCount;
     }
-
 #endif
 
     NO_DISCARD inline uint8_t getReadCapacity() const {
@@ -57,6 +56,7 @@ public:
 #else
         traceByte = 0;
         traceCount = 0;
+        haveByte = 0;
 #endif
     }
 
@@ -69,37 +69,49 @@ public:
     }
 #else
     void trace(uint8_t byte) {
-        if (traceByte == byte) {
-            if (traceCount < 255) {
-                traceCount++;
+        if (haveByte) {
+            if (traceByte == byte) {
+                if (traceCount < 255) {
+                    traceCount++;
+                }
+                return;
+            } else {
+                storeTrace();
             }
-        } else {
-            storeTrace();
-            traceByte = byte;
-            traceCount = 1;
         }
+        
+        traceByte = byte;
+        traceCount = 1;
+        haveByte = 1;
     }
 
     void storeTrace() {
-        if (traceByte) {
-            if (traceCount) {
+        if (haveByte) {
+            if (traceCount > 1) {
                 if (nCapacity > 1) {
                     *pPos++ = traceByte | TRACER_BYTE_COUNT_MARKER;
                     *pPos++ = traceCount;
                     nCapacity -= 2;
+                } else {
+                    nCapacity = 0;
                 }
             } else if (nCapacity) {
                 *pPos++ = traceByte;
                 nCapacity--;
             }
+            
             traceByte = 0;
             traceCount = 0;
+            haveByte = 0;
         }
     }
 #endif        
 
     void copyFrom(TraceBuffer *pOther) {
-        memcpy(this, pOther, sizeof(TraceBuffer));
+        memcpy(this, pOther, sizeof(CTwiTraceBuffer_t));
+        
+        // this is not copied correctly
+        pPos = data + (pOther->pPos - pOther->data);
     }
 
     void startRead() {
@@ -123,6 +135,7 @@ public:
     void readEntry() {
         if (nReadCapacity) {
             traceByte = *pPos++;
+            haveByte = 1;
             nReadCapacity--;
             if (traceByte & TRACER_BYTE_COUNT_MARKER) {
                 traceByte &= ~TRACER_BYTE_COUNT_MARKER;
@@ -138,6 +151,7 @@ public:
         } else {
             traceByte = 0;
             traceCount = 0;
+            haveByte = 0;
         }
     }
 #endif

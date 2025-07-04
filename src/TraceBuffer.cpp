@@ -1,6 +1,5 @@
 #ifdef SERIAL_DEBUG_TWI_TRACER
 
-#include <util/twi.h>
 #include "Arduino.h"
 #include "TraceBuffer.h"
 #include "twiint.h"
@@ -20,7 +19,7 @@ void twi_trace(CTwiTraceBuffer_t *thizz, uint8_t data) {
 #endif
 
 #ifndef SERIAL_DEBUG_TWI_RAW_TRACER
-const char sSTR_NONE[] PROGMEM = "";
+const char sSTR_NONE[] PROGMEM = "0x00";
 const char sSTR_START[] PROGMEM = STR_TRC_START;
 const char sSTR_REP_START[] PROGMEM = STR_TRC_REP_START;
 const char sSTR_MT_SLA_ACK[] PROGMEM = STR_TRC_MT_SLA_ACK;
@@ -34,7 +33,7 @@ const char sSTR_MT_DATA_NACK[] PROGMEM = STR_TRC_MT_DATA_NACK;
 const char sSTR_MR_SLA_NACK[] PROGMEM = STR_TRC_MR_SLA_NACK;
 
 PGM_P const trcStrings[] PROGMEM = {
-        sSTR_START,
+        sSTR_NONE,
         sSTR_START,
         sSTR_REP_START,
         sSTR_MT_SLA_ACK,
@@ -57,6 +56,11 @@ void TraceBuffer::dump() {
     startRead();
 
     serialDebugPrintf_P(PSTR("TWI Trc: %d {"), getReadCapacity());
+#if 0    
+    while (nReadCapacity--) {
+        serialDebugPrintf_P(PSTR("  0x%2.2x"), *pPos++);
+    }
+#else
     while (!isAllRead()) {
 #ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
         uint16_t entry = readEntry();
@@ -78,7 +82,7 @@ void TraceBuffer::dump() {
         } else {
             serialDebugPrintf_P(PSTR("  0x%2.2x"), trc);
         }
-#else        
+#else
         if (trc >= TRC_MAX) {
             // out of bounds
             if (count > 1) {
@@ -107,6 +111,7 @@ void TraceBuffer::dump() {
 #endif
 #endif
     }
+#endif
     serialDebugPrintf_P(PSTR(" }\n"));
 }
 

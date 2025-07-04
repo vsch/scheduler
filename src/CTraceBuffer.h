@@ -21,6 +21,7 @@ typedef struct CTraceBuffer
     uint8_t *pPos;
     uint8_t traceByte;
     uint8_t traceCount;
+    uint8_t haveByte;
     uint8_t data[TWI_TRACE_SIZE];
 #endif
 } CTwiTraceBuffer_t;
