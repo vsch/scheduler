@@ -25,6 +25,12 @@ CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSiz
     return (CByteStream_t *) twiController.processRequest(addr, pData, nSize, (ByteQueue *) pRcvQ);
 }
 
+void twi_dump_trace(uint8_t force) {
+    cli();
+    twiController.dumpTrace(force);
+    sei();
+}
+
 #ifdef SERIAL_DEBUG_DETAIL_TWI_STATS
 uint32_t twi_send_time = 0;
 uint16_t twi_send_bytes = 0;

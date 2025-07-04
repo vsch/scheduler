@@ -95,7 +95,7 @@ void Controller::dumpResourceTrace() {
 #ifdef SERIAL_DEBUG_TWI_TRACER
 
 void Controller::dumpTrace(uint8_t noWait) {
-    if (!twiTraceBuffer.isEmpty()) {
+    if (1 || !twiTraceBuffer.isEmpty()) {
 
         // set trace pending and wait for TWI to be idle so we don't mess up the twi interrupt timing
         flags |= CTR_FLAGS_TRC_PENDING;
