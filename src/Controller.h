@@ -7,6 +7,7 @@
 #include "Mutex.h"
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
+
 #include "TraceBuffer.h"
 
 extern TraceBuffer twiTraceBuffer;
@@ -207,7 +208,6 @@ public:
 
     inline void updateResourceLockTrace() {}
 
-
 #endif
 
     uint8_t getReadStreamId(ByteStream *pStream) {
@@ -297,9 +297,6 @@ public:
 
     ByteStream *getWriteStream() {
         return writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
-    }
-
-    void begin() override {
     }
 
     ByteStream *getStreamRequest() {
@@ -408,7 +405,7 @@ public:
 
         if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
             // first one, then no-one to start it up but here
-            serialDebugTwiDataPrintf_P(PSTR("AutoStart\n"));
+            serialDebugTwiDataPrintf_P(PSTR("AutoStart req %d\n"), head);
             startProcessing = 1;
         } else {
             // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
@@ -473,19 +470,20 @@ public:
             // start processing next request
             startNextRequest();
         }
+        
+        // restart loop
+        resume(0);
     }
 
     // IMPORTANT: called with interrupts disabled, but they can be enabled inside the function 
     //     to allow TWI processing to proceed
     virtual void requestCompleted(ByteStream *pStream) {
-        
     };
 
     // IMPORTANT: called with interrupts disabled
 #ifdef SERIAL_DEBUG_TWI_TRACER
     virtual void dumpTrace(uint8_t noWait);
 #endif
-
 
     // IMPORTANT: called with interrupts disabled
     void handleCompletedRequests() {
@@ -505,6 +503,9 @@ public:
         }
     }
 
+    void begin() override {
+    }
+
     void loop() override {
         uint8_t pendingCount = 0;
         uint8_t writeCapacity = 0;
@@ -514,9 +515,9 @@ public:
         handleCompletedRequests();
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-        dumpTrace(0);
+        dumpTrace(1);
 #endif
-        
+
         startNextRequest();
 
         pendingCount = pendingReadStreams.getCount();
@@ -539,16 +540,17 @@ public:
 
         if (pendingCount > 1 && !requirementList.isEmpty()) {
             // can suspend until there is something to check for.
-            serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop resume(0)\n"));
-            resume(0);
+            // serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop resume(1)\n"));
+            resume(1);
         } else if (pendingCount <= 1) {
-            serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop suspend()\n"));
-            suspend();
+            // serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop suspend()\n"));
+            //suspend();
+            resume(100);
         } else {
             // resume just in case have completed requests
 #ifdef SERIAL_DEBUG_TWI_DATA
             if (isSuspended()) {
-                serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop resume(1)\n"));
+                // serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop resume(1)\n"));
                 resume(1);
             }
 #else
@@ -556,7 +558,7 @@ public:
 #endif
         }
 
-        //        serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop end\n"));
+        //        serialDebugPrintf_P(PSTR("Ctr::Loop end\n"));
     }
 
 #ifdef CONSOLE_DEBUG

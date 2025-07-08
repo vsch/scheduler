@@ -4,7 +4,7 @@
 #include <stddef.h>     //size_t type, NULL pointer
 #include <stdint.h>     //uint8_t type
 #include "CByteStream.h"
-#include "Dac53401_cmd.h"
+#include "CDac53401_cmd.h"
 
 // DAC computed values
 #define VOUT_A      (-134.9)
@@ -39,8 +39,6 @@
 extern "C" {
 #endif
 
-#define DAC_WAIT_TIMEOUT    (500)
-
 // dac read buffer for the stream
 typedef struct DacRead {
     uint8_t valMsb;
@@ -68,6 +66,7 @@ extern void dac_output(uint8_t addr, uint16_t value);
 extern CByteStream_t *dac_write(uint8_t addr, uint8_t reg, uint16_t value);
 extern uint8_t dac_write_wait(uint8_t addr, uint8_t reg, uint16_t value);
 
+extern CByteStream_t *dac_write_read(uint8_t addr, uint8_t reg, uint16_t value, uint16_t *pValue);
 /**
  * Write a value to a register then read in the value from the register.
  * 
@@ -79,6 +78,7 @@ extern uint8_t dac_write_wait(uint8_t addr, uint8_t reg, uint16_t value);
  */
 extern uint8_t dac_write_read_wait(uint8_t addr, uint8_t reg, uint16_t value, uint16_t *pValue);
 
+extern CByteStream_t *dac_read(uint8_t addr, uint8_t reg, uint16_t *pValue);
 /**
  * Read in the value from the register.
  * 

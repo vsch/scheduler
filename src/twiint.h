@@ -85,6 +85,17 @@ bool twiint_busy(void);
 void twiint_flush(void);
 
 /**
+ * cancel read operation (if the current stream equals given stream
+ * 
+ * NOTE: will disable then enable interrupts
+ * 
+ * @param pStream 
+ */
+void twint_cancel_rd(CByteStream_t *pStream);
+
+
+
+/**
  * Starts a TWI transmission writing or reading multiple bytes.
  * The address byte should be provided already manipulated by
  * TWI_ADDRESS_W if data should be written

@@ -14,7 +14,7 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr) {
 }
 
 CByteStream_t *twi_process(CByteStream_t *pStream) {
-    return (CByteStream_t *) twiController.processStream((ByteStream *) pStream);
+    return (CByteStream_t *) twiController.processStream((ByteStream *) pStream, NULL);
 }
 
 CByteStream_t *twi_process_rcv(CByteStream_t *pStream, CByteBuffer_t *pRcvBuffer) {
@@ -26,9 +26,9 @@ CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSiz
 }
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-void twi_dump_trace(uint8_t force) {
+void twi_dump_trace(uint8_t noWait) {
     cli();
-    twiController.dumpTrace(force);
+    twiController.dumpTrace(noWait);
     sei();
 }
 #endif
@@ -63,11 +63,20 @@ uint8_t twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs) {
         if (timeoutMs) {
             uint32_t diff = micros() - start;
             if (diff >= timeoutMic) {
-                PRINTF_SERIAL_DEBUG_TWI_STATS(PSTR("     Waiting last req timed out %ld.\n"), diff / 1000L);
+                cli();
+                twint_cancel_rd(pStream);
+                sei();
+#ifdef SERIAL_DEBUG_TWI_TRACER
+                twi_dump_trace(1);
+#endif
+                PRINTF_SERIAL_DEBUG_TWI_STATS(PSTR("  TWI: %d wait_sent timed out %ld.\n"), twiController.getReadStreamId((ByteStream *)pStream), diff / 1000L);
                 return 0;
             }
         }
     }
+#ifdef SERIAL_DEBUG_TWI_TRACER
+    twi_dump_trace(1);
+#endif
     return 1;
 }
 

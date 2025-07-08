@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include "CByteBuffer.h"
 
 void buffer_init(CByteBuffer_t *thizz, uint8_t flags, uint8_t *pData, uint8_t nSize) {
@@ -5,6 +6,15 @@ void buffer_init(CByteBuffer_t *thizz, uint8_t flags, uint8_t *pData, uint8_t nS
     thizz->nPos = flags & BUFFER_PUT_REVERSE ? nSize : 0;
     thizz->nSize = nSize;
     thizz->pData = pData;
+}
+
+void buffer_copy(CByteBuffer_t *thizz, CByteBuffer_t *other) {
+    if (other) {
+        thizz->flags = other->flags;
+        thizz->nPos = other->nPos;
+        thizz->nSize = other->nSize;
+        thizz->pData = other->pData;
+    }
 }
 
 // test if any more data to read

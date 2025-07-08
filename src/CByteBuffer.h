@@ -20,6 +20,7 @@ extern "C" {
 #endif
 
 extern void buffer_init(CByteBuffer_t *thizz, uint8_t flags, uint8_t *pData, uint8_t nSize);
+extern void buffer_copy(CByteBuffer_t *thizz, CByteBuffer_t *other);
 extern uint8_t buffer_is_empty(const CByteBuffer_t *thizz); // test if room for more data to write
 extern uint8_t buffer_is_full(const CByteBuffer_t *thizz); // test if room for more data to write
 extern uint8_t buffer_count(const CByteBuffer_t *thizz); // capacity to accept written bytes

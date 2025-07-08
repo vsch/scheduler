@@ -80,7 +80,8 @@
 #define TWBR_VALUE ((F_CPU/TWI_FREQUENCY - 16) / (2 * TWI_PRESCALER))
 
 CByteStream_t *pTwiStream;
-CByteBuffer_t *pRdBuffer;
+CByteBuffer_t rdBuffer;
+uint8_t haveRead;
 
 void twiint_init(void) {
     TWBR = TWBR_VALUE;
@@ -101,9 +102,21 @@ void twiint_start(CByteStream_t *pStream) {
     twiint_flush();
 
     pTwiStream = pStream;
-    pRdBuffer = pStream->pRcvBuffer;
-
+    haveRead = 0;
+    CByteBuffer_t *pRcvBuffer = pStream->pRcvBuffer;
+    if (pRcvBuffer) {
+        buffer_copy(&rdBuffer, pRcvBuffer);
+        haveRead = 1;
+    }
     TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN) | (1 << TWIE);
+}
+
+void twint_cancel_rd(CByteStream_t *pStream) {
+    if (haveRead) {
+        if (pTwiStream == pStream) {
+            haveRead = 0;
+        }
+    }
 }
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
@@ -144,7 +157,7 @@ ISR(TWI_vect) {
 #endif
         case TW_REP_START:
             twi_tracer(TRC_REP_START);
-            if (pRdBuffer) {
+            if (haveRead) {
                 TWDR = pTwiStream->addr | 0x01;     // make it a read
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
                 break;
@@ -172,7 +185,7 @@ ISR(TWI_vect) {
             if (!stream_is_empty(pTwiStream)) {
                 TWDR = stream_get(pTwiStream);
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
-            } else if (pRdBuffer) {
+            } else if (haveRead) {
                 // do a repeated start then read into the rcv queue
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
             } else {
@@ -184,17 +197,18 @@ ISR(TWI_vect) {
             
         case TW_MR_DATA_ACK:
             twi_tracer(TRC_MR_DATA_ACK);
-            if (pRdBuffer) {
-                uint8_t capacity = buffer_capacity(pRdBuffer);
+            if (haveRead) {
+                uint8_t capacity = buffer_capacity(&rdBuffer);
                 if (capacity > 1) {
-                    buffer_put(pRdBuffer, TWDR);
+                    buffer_put(&rdBuffer, TWDR);
                     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA);
                     break;
                 } else {
                     if (capacity) {
-                        buffer_put(pRdBuffer, TWDR);
+                        buffer_put(&rdBuffer, TWDR);
                         complete_request(pTwiStream);
                     }
+                    haveRead = 0;
                 }
             }
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA) | (1 << TWSTO);
@@ -208,13 +222,15 @@ ISR(TWI_vect) {
         case TW_MR_DATA_NACK:
             twi_tracer(TRC_MR_DATA_NACK);
             twiint_errors++;
+            complete_request(pTwiStream);
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
             break;
 
         case TW_MT_ARB_LOST:
             twi_tracer(TRC_MT_ARB_LOST);
-            TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN) | (1 << TWIE);
             twiint_errors++;
+            complete_request(pTwiStream);
+            TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN) | (1 << TWIE);
             break;
 
         case TW_MT_SLA_NACK:
@@ -231,7 +247,8 @@ ISR(TWI_vect) {
         twi_tracer(twsr & TW_STATUS_MASK);
 #endif            
         nack:
-            TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
             twiint_errors++;
+            complete_request(pTwiStream);
+            TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
     }
 }
