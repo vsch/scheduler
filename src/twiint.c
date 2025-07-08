@@ -148,12 +148,12 @@ uint16_t twiint_errors;
 ISR(TWI_vect) {
 #if SERIAL_DEBUG_TWI_TRACER
     uint8_t twsr = TWSR;
-    
+
     twi_raw_tracer(twsr);
     switch (twsr & TW_STATUS_MASK) {
 #else
-    twi_raw_tracer(TWSR);
-    switch (TW_STATUS) {
+        twi_raw_tracer(TWSR);
+        switch (TW_STATUS) {
 #endif
         case TW_REP_START:
             twi_tracer(TRC_REP_START);
@@ -161,7 +161,7 @@ ISR(TWI_vect) {
                 TWDR = pTwiStream->addr | 0x01;     // make it a read
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
                 break;
-            }   else {
+            } else {
                 TWDR = pTwiStream->addr;
                 goto start;
             }
@@ -177,10 +177,10 @@ ISR(TWI_vect) {
         case TW_MT_SLA_ACK:
             twi_tracer(TRC_MT_SLA_ACK);
             goto ack;
-            
+
         case TW_MT_DATA_ACK:
             twi_tracer(TRC_MT_DATA_ACK);
-            
+
         ack:
             if (!stream_is_empty(pTwiStream)) {
                 TWDR = stream_get(pTwiStream);
@@ -191,10 +191,10 @@ ISR(TWI_vect) {
             } else {
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
                 complete_request(pTwiStream);
+                goto stop;
             }
             break;
 
-            
         case TW_MR_DATA_ACK:
             twi_tracer(TRC_MR_DATA_ACK);
             if (haveRead) {
@@ -212,7 +212,7 @@ ISR(TWI_vect) {
                 }
             }
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA) | (1 << TWSTO);
-            break;
+            goto stop;
             
         case TW_MR_SLA_ACK:
             twi_tracer(TRC_MR_SLA_ACK);
@@ -224,7 +224,7 @@ ISR(TWI_vect) {
             twiint_errors++;
             complete_request(pTwiStream);
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
-            break;
+            goto stop;
 
         case TW_MT_ARB_LOST:
             twi_tracer(TRC_MT_ARB_LOST);
@@ -244,11 +244,15 @@ ISR(TWI_vect) {
             goto nack;
         default:
 #ifdef SERIAL_DEBUG_TWI_TRACER
-        twi_tracer(twsr & TW_STATUS_MASK);
-#endif            
+            twi_tracer(twsr & TW_STATUS_MASK);
+#endif
         nack:
             twiint_errors++;
             complete_request(pTwiStream);
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
+            
+        stop:
+            twi_tracer(TRC_STOP);
+            break;
     }
 }

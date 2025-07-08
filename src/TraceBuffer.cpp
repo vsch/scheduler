@@ -31,6 +31,7 @@ const char sSTR_MT_ARB_LOST[] PROGMEM = STR_TRC_MT_ARB_LOST;
 const char sSTR_MT_SLA_NACK[] PROGMEM = STR_TRC_MT_SLA_NACK;
 const char sSTR_MT_DATA_NACK[] PROGMEM = STR_TRC_MT_DATA_NACK;
 const char sSTR_MR_SLA_NACK[] PROGMEM = STR_TRC_MR_SLA_NACK;
+const char sSTR_STOP[] PROGMEM = STR_STOP;
 
 PGM_P const trcStrings[] PROGMEM = {
         sSTR_NONE,
@@ -45,6 +46,7 @@ PGM_P const trcStrings[] PROGMEM = {
         sSTR_MT_SLA_NACK,
         sSTR_MT_DATA_NACK,
         sSTR_MR_SLA_NACK,
+        sSTR_STOP,
 };
 #endif
 
