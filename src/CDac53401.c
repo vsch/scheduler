@@ -1,3 +1,5 @@
+#ifdef INCLUDE_DAC_MODULE
+
 #include "Arduino.h"
 #include "CDac53401.h"
 #include "CTwiController.h"
@@ -97,3 +99,5 @@ void dac_power_down(uint8_t addr, uint8_t flags) {
 
 void dac_output(uint8_t addr, uint16_t value) {
 }
+
+#endif
