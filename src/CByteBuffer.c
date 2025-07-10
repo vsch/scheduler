@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include "CByteBuffer.h"
 
-void buffer_init(CByteBuffer_t *thizz, uint8_t flags, uint8_t *pData, uint8_t nSize) {
+void buffer_init(CByteBuffer_t *thizz, uint8_t flags, void *pData, uint8_t nSize) {
     thizz->flags = flags;
     thizz->nPos = flags & BUFFER_PUT_REVERSE ? nSize : 0;
     thizz->nSize = nSize;

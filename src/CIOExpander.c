@@ -23,54 +23,56 @@ CByteStream_t *iox_send_byte(uint8_t addr, uint8_t reg, uint8_t data) {
     return twi_process(twiStream);
 }
 
+CByteStream_t *iox_rcv_data(uint8_t addr, uint8_t reg, void *pData, uint8_t len) {
+    CByteBuffer_t rdBuffer;
+    buffer_init(&rdBuffer, 0, pData, len);
+
+    iox_prep_write(addr, reg);
+    return twi_process_rcv(twiStream, &rdBuffer);
+}
+
+uint8_t iox_rcv_data_wait(uint8_t addr, uint8_t reg, void *pData, uint8_t len) {
+    CByteStream_t *pStream = iox_rcv_data(addr, reg, pData, len);
+    return twi_wait_sent(pStream, TWI_WAIT_TIMEOUT);
+}
+
+CByteStream_t *iox_rcv_byte(uint8_t addr, uint8_t reg, uint8_t *pData) {
+    return iox_rcv_data(addr, reg, pData, 1);
+}
+
+uint8_t iox_rcv_byte_wait(uint8_t addr, uint8_t reg, uint8_t *pData) {
+    return iox_rcv_data_wait(addr, reg, pData, 1);
+}
+
+CByteStream_t *iox_rcv_word(uint8_t addr, uint8_t reg, uint16_t *pData) {
+    return iox_rcv_data(addr, reg, pData, 2);
+}
+
+uint8_t iox_rcv_word_wait(uint8_t addr, uint8_t reg, uint16_t *pData) {
+    return iox_rcv_data_wait(addr, reg, pData, 2);
+}
+
 CByteStream_t *iox_init(uint8_t addr, uint16_t rw_config, uint16_t data){
     // set the output value
     iox_send_word(addr, IOX_REG_CONFIGURATION_PORT0, rw_config);
     return iox_send_word(addr, IOX_REG_OUTPUT_PORT0, data);
 }
 
-CByteStream_t *iox_out_byte(uint8_t addr, uint8_t data){
-    return iox_send_byte(addr, IOX_REG_OUTPUT_PORT0, data);
-}
-
-uint8_t iox_out_byte_wait(uint8_t addr, uint8_t data){
-    CByteStream_t *pStream = iox_send_byte(addr, IOX_REG_OUTPUT_PORT0, data);
-    return twi_wait_sent(pStream, TWI_WAIT_TIMEOUT);
-}
-
-CByteStream_t *iox_in_byte(uint8_t addr, uint8_t *pData) {
-    CByteBuffer_t rdBuffer;
-    buffer_init(&rdBuffer, 0, pData, sizeof(*pData));
-
-    iox_prep_write(addr, IOX_REG_INPUT_PORT0);
-    return twi_process_rcv(twiStream, &rdBuffer);
-}
-
-uint8_t iox_in_byte_wait(uint8_t addr, uint8_t *pData) {
-    CByteStream_t *pStream = iox_in_byte(addr, pData);
-    return twi_wait_sent(pStream, TWI_WAIT_TIMEOUT);
-}
-
-CByteStream_t *iox_out_word(uint8_t addr, uint16_t data){
+CByteStream_t *iox_out(uint8_t addr, uint16_t data){
     return iox_send_word(addr, IOX_REG_OUTPUT_PORT0, data);
 }
 
-uint8_t iox_out_word_wait(uint8_t addr, uint16_t data){
+uint8_t iox_out_wait(uint8_t addr, uint16_t data){
     CByteStream_t *pStream = iox_send_word(addr, IOX_REG_OUTPUT_PORT0, data);
     return twi_wait_sent(pStream, TWI_WAIT_TIMEOUT);
 }
 
-CByteStream_t *iox_in_word(uint8_t addr, uint16_t *pData) {
-    CByteBuffer_t rdBuffer;
-    buffer_init(&rdBuffer, 0, pData, sizeof(*pData));
-
-    iox_prep_write(addr, IOX_REG_INPUT_PORT0);
-    return twi_process_rcv(twiStream, &rdBuffer);
+CByteStream_t *iox_in(uint8_t addr, uint16_t *pData) {
+    return iox_rcv_word(addr, IOX_REG_INPUT_PORT0, pData);
 }
 
-uint8_t iox_in_word_wait(uint8_t addr, uint16_t *pData) {
-    CByteStream_t *pStream = iox_in_word(addr, pData);
-    return twi_wait_sent(pStream, TWI_WAIT_TIMEOUT);
+uint8_t iox_in_wait(uint8_t addr, uint16_t *pData) {
+    return iox_rcv_word_wait(addr, IOX_REG_INPUT_PORT0, pData);
 }
 
 #endif

@@ -76,4 +76,20 @@ extern uint8_t twi_send_errors;
 #define PRINTF_SERIAL_DEBUG_TWI_STATS(...)              ((void)0)
 #endif // SERIAL_DEBUG_DETAIL_TWI_STATS
 
+#ifdef SERIAL_DEBUG_DETAIL_TWI_STATS
+#define serialDebugDetailTwiStatsPrintf_P(...) printf_P(__VA_ARGS__)
+#define serialDebugDetailTwiStatsPuts_P(...) puts_P(__VA_ARGS__)
+#else
+#define serialDebugDetailTwiStatsPrintf_P(...) ((void)0)
+#define serialDebugDetailTwiStatsPuts_P(...) ((void)0)
+#endif
+
+#ifdef SERIAL_DEBUG_TWI
+#define serialDebugTwiPrintf_P(...) printf_P(__VA_ARGS__)
+#define serialDebugTwiPuts_P(...) puts_P(__VA_ARGS__)
+#else
+#define serialDebugTwiPrintf_P(...) ((void)0)
+#define serialDebugTwiPuts_P(...) ((void)0)
+#endif
+
 #endif //ARDUINOPROJECTMODULE_CTWICONTROLLER_H

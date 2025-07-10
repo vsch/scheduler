@@ -119,7 +119,7 @@ PGM_P const trcStrings[] PROGMEM = {
         sSTR_MT_DATA_NACK,
         sSTR_MR_SLA_NACK,
         sSTR_STOP,
-#ifdef DEBUG_MODE_SINGLE_TWI
+#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
         sSTR_TRC_RCV_OVR1,
         sSTR_TRC_RCV_OVR2,
 #endif
@@ -200,7 +200,7 @@ ISR(TWI_vect) {
             // this is generated after the last byte is received
             twi_tracer(TRC_MR_DATA_NACK);
 
-#ifdef DEBUG_MODE_SINGLE_TWI
+#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
             {
                 uint8_t capacity = buffer_capacity(&rdBuffer);
                 if (!capacity) {
@@ -220,7 +220,7 @@ ISR(TWI_vect) {
             twi_tracer(TRC_MR_DATA_ACK);
             uint8_t capacity = buffer_capacity(&rdBuffer);
 
-#ifdef DEBUG_MODE_SINGLE_TWI
+#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
             if (!capacity) {
                 // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
                 twi_tracer(TRC_RCV_OVR1);
@@ -238,7 +238,7 @@ ISR(TWI_vect) {
                 // data byte received, send ack since we have room for more 
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA);
             } else {
-#ifdef DEBUG_MODE_SINGLE_TWI
+#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
                 if (!capacity) {
                     // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
                     twi_tracer(TRC_RCV_OVR2);
@@ -302,12 +302,9 @@ ISR(TWI_vect) {
 
         default:
 #ifdef SERIAL_DEBUG_TWI_TRACER
-#ifdef DEBUG_MODE_SINGLE_TWI
             twi_tracer(twsr);
-#else
-            twi_tracer(twsr & TW_STATUS_MASK);
-#endif
-#endif
+            //twi_tracer(twsr & TW_STATUS_MASK);
+#endif            
         error:
             twiint_errors++;
 

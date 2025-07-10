@@ -151,7 +151,7 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define TRC_MT_DATA_NACK (0x0A)   
 #define TRC_MR_SLA_NACK  (0x0B)   
 #define TRC_STOP         (0x0C)   
-#ifdef DEBUG_MODE_SINGLE_TWI
+#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
 #define TRC_RCV_OVR1     (0x0D)   
 #define TRC_RCV_OVR2     (0x0E)   
 #define TRC_MAX          (0x0F)   
@@ -177,7 +177,7 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define STR_TRC_MT_DATA_NACK "MT_DATA_NACK(" TO_STRING(TW_MT_DATA_NACK) ")"
 #define STR_TRC_MR_SLA_NACK  "MR_SLA_NACK(" TO_STRING(TW_MR_SLA_NACK) ")"
 #define STR_TRC_STOP         "STOP()"
-#ifdef DEBUG_MODE_SINGLE_TWI
+#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
 #define STR_TRC_RCV_OVR1     "RCV OVERRUN1()"
 #define STR_TRC_RCV_OVR2     "RCV OVERRUN2()"
 #endif

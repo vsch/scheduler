@@ -69,7 +69,7 @@ uint8_t twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs) {
 #ifdef SERIAL_DEBUG_TWI_TRACER
                 twi_dump_trace(1);
 #endif
-                PRINTF_SERIAL_DEBUG_TWI_STATS(PSTR("  TWI: #%d wait_sent timed out %ld.\n"), twiController.getReadStreamId((ByteStream *)pStream), diff / 1000L);
+                serialDebugTwiPrintf_P(PSTR("  TWI: #%d wait_sent timed out %ld.\n"), twiController.getReadStreamId((ByteStream *)pStream), diff / 1000L);
                 return 0;
             }
         }
@@ -93,7 +93,7 @@ CByteStream_t *twi_process_stream_rcv(CByteBuffer_t *pBuffer) {
 
     END_SERIAL_DEBUG_TWI_STATS(reqSize);
 
-    PRINTF_SERIAL_DEBUG_TWI_STATS(PSTR("%8ld: TWI %d command bytes, new bytes %d in %ld usec %d\n"),
+    serialDebugDetailTwiStatsPrintf_P(PSTR("%8ld: TWI %d command bytes, new bytes %d in %ld usec %d\n"),
                                       start / 1000L, twi_send_bytes, stream_count(twiStream), twi_send_time, twi_send_errors);
 #ifdef SERIAL_DEBUG_DETAIL_TWI_STATS
     twi_send_bytes = 0;
