@@ -11,7 +11,8 @@
  *
  * Copyright (c) 2018 Sebastian Goessl
  *
-  * Modified for CByteStream and TwiController handling
+ * Modified for CByteStream and TwiController handling
+ * 
  * Author:     Vladimir Schneider
  * 
  * Copyright (c) 2025 Vladimir Schneider
@@ -43,42 +44,6 @@
 #include "twiint.h"
 #include "CByteBuffer.h"
 
-//default to Arduino oscillator
-#ifndef F_CPU
-#define F_CPU 16000000UL
-#warning "F_CPU not defined! Assuming 16MHz."
-#endif
-
-
-//set prescaler so that the TWBR value is as large as possible
-//and at least 10 (frequency error below 5%)
-//https://www.nongnu.org/avr-libc/user-manual/group__twi__demo.html Note[5]
-#if (F_CPU / TWI_FREQUENCY - 16) / (2 * 1) >= 2 \
- && (F_CPU / TWI_FREQUENCY - 16) / (2 * 1) <= 0xFF
-#define TWI_PRESCALER 1
-#define TWPS0_VALUE 0
-#define TWPS1_VALUE 0
-#elif (F_CPU / TWI_FREQUENCY - 16) / (2 * 4) >= 10 \
- && (F_CPU / TWI_FREQUENCY - 16) / (2 * 4) <= 0xFF
-#define TWI_PRESCALER 4
-#define TWPS0_VALUE 1
-#define TWPS1_VALUE 0
-#elif (F_CPU/TWI_FREQUENCY - 16) / (2 * 16) >= 10 \
-        && (F_CPU/TWI_FREQUENCY - 16) / (2 * 16) <= 0xFF
-#define TWI_PRESCALER 16
-#define TWPS0_VALUE 0
-#define TWPS1_VALUE 1
-#elif (F_CPU/TWI_FREQUENCY - 16) / (2 * 64) >= 10 \
-        && (F_CPU/TWI_FREQUENCY - 16) / (2 * 64) <= 0xFF
-#define TWI_PRESCALER 64
-#define TWPS0_VALUE 1
-#define TWPS1_VALUE 1
-#else
-#error "TWI_FREQUENCY too low!"
-#endif
-
-#define TWBR_VALUE ((F_CPU/TWI_FREQUENCY - 16) / (2 * TWI_PRESCALER))
-
 CByteStream_t *pTwiStream;
 CByteBuffer_t rdBuffer;
 uint8_t haveRead;
@@ -108,7 +73,7 @@ void twiint_start(CByteStream_t *pStream) {
         buffer_copy(&rdBuffer, pRcvBuffer);
         haveRead = 1;
     }
-    TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN) | (1 << TWIE);
+    TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
 }
 
 void twint_cancel_rd(CByteStream_t *pStream) {
@@ -122,6 +87,44 @@ void twint_cancel_rd(CByteStream_t *pStream) {
 #ifdef SERIAL_DEBUG_TWI_TRACER
 
 CTwiTraceBuffer_t *twi_trace_buffer;
+
+#ifndef SERIAL_DEBUG_TWI_RAW_TRACER
+const char sSTR_BUS_ERROR[] PROGMEM = STR_TRC_BUS_ERROR;
+const char sSTR_START[] PROGMEM = STR_TRC_START;
+const char sSTR_REP_START[] PROGMEM = STR_TRC_REP_START;
+const char sSTR_MT_SLA_ACK[] PROGMEM = STR_TRC_MT_SLA_ACK;
+const char sSTR_MT_DATA_ACK[] PROGMEM = STR_TRC_MT_DATA_ACK;
+const char sSTR_MR_DATA_ACK[] PROGMEM = STR_TRC_MR_DATA_ACK;
+const char sSTR_MR_SLA_ACK[] PROGMEM = STR_TRC_MR_SLA_ACK;
+const char sSTR_MR_DATA_NACK[] PROGMEM = STR_TRC_MR_DATA_NACK;
+const char sSTR_MT_ARB_LOST[] PROGMEM = STR_TRC_MT_ARB_LOST;
+const char sSTR_MT_SLA_NACK[] PROGMEM = STR_TRC_MT_SLA_NACK;
+const char sSTR_MT_DATA_NACK[] PROGMEM = STR_TRC_MT_DATA_NACK;
+const char sSTR_MR_SLA_NACK[] PROGMEM = STR_TRC_MR_SLA_NACK;
+const char sSTR_STOP[] PROGMEM = STR_TRC_STOP;
+const char sSTR_TRC_RCV_OVR1[] PROGMEM = STR_TRC_STOP;
+const char sSTR_TRC_RCV_OVR2[] PROGMEM = STR_TRC_STOP;
+
+PGM_P const trcStrings[] PROGMEM = {
+        sSTR_BUS_ERROR,
+        sSTR_START,
+        sSTR_REP_START,
+        sSTR_MT_SLA_ACK,
+        sSTR_MT_DATA_ACK,
+        sSTR_MR_DATA_ACK,
+        sSTR_MR_SLA_ACK,
+        sSTR_MR_DATA_NACK,
+        sSTR_MT_ARB_LOST,
+        sSTR_MT_SLA_NACK,
+        sSTR_MT_DATA_NACK,
+        sSTR_MR_SLA_NACK,
+        sSTR_STOP,
+#ifdef DEBUG_MODE_SINGLE_TWI
+        sSTR_TRC_RCV_OVR1,
+        sSTR_TRC_RCV_OVR2,
+#endif
+};
+#endif
 
 #endif
 
@@ -159,18 +162,18 @@ ISR(TWI_vect) {
             twi_tracer(TRC_REP_START);
             if (haveRead) {
                 TWDR = pTwiStream->addr | 0x01;     // make it a read
-                TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
-                break;
-            } else {
-                TWDR = pTwiStream->addr;
-                goto start;
+                goto rep_start;
+                // } else {
+                //     TWDR = pTwiStream->addr;
             }
+            goto start;
 
         case TW_START:
             twi_tracer(TRC_START);
+        start:
             TWDR = pTwiStream->addr;
 
-        start:
+        rep_start:
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
             break;
 
@@ -189,69 +192,133 @@ ISR(TWI_vect) {
                 // do a repeated start then read into the rcv queue
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
             } else {
-                TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
-                complete_request(pTwiStream);
-                goto stop;
+                goto complete;
             }
-            break;
-
-        case TW_MR_DATA_ACK:
-            twi_tracer(TRC_MR_DATA_ACK);
-            if (haveRead) {
-                uint8_t capacity = buffer_capacity(&rdBuffer);
-                if (capacity > 1) {
-                    buffer_put(&rdBuffer, TWDR);
-                    TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA);
-                    break;
-                } else {
-                    if (capacity) {
-                        buffer_put(&rdBuffer, TWDR);
-                        complete_request(pTwiStream);
-                    }
-                    haveRead = 0;
-                }
-            }
-            TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWEA) | (1 << TWSTO);
-            goto stop;
-            
-        case TW_MR_SLA_ACK:
-            twi_tracer(TRC_MR_SLA_ACK);
-            TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA);
             break;
 
         case TW_MR_DATA_NACK:
+            // this is generated after the last byte is received
             twi_tracer(TRC_MR_DATA_NACK);
-            twiint_errors++;
-            complete_request(pTwiStream);
-            TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
-            goto stop;
+
+#ifdef DEBUG_MODE_SINGLE_TWI
+            {
+                uint8_t capacity = buffer_capacity(&rdBuffer);
+                if (!capacity) {
+                    // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
+                    twi_tracer(TRC_RCV_OVR1);
+                    TWCR = (1 << TWINT) | (1 << TWEN) /*| (1 << TWEA)*/ | (1 << TWSTO);
+                    complete_request(pTwiStream);
+                    twi_tracer(TRC_STOP);
+                    break;
+                }
+            }
+#endif
+            buffer_put(&rdBuffer, TWDR);
+            goto complete;
+
+        case TW_MR_DATA_ACK: {
+            twi_tracer(TRC_MR_DATA_ACK);
+            uint8_t capacity = buffer_capacity(&rdBuffer);
+
+#ifdef DEBUG_MODE_SINGLE_TWI
+            if (!capacity) {
+                // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
+                twi_tracer(TRC_RCV_OVR1);
+                TWCR = (1 << TWINT) | (1 << TWEN) /*| (1 << TWEA)*/ | (1 << TWSTO);
+                complete_request(pTwiStream);
+                twi_tracer(TRC_STOP);
+                break;
+            }
+#endif
+
+            buffer_put(&rdBuffer, TWDR);
+            capacity--;
+
+            if (capacity > 1) {
+                // data byte received, send ack since we have room for more 
+                TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA);
+            } else {
+#ifdef DEBUG_MODE_SINGLE_TWI
+                if (!capacity) {
+                    // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
+                    twi_tracer(TRC_RCV_OVR2);
+                    TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTO);
+                    complete_request(pTwiStream);
+                    twi_tracer(TRC_STOP);
+                    break;
+                }
+#endif
+                TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
+                //
+                // // TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) /*| (1 << TWEA)*/; // data byte received, send nack
+                // TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) /*| (1 << TWSTO)*/;
+                // //complete_request(pTwiStream);
+                // //twi_tracer(TRC_STOP);
+                // break;
+            }
+        }
+            break;
+
+        case TW_MR_SLA_ACK:
+            twi_tracer(TRC_MR_SLA_ACK);
+            if (buffer_capacity(&rdBuffer) > 1) {
+                TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA); // data byte will be received, send ACK
+            } else {
+                // this is a 1 byte buffer, we need to have NACK generated so only 1 byte is transfered.
+                TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE); // data byte will be received, send NACK
+            }
+            break;
 
         case TW_MT_ARB_LOST:
             twi_tracer(TRC_MT_ARB_LOST);
             twiint_errors++;
-            complete_request(pTwiStream);
-            TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN) | (1 << TWIE);
+            TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
+            // Arbitration loss restarts attempt
+            // TODO: need to reset the stream condition because it is unknown when the arbitration was lost
+            //       it could have been detected after transmission of some data.
+            //       as an alternative, just handle it as an error and need for to signal the requestor that
+            //       an error has occurred.
+            // TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN) | (1 << TWIE);
+            // complete_request(pTwiStream);
             break;
 
+            // TODO: some of these may not be errors but SOP for I2C protocol. Like the MR_DATA_NACK used to receive
+            //     the last byte, and not an error.
         case TW_MT_SLA_NACK:
             twi_tracer(TRC_MT_SLA_NACK);
-            goto nack;
+            goto error;
+
         case TW_MT_DATA_NACK:
             twi_tracer(TRC_MT_DATA_NACK);
-            goto nack;
+            goto error;
+
         case TW_MR_SLA_NACK:
             twi_tracer(TRC_MR_SLA_NACK);
-            goto nack;
+            goto error;
+
+        case TW_BUS_ERROR:
+            twi_tracer(TRC_BUS_ERROR);
+            goto error;
+
         default:
 #ifdef SERIAL_DEBUG_TWI_TRACER
+#ifdef DEBUG_MODE_SINGLE_TWI
+            twi_tracer(twsr);
+#else
             twi_tracer(twsr & TW_STATUS_MASK);
 #endif
-        nack:
+#endif
+        error:
             twiint_errors++;
-            complete_request(pTwiStream);
+
+        complete:
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
-            
+            complete_request(pTwiStream);
+            twi_tracer(TRC_STOP);
+            break;
+
         stop:
+            TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
             twi_tracer(TRC_STOP);
             break;
     }

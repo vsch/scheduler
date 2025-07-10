@@ -457,22 +457,26 @@ public:
     void endProcessingRequest(ByteStream *pStream) {
         pStream->flags &= ~(STREAM_FLAGS_PENDING | STREAM_FLAGS_PROCESSING);
 
-        if (pStream->pData == writeBuffer.pData) {
-            // at this point the buffer used by this request is no longer needed, so the buffer head can be moved to processed request tail.
-            writeBuffer.nHead = pStream->nTail;
-        }
+        // make sure it is a shared request stream
+        uint8_t id = getReadStreamId(pStream);
+        if (id < maxStreams) {
+            if (pStream->pData == writeBuffer.pData) {
+                // at this point the buffer used by this request is no longer needed, so the buffer head can be moved to processed request tail.
+                writeBuffer.nHead = pStream->nTail;
+            }
 
-        uint8_t head = pendingReadStreams.removeHead();
-        completedStreams.addTail(head);
+            uint8_t head = pendingReadStreams.removeHead();
+            completedStreams.addTail(head);
 
-        // don't start next request if trace processing is pending
-        if (isRequestAutoStart()) {
-            // start processing next request
-            startNextRequest();
+            // don't start next request if trace processing is pending
+            if (isRequestAutoStart()) {
+                // start processing next request
+                startNextRequest();
+            }
+
+            // restart loop
+            resume(0);
         }
-        
-        // restart loop
-        resume(0);
     }
 
     // IMPORTANT: called with interrupts disabled, but they can be enabled inside the function 

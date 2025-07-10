@@ -69,7 +69,7 @@ uint8_t twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs) {
 #ifdef SERIAL_DEBUG_TWI_TRACER
                 twi_dump_trace(1);
 #endif
-                PRINTF_SERIAL_DEBUG_TWI_STATS(PSTR("  TWI: %d wait_sent timed out %ld.\n"), twiController.getReadStreamId((ByteStream *)pStream), diff / 1000L);
+                PRINTF_SERIAL_DEBUG_TWI_STATS(PSTR("  TWI: #%d wait_sent timed out %ld.\n"), twiController.getReadStreamId((ByteStream *)pStream), diff / 1000L);
                 return 0;
             }
         }
@@ -80,7 +80,7 @@ uint8_t twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs) {
     return 1;
 }
 
-CByteStream_t *twi_process_stream() {
+CByteStream_t *twi_process_stream_rcv(CByteBuffer_t *pBuffer) {
     // send the accumulated buffer
     CByteStream_t *pStream = NULL;
 
@@ -89,7 +89,7 @@ CByteStream_t *twi_process_stream() {
     uint16_t reqSize = stream_count(twiStream);
 #endif
     // returns the same stream but updated head/tail, so address is unchanged
-    pStream = twi_process(twiStream);
+    pStream = (CByteStream_t *)twiController.processStream((ByteStream *)twiStream, pBuffer);
 
     END_SERIAL_DEBUG_TWI_STATS(reqSize);
 
@@ -99,5 +99,9 @@ CByteStream_t *twi_process_stream() {
     twi_send_bytes = 0;
 #endif
     return pStream;
+}
+
+CByteStream_t *twi_process_stream() {
+    return twi_process_stream_rcv(NULL);
 }
 

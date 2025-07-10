@@ -135,7 +135,10 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define TWI_TRACE_SIZE (32)
 #endif
 
+#include <util/twi.h>
+
 #ifndef SERIAL_DEBUG_TWI_RAW_TRACER
+#define TRC_BUS_ERROR    (0x00)   
 #define TRC_START        (0x01)   
 #define TRC_REP_START    (0x02)   
 #define TRC_MT_SLA_ACK   (0x03)   
@@ -148,8 +151,38 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define TRC_MT_DATA_NACK (0x0A)   
 #define TRC_MR_SLA_NACK  (0x0B)   
 #define TRC_STOP         (0x0C)   
+#ifdef DEBUG_MODE_SINGLE_TWI
+#define TRC_RCV_OVR1     (0x0D)   
+#define TRC_RCV_OVR2     (0x0E)   
+#define TRC_MAX          (0x0F)   
+#else
 #define TRC_MAX          (0x0D)   
+#endif
 
+#ifdef SERIAL_DEBUG_TWI_TRACER_CODES
+#define TO_STRING2(x) #x
+#define TO_STRING(x) TO_STRING2(x)
+
+// Usage:
+#define STR_TRC_BUS_ERROR    "BUS_ERROR(0x00)"   
+#define STR_TRC_START        "START(" TO_STRING(TW_START) ")"
+#define STR_TRC_REP_START    "REP_START(" TO_STRING(TW_REP_START) ")"
+#define STR_TRC_MT_SLA_ACK   "MT_SLA_ACK(" TO_STRING(TW_MT_SLA_ACK) ")"
+#define STR_TRC_MT_DATA_ACK  "MT_DATA_ACK(" TO_STRING(TW_MT_DATA_ACK) ")"
+#define STR_TRC_MR_DATA_ACK  "MR_DATA_ACK(" TO_STRING(TW_MR_DATA_ACK) ")"
+#define STR_TRC_MR_SLA_ACK   "MR_SLA_ACK(" TO_STRING(TW_MR_SLA_ACK) ")"
+#define STR_TRC_MR_DATA_NACK "MR_DATA_NACK(" TO_STRING(TW_MR_DATA_NACK) ")"
+#define STR_TRC_MT_ARB_LOST  "MT_ARB_LOST(" TO_STRING(TW_MT_ARB_LOST) ")"
+#define STR_TRC_MT_SLA_NACK  "MT_SLA_NACK(" TO_STRING(TW_MT_SLA_NACK) ")"
+#define STR_TRC_MT_DATA_NACK "MT_DATA_NACK(" TO_STRING(TW_MT_DATA_NACK) ")"
+#define STR_TRC_MR_SLA_NACK  "MR_SLA_NACK(" TO_STRING(TW_MR_SLA_NACK) ")"
+#define STR_TRC_STOP         "STOP()"
+#ifdef DEBUG_MODE_SINGLE_TWI
+#define STR_TRC_RCV_OVR1     "RCV OVERRUN1()"
+#define STR_TRC_RCV_OVR2     "RCV OVERRUN2()"
+#endif
+#else
+#define STR_TRC_BUS_ERROR    "BUS_ERROR"   
 #define STR_TRC_START        "START"   
 #define STR_TRC_REP_START    "REP_START"   
 #define STR_TRC_MT_SLA_ACK   "MT_SLA_ACK"   
@@ -161,15 +194,89 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define STR_TRC_MT_SLA_NACK  "MT_SLA_NACK"   
 #define STR_TRC_MT_DATA_NACK "MT_DATA_NACK"   
 #define STR_TRC_MR_SLA_NACK  "MR_SLA_NACK"   
-#define STR_STOP             "STOP"   
+#define STR_TRC_STOP         "STOP"   
+#ifdef DEBUG_MODE_SINGLE_TWI
+#define STR_TRC_RCV_OVR1     "RCV OVERRUN1"
+#define STR_TRC_RCV_OVR2     "RCV OVERRUN2"
 #endif
+#endif //SERIAL_DEBUG_TWI_TRACER_CODES
+#endif // SERIAL_DEBUG_TWI_RAW_TRACER
 
 extern CTwiTraceBuffer_t *twi_trace_buffer;
+extern PGM_P const trcStrings[] PROGMEM;
 #endif
 
 #ifdef __cplusplus
 }
 #endif
 
+//default to Arduino oscillator
+#ifndef F_CPU
+#define F_CPU 16000000UL
+#warning "F_CPU not defined! Assuming 16MHz."
+#endif
+
+#ifndef TWI_FREQUENCY
+#define TWI_FREQUENCY 400000UL
+#warning "TWI_FREQUENCY not defined! Assuming 400kHz."
+#endif
+
+//set prescaler so that the TWBR value is as large as possible
+//and at least 10 (frequency error below 5%)
+//https://www.nongnu.org/avr-libc/user-manual/group__twi__demo.html Note[5]
+#define TWI_TWBR_VALUE(c, t, p)             (((c) / (t) - 16) / (2 * (p)))
+#define TWI_TWBR_IN_RANGE(c, t, p, l, h)    TWI_TWBR_VALUE(c, t, p) >= (l) && TWI_TWBR_VALUE(c, t, p) <= (h)
+#define TWI_COMPUTED_FREQUENCY(c, p, v)     ((c) / (16L + 2L * (p) * (v)))
+
+#if TWI_TWBR_IN_RANGE(F_CPU, TWI_FREQUENCY, 1, 2, 0xff)
+#define TWI_PRESCALER 1
+#define TWPS0_VALUE 0
+#define TWPS1_VALUE 0
+#elif TWI_TWBR_IN_RANGE(F_CPU, TWI_FREQUENCY, 4, 10, 0xff)
+#define TWI_PRESCALER 4
+#define TWPS0_VALUE 1
+#define TWPS1_VALUE 0
+#elif TWI_TWBR_IN_RANGE(F_CPU, TWI_FREQUENCY, 16, 10, 0xff)
+#define TWI_PRESCALER 16
+#define TWPS0_VALUE 0
+#define TWPS1_VALUE 1
+#elif TWI_TWBR_IN_RANGE(F_CPU, TWI_FREQUENCY, 64, 10, 0xff)
+#define TWI_PRESCALER 64
+#define TWPS0_VALUE 1
+#define TWPS1_VALUE 1
+#else
+#if TWI_TWBR_VALUE(F_CPU, TWI_FREQUENCY, 1) < 2
+#error "TWI_FREQUENCY too high!"
+#else
+#error "TWI_FREQUENCY too low!"
+#endif
+#endif
+
+// #if (F_CPU / TWI_FREQUENCY - 16) / (2 * 1) >= 2 \
+//  && (F_CPU / TWI_FREQUENCY - 16) / (2 * 1) <= 0xFF
+// #define TWI_PRESCALER 1
+// #define TWPS0_VALUE 0
+// #define TWPS1_VALUE 0
+// #elif (F_CPU / TWI_FREQUENCY - 16) / (2 * 4) >= 10 \
+//  && (F_CPU / TWI_FREQUENCY - 16) / (2 * 4) <= 0xFF
+// #define TWI_PRESCALER 4
+// #define TWPS0_VALUE 1
+// #define TWPS1_VALUE 0
+// #elif (F_CPU/TWI_FREQUENCY - 16) / (2 * 16) >= 10 \
+//         && (F_CPU/TWI_FREQUENCY - 16) / (2 * 16) <= 0xFF
+// #define TWI_PRESCALER 16
+// #define TWPS0_VALUE 0
+// #define TWPS1_VALUE 1
+// #elif (F_CPU/TWI_FREQUENCY - 16) / (2 * 64) >= 10 \
+//         && (F_CPU/TWI_FREQUENCY - 16) / (2 * 64) <= 0xFF
+// #define TWI_PRESCALER 64
+// #define TWPS0_VALUE 1
+// #define TWPS1_VALUE 1
+// #else
+// #error "TWI_FREQUENCY too low!"
+// #endif
+//
+#define TWBR_VALUE TWI_TWBR_VALUE(F_CPU, TWI_FREQUENCY, TWI_PRESCALER)
+#define TWI_ACTUAL_FREQUENCY TWI_COMPUTED_FREQUENCY(F_CPU, TWI_PRESCALER, TWBR_VALUE)      
 
 #endif /* TWIINT_H_ */

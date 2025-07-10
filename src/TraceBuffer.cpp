@@ -18,38 +18,6 @@ void twi_trace(CTwiTraceBuffer_t *thizz, uint8_t data) {
 
 #endif
 
-#ifndef SERIAL_DEBUG_TWI_RAW_TRACER
-const char sSTR_NONE[] PROGMEM = "0x00";
-const char sSTR_START[] PROGMEM = STR_TRC_START;
-const char sSTR_REP_START[] PROGMEM = STR_TRC_REP_START;
-const char sSTR_MT_SLA_ACK[] PROGMEM = STR_TRC_MT_SLA_ACK;
-const char sSTR_MT_DATA_ACK[] PROGMEM = STR_TRC_MT_DATA_ACK;
-const char sSTR_MR_DATA_ACK[] PROGMEM = STR_TRC_MR_DATA_ACK;
-const char sSTR_MR_SLA_ACK[] PROGMEM = STR_TRC_MR_SLA_ACK;
-const char sSTR_MR_DATA_NACK[] PROGMEM = STR_TRC_MR_DATA_NACK;
-const char sSTR_MT_ARB_LOST[] PROGMEM = STR_TRC_MT_ARB_LOST;
-const char sSTR_MT_SLA_NACK[] PROGMEM = STR_TRC_MT_SLA_NACK;
-const char sSTR_MT_DATA_NACK[] PROGMEM = STR_TRC_MT_DATA_NACK;
-const char sSTR_MR_SLA_NACK[] PROGMEM = STR_TRC_MR_SLA_NACK;
-const char sSTR_STOP[] PROGMEM = STR_STOP;
-
-PGM_P const trcStrings[] PROGMEM = {
-        sSTR_NONE,
-        sSTR_START,
-        sSTR_REP_START,
-        sSTR_MT_SLA_ACK,
-        sSTR_MT_DATA_ACK,
-        sSTR_MR_DATA_ACK,
-        sSTR_MR_SLA_ACK,
-        sSTR_MR_DATA_NACK,
-        sSTR_MT_ARB_LOST,
-        sSTR_MT_SLA_NACK,
-        sSTR_MT_DATA_NACK,
-        sSTR_MR_SLA_NACK,
-        sSTR_STOP,
-};
-#endif
-
 #ifdef CONSOLE_DEBUG
 #include "tests/FileTestResults_AddResult.h"
 #endif
