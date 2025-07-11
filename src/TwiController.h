@@ -28,7 +28,10 @@ public:
 #ifndef CONSOLE_DEBUG
         twiint_start((CByteStream_t *) pStream);
 #endif        
+        
     }
+    
+    void dumpTrace() override;
 };
 
 extern TwiController twiController;

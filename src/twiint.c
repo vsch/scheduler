@@ -134,18 +134,26 @@ uint16_t twiint_errors;
 #ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
 #define twi_raw_tracer(s) twi_trace(twi_trace_buffer, s)
 #define twi_tracer(d) ((void)0)
+#define twi_tracer_start() ((void)0)
+#define twi_tracer_stop() ((void)0)
 #else
 #ifdef SERIAL_DEBUG_TWI_RAW_TRACER
 #define twi_raw_tracer(s) twi_trace(twi_trace_buffer, s)
 #define twi_tracer(d) ((void)0)
+#define twi_tracer_start() ((void)0)
+#define twi_tracer_stop() ((void)0)
 #else
 #define twi_raw_tracer(s) ((void)0)
 #define twi_tracer(d) twi_trace(twi_trace_buffer, (d))
+#define twi_tracer_start() twi_trace_start(twi_trace_buffer)
+#define twi_tracer_stop() twi_trace_stop(twi_trace_buffer)
 #endif
 #endif
 #else
 #define twi_raw_tracer(s) ((void)0)
 #define twi_tracer(d) ((void)0)
+#define twi_tracer_start() ((void)0)
+#define twi_tracer_stop() ((void)0)
 #endif
 
 ISR(TWI_vect) {
@@ -169,7 +177,7 @@ ISR(TWI_vect) {
             goto start;
 
         case TW_START:
-            twi_tracer(TRC_START);
+            twi_tracer_start();
         start:
             TWDR = pTwiStream->addr;
 
@@ -207,8 +215,8 @@ ISR(TWI_vect) {
                     // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
                     twi_tracer(TRC_RCV_OVR1);
                     TWCR = (1 << TWINT) | (1 << TWEN) /*| (1 << TWEA)*/ | (1 << TWSTO);
+                    twi_tracer_stop();
                     complete_request(pTwiStream);
-                    twi_tracer(TRC_STOP);
                     break;
                 }
             }
@@ -225,8 +233,8 @@ ISR(TWI_vect) {
                 // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
                 twi_tracer(TRC_RCV_OVR1);
                 TWCR = (1 << TWINT) | (1 << TWEN) /*| (1 << TWEA)*/ | (1 << TWSTO);
+                twi_tracer_stop();
                 complete_request(pTwiStream);
-                twi_tracer(TRC_STOP);
                 break;
             }
 #endif
@@ -243,8 +251,8 @@ ISR(TWI_vect) {
                     // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
                     twi_tracer(TRC_RCV_OVR2);
                     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTO);
+                    twi_tracer_stop();
                     complete_request(pTwiStream);
-                    twi_tracer(TRC_STOP);
                     break;
                 }
 #endif
@@ -253,7 +261,7 @@ ISR(TWI_vect) {
                 // // TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) /*| (1 << TWEA)*/; // data byte received, send nack
                 // TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) /*| (1 << TWSTO)*/;
                 // //complete_request(pTwiStream);
-                // //twi_tracer(TRC_STOP);
+                // // twi_tracer_stop();
                 // break;
             }
         }
@@ -310,13 +318,12 @@ ISR(TWI_vect) {
 
         complete:
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
+            twi_tracer_stop();
             complete_request(pTwiStream);
-            twi_tracer(TRC_STOP);
             break;
 
         stop:
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
-            twi_tracer(TRC_STOP);
-            break;
+            twi_tracer_stop();
     }
 }

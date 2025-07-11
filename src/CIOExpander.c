@@ -33,7 +33,7 @@ CByteStream_t *iox_rcv_data(uint8_t addr, uint8_t reg, void *pData, uint8_t len)
 
 uint8_t iox_rcv_data_wait(uint8_t addr, uint8_t reg, void *pData, uint8_t len) {
     CByteStream_t *pStream = iox_rcv_data(addr, reg, pData, len);
-    return twi_wait_sent(pStream, TWI_WAIT_TIMEOUT);
+    return twi_wait_sent(pStream);
 }
 
 CByteStream_t *iox_rcv_byte(uint8_t addr, uint8_t reg, uint8_t *pData) {
@@ -64,7 +64,7 @@ CByteStream_t *iox_out(uint8_t addr, uint16_t data){
 
 uint8_t iox_out_wait(uint8_t addr, uint16_t data){
     CByteStream_t *pStream = iox_send_word(addr, IOX_REG_OUTPUT_PORT0, data);
-    return twi_wait_sent(pStream, TWI_WAIT_TIMEOUT);
+    return twi_wait_sent(pStream);
 }
 
 CByteStream_t *iox_in(uint8_t addr, uint16_t *pData) {

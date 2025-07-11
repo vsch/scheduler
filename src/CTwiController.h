@@ -5,7 +5,7 @@
 #include <stdint.h>     //uint8_t type
 #include "CByteStream.h"
 
-#define TWI_WAIT_TIMEOUT    (500)
+#define TWI_WAIT_TIMEOUT    (50)
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,7 +28,7 @@ extern void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count);
 
 // wait for stream to be sent, if timeout !=0 then wait that many ms before giving up
 // return 0 if timeed out, 1 if sent (may be with twiint_errors)
-extern uint8_t twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs);
+extern uint8_t twi_wait_sent(CByteStream_t *pStream);
 /**
  * Send given buffered data as self-buffered twi request
  * 
@@ -40,7 +40,7 @@ extern uint8_t twi_wait_sent(CByteStream_t *pStream, uint8_t timeoutMs);
 extern CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer);
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-extern void twi_dump_trace(uint8_t noWait);
+extern void twi_dump_trace();
 #endif
 
 #ifdef __cplusplus

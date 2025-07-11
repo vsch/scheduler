@@ -486,7 +486,7 @@ public:
 
     // IMPORTANT: called with interrupts disabled
 #ifdef SERIAL_DEBUG_TWI_TRACER
-    virtual void dumpTrace(uint8_t noWait);
+    virtual void dumpTrace() = 0;
 #endif
 
     // IMPORTANT: called with interrupts disabled
@@ -519,7 +519,7 @@ public:
         handleCompletedRequests();
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-        dumpTrace(1);
+        dumpTrace();
 #endif
 
         startNextRequest();

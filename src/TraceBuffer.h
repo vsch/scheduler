@@ -42,6 +42,7 @@ public:
     NO_DISCARD inline uint8_t getTraceCount() const {
         return traceCount;
     }
+
 #endif
 
     NO_DISCARD inline uint8_t getReadCapacity() const {
@@ -60,7 +61,7 @@ public:
 #endif
     }
 
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD       
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
     void trace(uint16_t word) {
         if (nCapacity) {
             *pPos++ = word;
@@ -68,6 +69,7 @@ public:
         }
     }
 #else
+
     void trace(uint8_t byte) {
         if (haveByte) {
             if (traceByte == byte) {
@@ -79,11 +81,37 @@ public:
                 storeTrace();
             }
         }
-        
+
         traceByte = byte;
         traceCount = 1;
         haveByte = 1;
     }
+
+#ifdef DEBUG_MODE_TWI_TRACE_TIMEIT
+    void traceBytes(void *data, uint8_t count) {
+        storeTrace();
+        uint8_t *bytes = (uint8_t *)data;
+
+        if (nCapacity >= count) {
+            nCapacity -= count;
+
+            while (count--) {
+                *pPos++ = *bytes++;
+            }
+        }
+    }
+
+    void readBytes(void *data, uint8_t count) {
+        if (nReadCapacity >= count) {
+            nReadCapacity -= count;
+            uint8_t *bytes = (uint8_t *)data;
+
+            while (count--) {
+                *bytes++ = *pPos++;
+            }
+        }
+    }
+#endif
 
     void storeTrace() {
         if (haveByte) {
@@ -99,17 +127,18 @@ public:
                 *pPos++ = traceByte;
                 nCapacity--;
             }
-            
+
             traceByte = 0;
             traceCount = 0;
             haveByte = 0;
         }
     }
-#endif        
+
+#endif
 
     void copyFrom(TraceBuffer *pOther) {
         memcpy(this, pOther, sizeof(CTwiTraceBuffer_t));
-        
+
         // this is not copied correctly
         pPos = data + (pOther->pPos - pOther->data);
     }
@@ -132,6 +161,7 @@ public:
         return 0;
     }
 #else
+
     void readEntry() {
         if (nReadCapacity) {
             traceByte = *pPos++;
@@ -154,8 +184,9 @@ public:
             haveByte = 0;
         }
     }
+
 #endif
-    
+
     void dump();
 };
 
