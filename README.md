@@ -85,7 +85,7 @@ the stack when the task is resumed.
   return until task is resumed via `resume()` call.
 * `uint8_t yieldResume(uint16_t milliseconds)` - Will set the task to
   resume in `milliseconds` and yield. Function will return when the
-  timeout has elapsed.
+  timeout has elapsedTime.
 * `void yield()` - sets resume delay to `0` and yields. Useful for
   breaking up long tasks to allow other functions to be performed.
 * `uint8_t hasYielded() const` - returns true if the task has returned

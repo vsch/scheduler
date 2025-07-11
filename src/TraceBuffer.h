@@ -33,8 +33,6 @@ public:
         return !nReadCapacity;
     }
 
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
-#else
     NO_DISCARD inline uint8_t getTraceByte() const {
         return traceByte;
     }
@@ -42,8 +40,6 @@ public:
     NO_DISCARD inline uint8_t getTraceCount() const {
         return traceCount;
     }
-
-#endif
 
     NO_DISCARD inline uint8_t getReadCapacity() const {
         return nReadCapacity;
@@ -53,22 +49,10 @@ public:
         pPos = data;
         nCapacity = TWI_TRACE_SIZE;
         nReadCapacity = 0;
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
-#else
         traceByte = 0;
         traceCount = 0;
         haveByte = 0;
-#endif
     }
-
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
-    void trace(uint16_t word) {
-        if (nCapacity) {
-            *pPos++ = word;
-            nCapacity--;
-        }
-    }
-#else
 
     void trace(uint8_t traceByte) {
         if (haveByte) {
@@ -108,18 +92,7 @@ public:
         }
     }
 
-    void readBytes(void *data, uint8_t count) {
-        if (nReadCapacity >= count) {
-            nReadCapacity -= count;
-            uint8_t *bytes = (uint8_t *) data;
-
-            while (count--) {
-                *bytes++ = *pPos++;
-            }
-        }
-    }
-
-#endif
+#endif // DEBUG_MODE_TWI_TRACE_TIMEIT
 
     void storeTrace() {
         if (haveByte) {
@@ -142,8 +115,6 @@ public:
         }
     }
 
-#endif
-
     void copyFrom(TraceBuffer *pOther) {
         memcpy(this, pOther, sizeof(CTwiTraceBuffer_t));
 
@@ -152,23 +123,10 @@ public:
     }
 
     void startRead() {
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
-#else
         storeTrace();
-#endif
         pPos = data;
         nReadCapacity = TWI_TRACE_SIZE - nCapacity;
     }
-
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
-    uint16_t readEntry() {
-        if (nReadCapacity) {
-            nReadCapacity--;
-            return *pPos++;
-        }
-        return 0;
-    }
-#else
 
     void readEntry() {
         if (nReadCapacity) {
@@ -193,7 +151,16 @@ public:
         }
     }
 
-#endif
+    void readBytes(void *data, uint8_t count) {
+        if (nReadCapacity >= count) {
+            nReadCapacity -= count;
+            uint8_t *bytes = (uint8_t *) data;
+
+            while (count--) {
+                *bytes++ = *pPos++;
+            }
+        }
+    }
 
     void dump();
 };

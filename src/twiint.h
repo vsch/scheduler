@@ -151,13 +151,13 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define TRC_MT_DATA_NACK (0x0A)   
 #define TRC_MR_SLA_NACK  (0x0B)   
 #define TRC_STOP         (0x0C)   
-#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
-#define TRC_RCV_OVR1     (0x0D)   
-#define TRC_RCV_OVR2     (0x0E)   
-#define TRC_MAX          (0x0F)   
-#else
+#ifndef SERIAL_DEBUG_WI_TRACE_OVERRUNS
 #define TRC_MAX          (0x0D)   
-#endif
+#else
+#define TRC_RCV_OVR1     (0x0D)
+#define TRC_RCV_OVR2     (0x0E)
+#define TRC_MAX          (0x0F)
+#endif // SERIAL_DEBUG_WI_TRACE_OVERRUNS
 
 #ifdef SERIAL_DEBUG_TWI_TRACER_CODES
 #define TO_STRING2(x) #x
@@ -177,11 +177,11 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define STR_TRC_MT_DATA_NACK "MT_DATA_NACK(" TO_STRING(TW_MT_DATA_NACK) ")"
 #define STR_TRC_MR_SLA_NACK  "MR_SLA_NACK(" TO_STRING(TW_MR_SLA_NACK) ")"
 #define STR_TRC_STOP         "STOP()"
-#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
-#define STR_TRC_RCV_OVR1     "RCV OVERRUN1()"
-#define STR_TRC_RCV_OVR2     "RCV OVERRUN2()"
+#ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
+#define STR_TRC_RCV_OVR1     "RCV_OVERRUN1()"
+#define STR_TRC_RCV_OVR2     "RCV_OVERRUN2()"
 #endif
-#else
+#else // SERIAL_DEBUG_TWI_TRACER_CODES
 #define STR_TRC_BUS_ERROR    "BUS_ERROR"   
 #define STR_TRC_START        "START"   
 #define STR_TRC_REP_START    "REP_START"   
@@ -195,9 +195,9 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define STR_TRC_MT_DATA_NACK "MT_DATA_NACK"   
 #define STR_TRC_MR_SLA_NACK  "MR_SLA_NACK"   
 #define STR_TRC_STOP         "STOP"   
-#ifdef DEBUG_MODE_IOX_SINGLE_TWI
-#define STR_TRC_RCV_OVR1     "RCV OVERRUN1"
-#define STR_TRC_RCV_OVR2     "RCV OVERRUN2"
+#ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
+#define STR_TRC_RCV_OVR1     "RCV_OVERRUN1"
+#define STR_TRC_RCV_OVR2     "RCV_OVERRUN2"
 #endif
 #endif //SERIAL_DEBUG_TWI_TRACER_CODES
 #endif // SERIAL_DEBUG_TWI_RAW_TRACER

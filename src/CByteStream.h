@@ -14,13 +14,10 @@
 #define STREAM_FLAGS_APPEND     (0x20)      // used in getStream to disable resetting content to 0 for write streams
 
 // Simple streaming both read and write for use in C interrupts and C code, provided from C/C++ code
-// has the same layout as Stream
+// has the same layout as ByteStream
 typedef struct CByteStream
 {
-    uint8_t nSize;
-    uint8_t nHead;
-    uint8_t nTail;
-    uint8_t* pData;
+    CByteQueue_t byteQueue;
     uint8_t flags;
     uint8_t addr;
     CByteBuffer_t *pRcvBuffer;

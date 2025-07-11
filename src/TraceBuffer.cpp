@@ -5,14 +5,6 @@
 #include "twiint.h"
 #include "CTraceBuffer.h"
 
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
-
-void twi_trace(CTwiTraceBuffer_t *thizz, uint16_t data) {
-    ((TraceBuffer *) thizz)->trace(data);
-}
-
-#else
-
 void twi_trace(CTwiTraceBuffer_t *thizz, uint8_t traceByte) {
     ((TraceBuffer *) thizz)->trace(traceByte);
 }
@@ -20,8 +12,6 @@ void twi_trace(CTwiTraceBuffer_t *thizz, uint8_t traceByte) {
 void twi_trace_bytes(CTwiTraceBuffer_t *thizz, uint8_t traceByte, void *data, uint8_t count) {
     ((TraceBuffer *) thizz)->traceBytes(traceByte, data, count);
 }
-
-#endif  //SERIAL_DEBUG_TWI_RAW_TRACER_WORD
 
 #ifdef CONSOLE_DEBUG
 #include "tests/FileTestResults_AddResult.h"
@@ -37,15 +27,6 @@ void TraceBuffer::dump() {
     }
 #else
     while (!isAllRead()) {
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
-        uint16_t entry = readEntry();
-        if (entry & ~TW_STATUS_MASK) {
-            // have other bits
-            serialDebugPrintf_P(PSTR("  0x%4.4x(0x%4.4x)"), entry & TW_STATUS_MASK, entry);
-        } else {
-            serialDebugPrintf_P(PSTR("  0x%4.4x"), entry & TW_STATUS_MASK);
-        }
-#else
         readEntry();
 
         uint8_t trc = getTraceByte();
@@ -82,18 +63,24 @@ void TraceBuffer::dump() {
                 uint16_t elapsedMicros;
                 readBytes(&elapsedMicros, sizeof(elapsedMicros));
                 serialDebugPrintf_P(PSTR("  %S(%dus)"), pStr, elapsedMicros);
-            } else 
-#endif
-
+            } else {
+                if (count > 1) {
+                    serialDebugPrintf_P(PSTR("  %S(%d)"), pStr, count);
+                } else {
+                    serialDebugPrintf_P(PSTR("  %S"), pStr);
+                }
+            }
+#else
             if (count > 1) {
                 serialDebugPrintf_P(PSTR("  %S(%d)"), pStr, count);
             } else {
                 serialDebugPrintf_P(PSTR("  %S"), pStr);
             }
+#endif // DEBUG_MODE_TWI_TRACE_TIMEIT
         }
-#endif
-#endif
-#endif
+
+#endif //CONSOLE_DEBUG
+#endif //SERIAL_DEBUG_TWI_RAW_TRACER
     }
 #endif
     serialDebugPrintf_P(PSTR(" }\n"));

@@ -48,13 +48,13 @@
 CByteStream_t *pTwiStream;
 CByteBuffer_t rdBuffer;
 
-#define TWI_FLAGS_HAVE_READ (0x01)
+#define TWI_FLAGS_HAVE_READ     (0x01)
 
 uint8_t twi_flags;
 
 void twiint_init(void) {
     twi_flags = 0;
-    
+
     TWBR = TWBR_VALUE;
     TWSR = (TWPS1_VALUE << TWPS1) | (TWPS0_VALUE << TWPS0);
 
@@ -73,7 +73,7 @@ void twiint_start(CByteStream_t *pStream) {
     twiint_flush();
 
     pTwiStream = pStream;
-    twi_flags = 0;
+    twi_flags &= ~TWI_FLAGS_HAVE_READ;
     CByteBuffer_t *pRcvBuffer = pStream->pRcvBuffer;
     if (pRcvBuffer) {
         buffer_copy(&rdBuffer, pRcvBuffer);
@@ -108,8 +108,11 @@ const char sSTR_MT_SLA_NACK[] PROGMEM = STR_TRC_MT_SLA_NACK;
 const char sSTR_MT_DATA_NACK[] PROGMEM = STR_TRC_MT_DATA_NACK;
 const char sSTR_MR_SLA_NACK[] PROGMEM = STR_TRC_MR_SLA_NACK;
 const char sSTR_STOP[] PROGMEM = STR_TRC_STOP;
-const char sSTR_TRC_RCV_OVR1[] PROGMEM = STR_TRC_STOP;
-const char sSTR_TRC_RCV_OVR2[] PROGMEM = STR_TRC_STOP;
+
+#ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
+const char sSTR_TRC_RCV_OVR1[] PROGMEM = STR_TRC_RCV_OVR1;
+const char sSTR_TRC_RCV_OVR2[] PROGMEM = STR_TRC_RCV_OVR2;
+#endif
 
 PGM_P const trcStrings[] PROGMEM = {
         sSTR_BUS_ERROR,
@@ -125,24 +128,18 @@ PGM_P const trcStrings[] PROGMEM = {
         sSTR_MT_DATA_NACK,
         sSTR_MR_SLA_NACK,
         sSTR_STOP,
-#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
+#ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
         sSTR_TRC_RCV_OVR1,
         sSTR_TRC_RCV_OVR2,
 #endif
 };
-#endif
+#endif //SERIAL_DEBUG_TWI_RAW_TRACER
 
-#endif
+#endif //SERIAL_DEBUG_TWI_TRACER
 
 uint16_t twiint_errors;
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
-#define twi_raw_tracer(s) twi_trace(twi_trace_buffer, s)
-#define twi_tracer(d) ((void)0)
-#define twi_tracer_start() ((void)0)
-#define twi_tracer_stop() ((void)0)
-#else
 #ifdef SERIAL_DEBUG_TWI_RAW_TRACER
 #define twi_raw_tracer(s) twi_trace(twi_trace_buffer, s)
 #define twi_tracer(d) ((void)0)
@@ -154,16 +151,15 @@ uint16_t twiint_errors;
 
 #ifdef DEBUG_MODE_TWI_TRACE_TIMEIT
 uint32_t startTime;
-uint16_t elapsed;
+uint16_t elapsedTime;
 
 #define twi_tracer_start() startTime = micros(); twi_trace(twi_trace_buffer, TRC_START)
-#define twi_tracer_stop() elapsed = (uint16_t)(micros() - startTime); twi_trace_bytes(twi_trace_buffer, TRC_STOP, &elapsed, sizeof(elapsed))
+#define twi_tracer_stop() elapsedTime = (uint16_t)(micros() - startTime); twi_trace_bytes(twi_trace_buffer, TRC_STOP, &elapsedTime, sizeof(elapsedTime))
 #else
 #define twi_tracer_start() twi_trace(twi_trace_buffer, TRC_START)
 #define twi_tracer_stop() twi_trace(twi_trace_buffer, TRC_STOP)
 #endif
 
-#endif
 #endif
 #else
 #define twi_raw_tracer(s) ((void)0)
@@ -194,7 +190,7 @@ ISR(TWI_vect) {
 
         case TW_START:
         twi_tracer_start();
-        
+
         start:
             TWDR = pTwiStream->addr;
 
@@ -225,7 +221,7 @@ ISR(TWI_vect) {
             // this is generated after the last byte is received
             twi_tracer(TRC_MR_DATA_NACK);
 
-#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
+#ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
             {
                 uint8_t capacity = buffer_capacity(&rdBuffer);
                 if (!capacity) {
@@ -245,7 +241,7 @@ ISR(TWI_vect) {
             twi_tracer(TRC_MR_DATA_ACK);
             uint8_t capacity = buffer_capacity(&rdBuffer);
 
-#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
+#ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
             if (!capacity) {
                 // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
                 twi_tracer(TRC_RCV_OVR1);
@@ -263,7 +259,7 @@ ISR(TWI_vect) {
                 // data byte received, send ack since we have room for more 
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA);
             } else {
-#ifdef DEBUG_MODE_TWI_TRACE_OVERRUNS
+#ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
                 if (!capacity) {
                     // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
                     twi_tracer(TRC_RCV_OVR2);
@@ -337,10 +333,5 @@ ISR(TWI_vect) {
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
             twi_tracer_stop();
             complete_request(pTwiStream);
-            break;
-
-        stop:
-            TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
-            twi_tracer_stop();
     }
 }

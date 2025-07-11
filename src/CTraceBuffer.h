@@ -14,30 +14,19 @@ typedef struct CTraceBuffer
 {
     uint8_t nCapacity;
     uint8_t nReadCapacity;
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD   
-    uint16_t *pPos;
-    uint16_t data[TWI_TRACE_SIZE];
-#else
     uint8_t *pPos;
     uint8_t traceByte;
     uint8_t traceCount;
     uint8_t haveByte;
-#ifdef DEBUG_MODE_TWI_TRACE_TIMEIT
-#endif
     uint8_t data[TWI_TRACE_SIZE];
-#endif
 } CTwiTraceBuffer_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
-extern void twi_trace(CTwiTraceBuffer_t* thizz, uint16_t data);
-#else
 extern void twi_trace(CTwiTraceBuffer_t* thizz, uint8_t traceByte); // write byte 7 bits, and add count if repeating
 extern void twi_trace_bytes(CTwiTraceBuffer_t* thizz, uint8_t traceByte, void *data, uint8_t count); // write byte 7Bits, and add given data afterwards
-#endif
 
 #ifdef SERIAL_DEBUG_TWI_RAW_TRACER
 #define TRACER_BYTE_COUNT_MARKER    (0x01)
