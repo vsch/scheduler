@@ -250,10 +250,11 @@ uint8_t ByteQueue::addHead(uint8_t data) {
     return data;
 }
 
-ByteQueue::ByteQueue(uint8_t *pData, uint8_t nSize) : pData(pData) {
+ByteQueue::ByteQueue(uint8_t *pData, uint8_t nSize) {
     this->nSize = nSize;
     nHead = 0;
     nTail = 0;
+    this->pData = pData;
 }
 
 void queue_init(CByteQueue_t *thizz, uint8_t *pData, uint8_t nSize) {

@@ -75,10 +75,7 @@ public:
 
     NO_DISCARD inline uint8_t isUnbufferedPending() const { return allFlags(STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED); }
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "HidingNonVirtualFunction"
     ByteStream *getStream(ByteStream *pOther, uint8_t flags);
-#pragma clang diagnostic pop
 
     /**
      * Setup write stream for own buffer.

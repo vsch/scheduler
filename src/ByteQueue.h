@@ -24,17 +24,10 @@ class Controller;
  * Queuing class which stores data in byte format but has word access methods for making it a word based queue.
  */
 
-class ByteQueue {
+class ByteQueue : public CByteQueue{
     friend class ByteStream;
     friend class Controller;
     friend class TwiController2;
-
-    // CAVEAT: nHead is modified in code called from interrupt routine, if size changed from a byte, then code accessing 
-    //      nHead in write buffer will need to be protected with cli()/sei() wrapper
-    uint8_t nSize;
-    uint8_t nHead;
-    uint8_t nTail;
-    uint8_t *pData;
 
 public:
     ByteQueue(uint8_t *pData, uint8_t nSize);

@@ -123,7 +123,7 @@ void ByteStream::triggerComplete() {
     }
 }
 
-#ifdef SERIAL_DEBUG_TWI_DATA
+#ifdef SERIAL_DEBUG
 
 void ByteStream::serialDebugDump(uint8_t id) {
     uint8_t iMax = getCount();
