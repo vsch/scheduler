@@ -3,6 +3,11 @@
 
 #include "common_defs.h"
 
+#define QUEUE_MAX_SIZE      (254)
+
+#define sizeOfQueue(s, t)            (sizeOfArray((s)+1, t))
+#define sizeOfByteQueue(s)          (sizeOfQueue((s), uint8_t))
+
 // Simple queueing both read and write for use in C interrupts and C code, provided from C/C++ code
 // has the same layout as Queue
 typedef struct CByteQueue

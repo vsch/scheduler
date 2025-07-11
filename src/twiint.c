@@ -11,7 +11,10 @@
  *
  * Copyright (c) 2018 Sebastian Goessl
  *
- * Modified for CByteStream and TwiController handling
+ * Modified for CByteStream and CTwiController handling
+ * Added rd Buffer aftwer write request handing
+ * Fixed write followed by read handling
+ * Added TWI status tracing for debugging drivers
  * 
  * Author:     Vladimir Schneider
  * 
@@ -36,8 +39,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-
-
 #include <avr/io.h>         //hardware registers
 #include <avr/interrupt.h>  //interrupt vectors
 #include <util/twi.h>       //TWI status masks
@@ -46,9 +47,14 @@
 
 CByteStream_t *pTwiStream;
 CByteBuffer_t rdBuffer;
-uint8_t haveRead;
+
+#define TWI_FLAGS_HAVE_READ (0x01)
+
+uint8_t twi_flags;
 
 void twiint_init(void) {
+    twi_flags = 0;
+    
     TWBR = TWBR_VALUE;
     TWSR = (TWPS1_VALUE << TWPS1) | (TWPS0_VALUE << TWPS0);
 
@@ -67,19 +73,19 @@ void twiint_start(CByteStream_t *pStream) {
     twiint_flush();
 
     pTwiStream = pStream;
-    haveRead = 0;
+    twi_flags = 0;
     CByteBuffer_t *pRcvBuffer = pStream->pRcvBuffer;
     if (pRcvBuffer) {
         buffer_copy(&rdBuffer, pRcvBuffer);
-        haveRead = 1;
+        twi_flags |= TWI_FLAGS_HAVE_READ;
     }
     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
 }
 
 void twint_cancel_rd(CByteStream_t *pStream) {
-    if (haveRead) {
+    if (twi_flags & TWI_FLAGS_HAVE_READ) {
         if (pTwiStream == pStream) {
-            haveRead = 0;
+            twi_flags &= ~TWI_FLAGS_HAVE_READ;
         }
     }
 }
@@ -178,7 +184,7 @@ ISR(TWI_vect) {
 #endif
         case TW_REP_START:
             twi_tracer(TRC_REP_START);
-            if (haveRead) {
+            if (twi_flags & TWI_FLAGS_HAVE_READ) {
                 TWDR = pTwiStream->addr | 0x01;     // make it a read
                 goto rep_start;
                 // } else {
@@ -207,7 +213,7 @@ ISR(TWI_vect) {
             if (!stream_is_empty(pTwiStream)) {
                 TWDR = stream_get(pTwiStream);
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
-            } else if (haveRead) {
+            } else if (twi_flags & TWI_FLAGS_HAVE_READ) {
                 // do a repeated start then read into the rcv queue
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
             } else {
