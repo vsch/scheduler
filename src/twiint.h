@@ -195,7 +195,7 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define STR_TRC_MT_DATA_NACK "MT_DATA_NACK"   
 #define STR_TRC_MR_SLA_NACK  "MR_SLA_NACK"   
 #define STR_TRC_STOP         "STOP"   
-#ifdef DEBUG_MODE_SINGLE_TWI
+#ifdef DEBUG_MODE_IOX_SINGLE_TWI
 #define STR_TRC_RCV_OVR1     "RCV OVERRUN1"
 #define STR_TRC_RCV_OVR2     "RCV OVERRUN2"
 #endif
