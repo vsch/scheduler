@@ -3,7 +3,6 @@
 #include "Arduino.h"
 #include "TraceBuffer.h"
 #include "twiint.h"
-#include "CTraceBuffer.h"
 
 void twi_trace(CTwiTraceBuffer_t *thizz, uint8_t traceByte) {
     ((TraceBuffer *) thizz)->trace(traceByte);
@@ -16,6 +15,64 @@ void twi_trace_bytes(CTwiTraceBuffer_t *thizz, uint8_t traceByte, void *data, ui
 #ifdef CONSOLE_DEBUG
 #include "tests/FileTestResults_AddResult.h"
 #endif
+
+TraceBuffer TraceBuffer::twiTraceBuffer;
+
+void TraceBuffer::dumpTrace() {
+    cli();
+    dumpTrace(&twiTraceBuffer);
+    sei();
+}
+
+void twi_dump_trace() {
+    TraceBuffer::dumpTrace();
+}
+
+// IMPORTANT: called with interrupts disabled, so it should return with interrupts disabled
+void TraceBuffer::dumpTrace(TraceBuffer *pBuffer) {
+    if (!(twiint_flags & TWI_FLAGS_TRC_HAD_EMPTY) || !pBuffer->isEmpty()) {
+        if (pBuffer->isEmpty()) {
+            twiint_flags |= TWI_FLAGS_TRC_HAD_EMPTY;
+        } else {
+            twiint_flags &= ~TWI_FLAGS_TRC_HAD_EMPTY;
+        }
+
+        // set trace pending and wait for TWI to be idle so we don't mess up the twi interrupt timing
+        twiint_flags |= TWI_FLAGS_TRC_PENDING;
+
+#ifndef CONSOLE_DEBUG
+        serialDebugPrintf_P(PSTR("Waiting for TWI TRACER. "));
+        uint32_t start = micros();
+        uint32_t timeoutMic = TWI_WAIT_TIMEOUT * 1000L;
+
+        sei();
+        while (twiint_busy()) {
+            uint32_t diff = micros() - start;
+            if (diff >= timeoutMic) {
+                serialDebugPrintf_P(PSTR("timed out %dms. "), TWI_WAIT_TIMEOUT);
+                break;
+            }
+        }
+        cli();
+        serialDebugPrintf_P(PSTR("done.\n"));
+#endif
+
+        TraceBuffer traceBuffer;
+
+        // make a copy and clear the trace queue
+        traceBuffer.copyFrom(pBuffer);
+        pBuffer->reset();
+
+        twiint_flags &= ~TWI_FLAGS_TRC_PENDING;
+
+        // enable interrupts so twi processing can proceed
+        sei();
+
+        traceBuffer.dump();
+
+        cli();
+    }
+}
 
 void TraceBuffer::dump() {
     startRead();

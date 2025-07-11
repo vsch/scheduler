@@ -25,16 +25,6 @@ CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSiz
     return (CByteStream_t *) twiController.processRequest(addr, pData, nSize, pRcvBuffer);
 }
 
-#ifdef SERIAL_DEBUG_TWI_TRACER
-
-void twi_dump_trace() {
-    cli();
-    twiController.dumpTrace();
-    sei();
-}
-
-#endif
-
 #ifdef SERIAL_DEBUG_DETAIL_TWI_STATS
 uint32_t twi_send_time = 0;
 uint16_t twi_send_bytes = 0;
@@ -68,14 +58,15 @@ uint8_t twi_wait_sent(CByteStream_t *pStream) {
             twint_cancel_rd(pStream);
             sei();
 #ifdef SERIAL_DEBUG_TWI_TRACER
-            twi_dump_trace();
+            TraceBuffer::dumpTrace();
 #endif
             serialDebugTwiPrintf_P(PSTR("  TWI: #%d wait_sent timed out %ld.\n"), twiController.getReadStreamId((ByteStream *) pStream), diff / 1000L);
             return 0;
         }
     }
+
 #ifdef SERIAL_DEBUG_TWI_TRACER
-    twi_dump_trace();
+    TraceBuffer::dumpTrace();
 #endif
     return 1;
 }
@@ -104,54 +95,3 @@ CByteStream_t *twi_process_stream() {
     return twi_process_stream_rcv(NULL);
 }
 
-#ifdef SERIAL_DEBUG_TWI_TRACER
-
-// IMPORTANT: called with interrupts disabled, so it should return with interrupts disabled
-void TwiController::dumpTrace() {
-    if (!(flags & CTR_FLAGS_TRC_HAD_EMPTY) || !twiTraceBuffer.isEmpty()) {
-
-        if (twiTraceBuffer.isEmpty()) {
-            flags |= CTR_FLAGS_TRC_HAD_EMPTY;
-        } else {
-            flags &= ~CTR_FLAGS_TRC_HAD_EMPTY;
-        }
-
-        // set trace pending and wait for TWI to be idle so we don't mess up the twi interrupt timing
-        flags |= CTR_FLAGS_TRC_PENDING;
-
-#ifndef CONSOLE_DEBUG
-        serialDebugPrintf_P(PSTR("Waiting for TWI TRACER. "));
-        uint32_t start = micros();
-        uint32_t timeoutMic = TWI_WAIT_TIMEOUT * 1000L;
-
-        sei();
-        while (twiint_busy()) {
-            uint32_t diff = micros() - start;
-            if (diff >= timeoutMic) {
-                serialDebugPrintf_P(PSTR("timed out %dms. "), TWI_WAIT_TIMEOUT);
-                break;
-            }
-        }
-        cli();
-        serialDebugPrintf_P(PSTR("done.\n"));
-#endif
-
-        TraceBuffer traceBuffer;
-
-        // make a copy and clear the trace queue
-        traceBuffer.copyFrom(&twiTraceBuffer);
-        twiTraceBuffer.reset();
-
-        flags &= ~CTR_FLAGS_TRC_PENDING;
-
-        // enable interrupts so twi processing can proceed
-        sei();
-
-        traceBuffer.dump();
-
-        cli();
-    }
-}
-
-#endif
-    

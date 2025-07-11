@@ -30,8 +30,6 @@ public:
 #endif        
         
     }
-    
-    void dumpTrace() override;
 };
 
 extern TwiController twiController;

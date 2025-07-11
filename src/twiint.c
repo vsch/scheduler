@@ -47,13 +47,11 @@
 
 CByteStream_t *pTwiStream;
 CByteBuffer_t rdBuffer;
-
-#define TWI_FLAGS_HAVE_READ     (0x01)
-
-uint8_t twi_flags;
+uint16_t twiint_errors;
+uint8_t twiint_flags;
 
 void twiint_init(void) {
-    twi_flags = 0;
+    twiint_flags = 0;
 
     TWBR = TWBR_VALUE;
     TWSR = (TWPS1_VALUE << TWPS1) | (TWPS0_VALUE << TWPS0);
@@ -73,19 +71,19 @@ void twiint_start(CByteStream_t *pStream) {
     twiint_flush();
 
     pTwiStream = pStream;
-    twi_flags &= ~TWI_FLAGS_HAVE_READ;
+    twiint_flags &= ~TWI_FLAGS_HAVE_READ;
     CByteBuffer_t *pRcvBuffer = pStream->pRcvBuffer;
     if (pRcvBuffer) {
         buffer_copy(&rdBuffer, pRcvBuffer);
-        twi_flags |= TWI_FLAGS_HAVE_READ;
+        twiint_flags |= TWI_FLAGS_HAVE_READ;
     }
     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
 }
 
 void twint_cancel_rd(CByteStream_t *pStream) {
-    if (twi_flags & TWI_FLAGS_HAVE_READ) {
+    if (twiint_flags & TWI_FLAGS_HAVE_READ) {
         if (pTwiStream == pStream) {
-            twi_flags &= ~TWI_FLAGS_HAVE_READ;
+            twiint_flags &= ~TWI_FLAGS_HAVE_READ;
         }
     }
 }
@@ -137,8 +135,6 @@ PGM_P const trcStrings[] PROGMEM = {
 
 #endif //SERIAL_DEBUG_TWI_TRACER
 
-uint16_t twiint_errors;
-
 #ifdef SERIAL_DEBUG_TWI_TRACER
 #ifdef SERIAL_DEBUG_TWI_RAW_TRACER
 #define twi_raw_tracer(s) twi_trace(twi_trace_buffer, s)
@@ -180,7 +176,7 @@ ISR(TWI_vect) {
 #endif
         case TW_REP_START:
             twi_tracer(TRC_REP_START);
-            if (twi_flags & TWI_FLAGS_HAVE_READ) {
+            if (twiint_flags & TWI_FLAGS_HAVE_READ) {
                 TWDR = pTwiStream->addr | 0x01;     // make it a read
                 goto rep_start;
                 // } else {
@@ -209,7 +205,7 @@ ISR(TWI_vect) {
             if (!stream_is_empty(pTwiStream)) {
                 TWDR = stream_get(pTwiStream);
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE);
-            } else if (twi_flags & TWI_FLAGS_HAVE_READ) {
+            } else if (twiint_flags & TWI_FLAGS_HAVE_READ) {
                 // do a repeated start then read into the rcv queue
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
             } else {

@@ -6,6 +6,10 @@
 #include "ByteQueue.h"
 #include "Mutex.h"
 
+#ifdef INCLUDE_TWI_INT
+#include "twiint.h"
+#endif
+
 #ifdef SERIAL_DEBUG_TWI_TRACER
 
 #include "TraceBuffer.h"
@@ -50,8 +54,6 @@ extern TraceBuffer twiTraceBuffer;
       )
 
 #define CTR_FLAGS_REQ_AUTO_START      (0x01)          // auto start requests when process request is called, default
-#define CTR_FLAGS_TRC_PENDING         (0x02)          // auto start requests when process request is called, default
-#define CTR_FLAGS_TRC_HAD_EMPTY       (0x04)          // only dump empty if had non-empty before
 
 class Controller : public Task {
 protected:
@@ -102,7 +104,7 @@ public:
 			, readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize)))
             , maxStreams(maxStreams)
             , maxTasks(maxTasks)
-            , writeBufferSize(writeBufferSize), flags(flags | CTR_FLAGS_TRC_HAD_EMPTY) {
+            , writeBufferSize(writeBufferSize), flags(flags) {
     /* @formatter:on */
         // now initialize all the read Streams
 
@@ -219,7 +221,7 @@ public:
     }
 
     NO_DISCARD uint8_t isTracePending() const {
-        return flags & CTR_FLAGS_TRC_PENDING;
+        return twiint_flags & TWI_FLAGS_TRC_PENDING;
     }
 
     void setRequestAutoStart() {
@@ -485,11 +487,6 @@ public:
     };
 
     // IMPORTANT: called with interrupts disabled
-#ifdef SERIAL_DEBUG_TWI_TRACER
-    virtual void dumpTrace() = 0;
-#endif
-
-    // IMPORTANT: called with interrupts disabled
     void handleCompletedRequests() {
         while (!completedStreams.isEmpty()) {
             const uint8_t head = completedStreams.removeHead();
@@ -519,7 +516,7 @@ public:
         handleCompletedRequests();
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-        dumpTrace();
+        TraceBuffer::dumpTrace();
 #endif
 
         startNextRequest();

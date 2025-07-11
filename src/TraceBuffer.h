@@ -5,6 +5,7 @@
 
 #include "common_defs.h"
 #include "CTraceBuffer.h"
+#include "twiint.h"
 
 struct TraceBuffer : public CTraceBuffer {
 
@@ -52,6 +53,7 @@ public:
         traceByte = 0;
         traceCount = 0;
         haveByte = 0;
+        nextAfterStop = 0;
     }
 
     void trace(uint8_t traceByte) {
@@ -86,9 +88,14 @@ public:
             while (count--) {
                 *pPos++ = *bytes++;
             }
+            
+            if (traceByte == TRC_STOP) {
+                nextAfterStop = pPos - this->data;
+            }
         } else {
             // no room, terminate current trace frame
             nCapacity = 0;
+            nextAfterStop = pPos - this->data;
         }
     }
 
@@ -108,6 +115,10 @@ public:
                 *pPos++ = traceByte;
                 nCapacity--;
             }
+            
+            if (traceByte == TRC_STOP || !nCapacity) {
+                nextAfterStop = pPos - this->data;
+            }
 
             traceByte = 0;
             traceCount = 0;
@@ -116,6 +127,7 @@ public:
     }
 
     void copyFrom(TraceBuffer *pOther) {
+        // TODO: copy only up to the nextAfterStop so we trace complete frames, unless the trace buffer is full
         memcpy(this, pOther, sizeof(CTwiTraceBuffer_t));
 
         // this is not copied correctly
@@ -163,7 +175,29 @@ public:
     }
 
     void dump();
+    
+    static TraceBuffer twiTraceBuffer;
+    static void dumpTrace();
+    
+private:    
+    static void dumpTrace(TraceBuffer *pBuffer);
 };
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef SERIAL_DEBUG_TWI_TRACER
+
+extern void twi_dump_trace();
+
+#endif
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //ARDUINOPROJECTMODULE_DEBUG_TRACEBUFFER_H
 

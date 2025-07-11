@@ -5,8 +5,6 @@
 #include <stdint.h>     //uint8_t type
 #include "CByteStream.h"
 
-#define TWI_WAIT_TIMEOUT    (50)
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -38,10 +36,6 @@ extern uint8_t twi_wait_sent(CByteStream_t *pStream);
  * @return       pointer to last request, can be used to wait for completion of the send
  */
 extern CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer);
-
-#ifdef SERIAL_DEBUG_TWI_TRACER
-extern void twi_dump_trace();
-#endif
 
 #ifdef __cplusplus
 }

@@ -18,6 +18,7 @@ typedef struct CTraceBuffer
     uint8_t traceByte;
     uint8_t traceCount;
     uint8_t haveByte;
+    uint8_t nextAfterStop;           // index of trace after last stop
     uint8_t data[TWI_TRACE_SIZE];
 } CTwiTraceBuffer_t;
 
