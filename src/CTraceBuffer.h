@@ -35,9 +35,8 @@ extern "C" {
 #ifdef SERIAL_DEBUG_TWI_RAW_TRACER_WORD
 extern void twi_trace(CTwiTraceBuffer_t* thizz, uint16_t data);
 #else
-extern void twi_trace(CTwiTraceBuffer_t* thizz, uint8_t data); // write byte 7 bits, and add count if repeating
-extern void twi_trace_start(CTwiTraceBuffer_t* thizz); // write byte 7 bits, and add count if repeating
-extern void twi_trace_stop(CTwiTraceBuffer_t* thizz); // write byte 7 bits, and add count if repeating
+extern void twi_trace(CTwiTraceBuffer_t* thizz, uint8_t traceByte); // write byte 7 bits, and add count if repeating
+extern void twi_trace_bytes(CTwiTraceBuffer_t* thizz, uint8_t traceByte, void *data, uint8_t count); // write byte 7Bits, and add given data afterwards
 #endif
 
 #ifdef SERIAL_DEBUG_TWI_RAW_TRACER

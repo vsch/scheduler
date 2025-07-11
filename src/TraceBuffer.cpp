@@ -13,41 +13,21 @@ void twi_trace(CTwiTraceBuffer_t *thizz, uint16_t data) {
 
 #else
 
-void twi_trace(CTwiTraceBuffer_t *thizz, uint8_t data) {
-    ((TraceBuffer *) thizz)->trace(data);
+void twi_trace(CTwiTraceBuffer_t *thizz, uint8_t traceByte) {
+    ((TraceBuffer *) thizz)->trace(traceByte);
 }
 
-void twi_trace_start(CTwiTraceBuffer_t *thizz) {
-#ifdef DEBUG_MODE_TWI_TRACE_TIMEIT
-    uint32_t startuS = micros();
-    twi_trace(thizz, TRC_START);
-    ((TraceBuffer *) thizz)->traceBytes(&startuS, sizeof(startuS));
-#else
-    twi_trace(thizz, TRC_START);
-#endif
+void twi_trace_bytes(CTwiTraceBuffer_t *thizz, uint8_t traceByte, void *data, uint8_t count) {
+    ((TraceBuffer *) thizz)->traceBytes(traceByte, data, count);
 }
 
-void twi_trace_stop(CTwiTraceBuffer_t *thizz) {
-#ifdef DEBUG_MODE_TWI_TRACE_TIMEIT
-    uint32_t startuS = micros();
-    twi_trace(thizz, TRC_STOP);
-    ((TraceBuffer *) thizz)->traceBytes(&startuS, sizeof(startuS));
-#else
-    twi_trace(thizz, TRC_STOP);
-#endif
-}
-
-#endif
+#endif  //SERIAL_DEBUG_TWI_RAW_TRACER_WORD
 
 #ifdef CONSOLE_DEBUG
 #include "tests/FileTestResults_AddResult.h"
 #endif
 
 void TraceBuffer::dump() {
-#ifdef DEBUG_MODE_TWI_TRACE_TIMEIT
-    uint32_t startTime = 0;
-    uint32_t endTime = 0;
-#endif
     startRead();
 
     serialDebugPrintf_P(PSTR("TWI Trc: %d {"), getReadCapacity());
@@ -98,14 +78,10 @@ void TraceBuffer::dump() {
             const char *pStr = (const char *) pgm_read_ptr(trcStrings + trc);
 
 #ifdef DEBUG_MODE_TWI_TRACE_TIMEIT
-            if (trc == TRC_START) {
-                readBytes(&startTime, sizeof(startTime));
-                endTime = startTime;
-                serialDebugPrintf_P(PSTR("  %S"), pStr);
-            } else if (trc == TRC_STOP) {
-                readBytes(&endTime, sizeof(endTime));
-                endTime -= startTime;
-                serialDebugPrintf_P(PSTR("  %S(%dus)"), pStr, endTime > 32767 ? 32767 : (int16_t)endTime);
+            if (trc == TRC_STOP) {
+                uint16_t elapsedMicros;
+                readBytes(&elapsedMicros, sizeof(elapsedMicros));
+                serialDebugPrintf_P(PSTR("  %S(%dus)"), pStr, elapsedMicros);
             } else 
 #endif
 

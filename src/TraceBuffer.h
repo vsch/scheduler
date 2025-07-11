@@ -70,9 +70,9 @@ public:
     }
 #else
 
-    void trace(uint8_t byte) {
+    void trace(uint8_t traceByte) {
         if (haveByte) {
-            if (traceByte == byte) {
+            if (this->traceByte == traceByte) {
                 if (traceCount < 255) {
                     traceCount++;
                 }
@@ -82,35 +82,43 @@ public:
             }
         }
 
-        traceByte = byte;
+        this->traceByte = traceByte;
         traceCount = 1;
         haveByte = 1;
     }
 
 #ifdef DEBUG_MODE_TWI_TRACE_TIMEIT
-    void traceBytes(void *data, uint8_t count) {
-        storeTrace();
-        uint8_t *bytes = (uint8_t *)data;
 
-        if (nCapacity >= count) {
-            nCapacity -= count;
+    void traceBytes(uint8_t traceByte, void *data, uint8_t count) {
+        storeTrace();
+
+        if (nCapacity >= count + 1) {
+            uint8_t *bytes = (uint8_t *) data;
+
+            nCapacity -= count + 1;
+
+            *pPos++ = traceByte;
 
             while (count--) {
                 *pPos++ = *bytes++;
             }
+        } else {
+            // no room, terminate current trace frame
+            nCapacity = 0;
         }
     }
 
     void readBytes(void *data, uint8_t count) {
         if (nReadCapacity >= count) {
             nReadCapacity -= count;
-            uint8_t *bytes = (uint8_t *)data;
+            uint8_t *bytes = (uint8_t *) data;
 
             while (count--) {
                 *bytes++ = *pPos++;
             }
         }
     }
+
 #endif
 
     void storeTrace() {

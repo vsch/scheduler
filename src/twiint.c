@@ -145,8 +145,18 @@ uint16_t twiint_errors;
 #else
 #define twi_raw_tracer(s) ((void)0)
 #define twi_tracer(d) twi_trace(twi_trace_buffer, (d))
-#define twi_tracer_start() twi_trace_start(twi_trace_buffer)
-#define twi_tracer_stop() twi_trace_stop(twi_trace_buffer)
+
+#ifdef DEBUG_MODE_TWI_TRACE_TIMEIT
+uint32_t startTime;
+uint16_t elapsed;
+
+#define twi_tracer_start() startTime = micros(); twi_trace(twi_trace_buffer, TRC_START)
+#define twi_tracer_stop() elapsed = (uint16_t)(micros() - startTime); twi_trace_bytes(twi_trace_buffer, TRC_STOP, &elapsed, sizeof(elapsed))
+#else
+#define twi_tracer_start() twi_trace(twi_trace_buffer, TRC_START)
+#define twi_tracer_stop() twi_trace(twi_trace_buffer, TRC_STOP)
+#endif
+
 #endif
 #endif
 #else
@@ -177,7 +187,8 @@ ISR(TWI_vect) {
             goto start;
 
         case TW_START:
-            twi_tracer_start();
+        twi_tracer_start();
+        
         start:
             TWDR = pTwiStream->addr;
 
@@ -312,7 +323,7 @@ ISR(TWI_vect) {
 #ifdef SERIAL_DEBUG_TWI_TRACER
             twi_tracer(twsr);
             //twi_tracer(twsr & TW_STATUS_MASK);
-#endif            
+#endif
         error:
             twiint_errors++;
 
