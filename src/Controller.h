@@ -166,6 +166,11 @@ public:
         startBufferSize = writeBuffer.getCapacity();
     }
 
+    void dumpResourceTrace(PGM_P id);
+    
+    void releaseResourceLock();
+
+private:    
     void updateResourceTrace() {
         uint8_t tmp = freeReadStreams.getCount();
         if (tmp < startStreams) {
@@ -197,18 +202,16 @@ public:
             if (usedTasks < tmp) { usedTasks = tmp; }
         }
     }
-
-    void dumpResourceTrace();
-
+    
+public:
 #else
 
     inline void startResourceTrace() {}
+    inline void dumpResourceTrace() {}
 
-    inline void updateResourceTrace() {}
-
-    inline void updateResourcePreLockTrace() {}
-
-    inline void updateResourceLockTrace() {}
+    // inline void updateResourceTrace() {}
+    // inline void updateResourcePreLockTrace() {}
+    // inline void updateResourceLockTrace() {}
 
 #endif
 
@@ -264,38 +267,7 @@ public:
      *                  resources
      */
 
-    uint8_t willRequire(uint8_t requests, uint8_t bytes) {
-        uint8_t adjBytes = RESERVATIONS_BYTES(bytes);
-        if (bytes > adjBytes || bytes > writeBuffer.getSize() || requests > 8) {
-            // cannot ever satisfy these requirements
-            return NULL_BYTE;
-        }
-
-        if (reservationLock.isFree()) {
-            // NOTE: need special processing because there are no waiters. Either, we have the required resources
-            //  and can obtain the reservationLock for the calling task. Otherwise, the reservationLock really needs to
-            //  be taken by the controller so that it can release the lock and have the next task in line get the
-            //  resource. However, this call is from the task's context, so we take the resource for it and transfer to
-            //  the controller task then the call for this task's context will suspend the task and resume it when the
-            //  controller task releases the lock because there are sufficient resources for the next task's processing.
-            if (requests <= freeReadStreams.getCount() && adjBytes <= writeBuffer.getCapacity()) {
-                // can proceed now, overwrite whatever was uncommitted in the write stream
-                writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
-                updateResourcePreLockTrace();
-                reservationLock.reserve();
-                return 0;
-            }
-
-            updateResourceLockTrace();
-            reservationLock.reserve();
-            reservationLock.transfer(scheduler.getTaskId(), this->getIndex());
-        }
-
-        // add to the queue of waiters
-        requirementList.addTail(RESERVATIONS_PACK(requests, adjBytes));
-        updateResourcePreLockTrace();
-        return reservationLock.reserve();
-    }
+    uint8_t willRequire(uint8_t requests, uint8_t bytes);
 
     ByteStream *getWriteStream() {
         return writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
@@ -504,63 +476,9 @@ public:
         }
     }
 
-    void begin() override {
-    }
+    void begin() override;
 
-    void loop() override {
-        uint8_t pendingCount = 0;
-        uint8_t writeCapacity = 0;
-        // serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop start\n"));
-
-        cli();
-        handleCompletedRequests();
-
-#ifdef SERIAL_DEBUG_TWI_TRACER
-        TraceBuffer::dumpTrace();
-#endif
-
-        startNextRequest();
-
-        pendingCount = pendingReadStreams.getCount();
-        writeCapacity = writeBuffer.getCapacity();
-        sei();
-
-        if (!requirementList.isEmpty()) {
-            // have some waiting
-            uint8_t packed = requirementList.peekHead();
-            uint8_t requests = RESERVATIONS_UNPACK_REQ(packed);
-            uint8_t bytes = RESERVATIONS_UNPACK_BYTES(packed);
-
-            if (requests <= freeReadStreams.getCount() && bytes <= writeCapacity) {
-                // let'er rip there are enough free resources
-                serialDebugTwiDataPrintf_P(PSTR("Loop release %d, req: %d, bytes: %d\n"), reservationLock.getOwner(), requests, bytes);
-                requirementList.removeHead();
-                reservationLock.release();
-            }
-        }
-
-        if (pendingCount > 1 && !requirementList.isEmpty()) {
-            // can suspend until there is something to check for.
-            // serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop resume(1)\n"));
-            resume(1);
-        } else if (pendingCount <= 1) {
-            // serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop suspend()\n"));
-            //suspend();
-            resume(100);
-        } else {
-            // resume just in case have completed requests
-#ifdef SERIAL_DEBUG_TWI_DATA
-            if (isSuspended()) {
-                // serialDebugTwiDataPrintf_P(PSTR("Ctr::Loop resume(1)\n"));
-                resume(1);
-            }
-#else
-            resume(1);
-#endif
-        }
-
-        //        serialDebugPrintf_P(PSTR("Ctr::Loop end\n"));
-    }
+    void loop() override;
 
 #ifdef CONSOLE_DEBUG
 
@@ -569,5 +487,22 @@ public:
 
 #endif
 };
+
+
+#ifdef RESOURCE_TRACE
+#define resourceTracePrintf_P(...) printf_P(__VA_ARGS__)
+#define resourceTracePuts_P(...) puts_P(__VA_ARGS__)
+#else
+#define resourceTracePrintf_P(...) ((void)0)
+#define resourceTracePuts_P(...) ((void)0)
+#endif
+
+#ifdef SERIAL_DEBUG_RESOURCE_TRACE
+#define serialDebugResourceTracePrintf_P(...) printf_P(__VA_ARGS__)
+#define serialDebugResourceTracePuts_P(...) puts_P(__VA_ARGS__)
+#else
+#define serialDebugResourceTracePrintf_P(...) ((void)0)
+#define serialDebugResourceTracePuts_P(...) ((void)0)
+#endif
 
 #endif //SCHEDULER_CONTROLLER_H

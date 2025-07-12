@@ -25,6 +25,13 @@ public:
         return queue.isEmpty();
     }
 
+    inline uint8_t getCount() const {
+        return queue.getCount();
+    }
+
+    inline uint8_t getSize() const {
+        return queue.getSize();
+    }
 
     uint8_t reserve(uint8_t taskId);
     /**
