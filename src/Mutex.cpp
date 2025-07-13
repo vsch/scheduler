@@ -23,7 +23,7 @@ uint8_t Mutex::reserve(uint8_t taskId) {
             }
         }
     }
-    return NULL_TASK;
+    return NULL_BYTE;
 }
 
 uint8_t Mutex::release() {
@@ -51,7 +51,7 @@ uint8_t Mutex::transfer(uint8_t fromTaskId, uint8_t toTaskId) {
         scheduler.resume(toTaskId, 0);
         return 0;
     }
-    return NULL_TASK;
+    return NULL_BYTE;
 }
 
 #ifdef CONSOLE_DEBUG

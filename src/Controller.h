@@ -4,11 +4,9 @@
 #include "Arduino.h"
 #include "ByteStream.h"
 #include "ByteQueue.h"
-#include "Mutex.h"
+#include "Res2Lock.h"
 
-#ifdef INCLUDE_TWI_INT
 #include "twiint.h"
-#endif
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
 
@@ -17,40 +15,31 @@
 extern TraceBuffer twiTraceBuffer;
 #endif
 
-#define DIV_ROUNDED_UP(v, d)            (((v)+(d)-1)/(d))
-#define RESERVATIONS_PACK(r, b)         ((((r & 0x07) - 1) << 5) | (DIV_ROUNDED_UP(b,8) > 0x1f ? 0x1f : DIV_ROUNDED_UP(b,8)))
-#define RESERVATIONS_BYTES(b)           ((DIV_ROUNDED_UP(b,8) > 0x1f ? 0x1f : DIV_ROUNDED_UP(b,8))*8)
-#define RESERVATIONS_UNPACK_REQ(p)      ((((p) >> 5) & 0x07) + 1)
-#define RESERVATIONS_UNPACK_BYTES(p)    (((p) & 0x1f)*8)
+#define CTRL_PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)    (sizeOfQueue(maxStreams, uint8_t))
+#define CTRL_COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)       (sizeOfQueue(maxStreams, uint8_t))
+#define CTRL_FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)       (sizeOfQueue(maxStreams, uint8_t))
+#define CTRL_WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)            (sizeOfQueue(writeBufferSize, uint8_t))
+#define CTRL_RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)        (sizeOfRes2LockBuffer(maxTasks))
+#define CTRL_WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)            (0)
+#define CTRL_READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)       (sizeOfArray(maxStreams, ByteStream))
 
-#define PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)    (sizeOfQueue(maxStreams, uint8_t))
-#define COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)       (sizeOfQueue(maxStreams, uint8_t))
-#define FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)       (sizeOfQueue(maxStreams, uint8_t))
-#define WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)            (sizeOfQueue(writeBufferSize, uint8_t))
-#define RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)        (sizeOfQueue(maxTasks, uint8_t))
-#define REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)        (sizeOfQueue(maxTasks, uint8_t))
-#define WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)            (0)
-#define READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)       (sizeOfArray(maxStreams, ByteStream))
-
-#define PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)    (0)
-#define COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)       (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)       (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize)            (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize)        (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize)        (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define WRITE_STREAM_OFFS(maxStreams, maxTasks, writeBufferSize)            (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize) + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize))
-#define READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize)       (PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize) + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize) + WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define CTRL_PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)    (0)
+#define CTRL_COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)       (CTRL_PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define CTRL_FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize)       (CTRL_PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define CTRL_WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize)            (CTRL_PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define CTRL_RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize)        (CTRL_PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define CTRL_WRITE_STREAM_OFFS(maxStreams, maxTasks, writeBufferSize)            (CTRL_PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize))
+#define CTRL_READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize)       (CTRL_PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize) + CTRL_WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize))
 
 // Use this macro to allocate space for all the queues and buffers in the controller
 #define sizeOfControllerBuffer(maxStreams, maxTasks, writeBufferSize) (0\
-        + PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)  /* pendingReadStreams */ \
-        + COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)     /* completedStreams */ \
-        + FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)     /* freeReadStreams */ \
-        + WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)          /* writeBuffer */ \
-        + RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)      /* reservationLock */ \
-        + REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize)      /* requirementList */      \
-        + WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)          /* writeStream actual read streams added to queues */ \
-        + READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)     /* readStreamTable actual read streams added to queues */ \
+        + CTRL_PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)  /* pendingReadStreams */ \
+        + CTRL_COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)     /* completedStreams */ \
+        + CTRL_FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)     /* freeReadStreams */ \
+        + CTRL_WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize)          /* writeBuffer */ \
+        + CTRL_RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize)      /* reservationLock */ \
+        + CTRL_WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize)          /* writeStream actual read streams added to queues */ \
+        + CTRL_READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize)     /* readStreamTable actual read streams added to queues */ \
       )
 
 #define CTR_FLAGS_REQ_AUTO_START      (0x01)          // auto start requests when process request is called, default
@@ -59,10 +48,11 @@ class Controller : public Task {
 protected:
     ByteQueue pendingReadStreams;   // requests waiting to be handleProcessedRequest
     ByteQueue completedStreams;     // requests already processed
+public:    
     ByteQueue freeReadStreams;      // requests for processing available
     ByteQueue writeBuffer;          // shared write byte buffer
-    Mutex reservationLock;          // reservationLock for requests and buffer write, first task will resume when resources it requested in willRequire() become available
-    ByteQueue requirementList;      // byte queue of requirementList: max 8 reservationLock and 31*8 buffer, b7:b5+1 is reservationLock, B4:b0*8 = 248 bytes see Note below.
+    Res2Lock reservationLock;       // reservationLock for requests and buffer write, first task will resume when resources it requested in willRequire() become available
+protected:    
     ByteStream writeStream;         // write stream, must be requested and released in the same task invocation or pending data will not be handleProcessedRequest
     ByteStream *readStreamTable;    // pointer to first element in array of ByteSteam entries FIFO basis
 
@@ -75,12 +65,7 @@ protected:
 public:
 #ifdef RESOURCE_TRACE
     // allow tracing of resource requirements
-    uint8_t startStreams;
-    uint8_t startTasks;
-    uint8_t startBufferSize;
-
     uint8_t usedStreams;
-    uint8_t usedTasks;
     uint8_t usedBufferSize;
 #endif
 
@@ -94,14 +79,13 @@ public:
     /* @formatter:off */     
     Controller(uint8_t *pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize, uint8_t flags = CTR_FLAGS_REQ_AUTO_START)
 
-            : pendingReadStreams(pData + PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-            , completedStreams(pData + COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-            , freeReadStreams(pData + FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
-            , writeBuffer(pData + WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize))
-            , reservationLock(pData + RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize))
-            , requirementList(pData + REQUIREMENT_LIST_OFFS(maxStreams, maxTasks, writeBufferSize), REQUIREMENT_LIST_SIZE(maxStreams, maxTasks, writeBufferSize))
+            : pendingReadStreams(pData + CTRL_PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), CTRL_PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+            , completedStreams(pData + CTRL_COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), CTRL_COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+            , freeReadStreams(pData + CTRL_FREE_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), CTRL_FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
+            , writeBuffer(pData + CTRL_WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize), CTRL_WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize))
+            , reservationLock(pData + CTRL_RESERVATION_LOCK_OFFS(maxStreams, maxTasks, writeBufferSize), CTRL_RESERVATION_LOCK_SIZE(maxStreams, maxTasks, writeBufferSize), maxStreams, writeBufferSize)
             , writeStream(&writeBuffer, 0)
-			, readStreamTable(reinterpret_cast<ByteStream *>(pData + READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize)))
+			, readStreamTable(reinterpret_cast<ByteStream *>(pData + CTRL_READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize)))
             , maxStreams(maxStreams)
             , maxTasks(maxTasks)
             , writeBufferSize(writeBufferSize), flags(flags) {
@@ -121,13 +105,8 @@ public:
             freeReadStreams.addTail(i);
         }
         lastFreeHead = writeBuffer.nHead;
-
 #ifdef RESOURCE_TRACE
-        startStreams = 0;
-        startTasks = 0;
-        startBufferSize = 0;
         usedStreams = 0;
-        usedTasks = 0;
         usedBufferSize = 0;
 #endif
     }
@@ -137,13 +116,12 @@ public:
 
         pendingReadStreams.reset();
         completedStreams.reset();
+        reservationLock.reset();
         sei();
 
         freeReadStreams.reset();
 
         writeBuffer.reset();
-        reservationLock.reset();
-        requirementList.reset();
         writeStream.reset();
 
         for (int i = 0; i < maxStreams; i++) {
@@ -152,67 +130,28 @@ public:
             freeReadStreams.addTail(i);
         }
         lastFreeHead = writeBuffer.nHead;
+        
+#ifdef RESOURCE_TRACE
+        usedStreams = 0;
+        usedBufferSize = 0;
+#endif
     }
 
 #ifdef RESOURCE_TRACE
 
-    //    void startResourceTrace();
-    //    void updateResourceTrace();
-    //    void updateResourcePreLockTrace();
-    //    void updateResourceLockTrace();
     void startResourceTrace() {
-        startStreams = freeReadStreams.getCount();
-        startTasks = reservationLock.queue.getCapacity();
-        startBufferSize = writeBuffer.getCapacity();
+        usedStreams = 0;
+        usedBufferSize = 0;
     }
 
     void dumpResourceTrace(PGM_P id);
     
-    void releaseResourceLock();
-
-private:    
-    void updateResourceTrace() {
-        uint8_t tmp = freeReadStreams.getCount();
-        if (tmp < startStreams) {
-            tmp = startStreams - tmp;
-            if (usedStreams < tmp) { usedStreams = tmp; }
-        }
-
-        tmp = writeBuffer.getCapacity();
-        if (tmp < startBufferSize) {
-            tmp = startBufferSize - tmp;
-            if (usedBufferSize < tmp) { usedBufferSize = tmp; }
-        }
-
-        updateResourceLockTrace();
-    }
-
-    void updateResourceLockTrace() {
-        uint8_t tmp = reservationLock.queue.getCapacity();
-        if (tmp < startTasks) {
-            tmp = startTasks - tmp;
-            if (usedTasks < tmp) { usedTasks = tmp; }
-        }
-    }
-
-    void updateResourcePreLockTrace() {
-        uint8_t tmp = reservationLock.queue.getCapacity();
-        if (tmp < startTasks + 1) {
-            tmp = startTasks - tmp + 1;
-            if (usedTasks < tmp) { usedTasks = tmp; }
-        }
-    }
-    
-public:
 #else
 
     inline void startResourceTrace() {}
     inline void dumpResourceTrace() {}
-
-    // inline void updateResourceTrace() {}
-    // inline void updateResourcePreLockTrace() {}
-    // inline void updateResourceLockTrace() {}
-
+    inline void dumpResourceTrace(PGM_P id) {}
+    
 #endif
 
     uint8_t getReadStreamId(ByteStream *pStream) {
@@ -275,7 +214,12 @@ public:
 
     ByteStream *getStreamRequest() {
         uint8_t head = freeReadStreams.removeHead();
-        updateResourceTrace();
+#ifdef RESOURCE_TRACE
+        usedStreams++;
+#endif
+        cli();
+        reservationLock.useAvailable1(1);
+        sei();
         ByteStream *pStream = readStreamTable + head;
         return pStream;
     }
@@ -296,7 +240,12 @@ public:
         }
 
         uint8_t head = freeReadStreams.removeHead();
-        updateResourceTrace();
+#ifdef RESOURCE_TRACE
+        usedStreams++;
+#endif
+        cli();
+        reservationLock.useAvailable1(1);
+        sei();
         ByteStream *pStream = readStreamTable + head;
         pStream->set_address(addr);
         pStream->pData = pData;
@@ -339,67 +288,7 @@ public:
      * @return                  pointer to read stream or NULL if not handleProcessedRequest because of lack of readStreams
      *                          as made in the willRequire() call.
      */
-    ByteStream *processStream(ByteStream *pWriteStream, CByteBuffer_t *pRcvBuffer = NULL) {
-        uint8_t nextFreeHead;       // where next request head position should start
-
-        if (freeReadStreams.isEmpty()) {
-            return NULL;
-        }
-
-        uint8_t head = freeReadStreams.removeHead();
-        ByteStream *pStream = readStreamTable + head;
-
-        // incorporate tail into buffer if not own buffered stream
-        uint8_t isSharedBuffer = pWriteStream->pData == writeBuffer.pData;
-        uint8_t startProcessing = 0;
-
-        // NOTE: protect from mods in interrupts mid-way through this code
-        cli();
-
-        if (isSharedBuffer) {
-            writeBuffer.updateStreamed(pWriteStream);
-            nextFreeHead = pWriteStream->nTail;
-        }
-
-        // copy the write stream info into read stream for processing
-        pWriteStream->getStream(pStream, isSharedBuffer ? STREAM_FLAGS_RD : STREAM_FLAGS_RD | STREAM_FLAGS_UNBUFFERED);
-
-        if (isSharedBuffer) {
-            // new read stream starts where last read stream left off
-            pStream->nHead = lastFreeHead;
-            lastFreeHead = nextFreeHead;
-
-            updateResourceTrace();
-        }
-
-        // queue it for processing
-        pStream->flags |= STREAM_FLAGS_PENDING;
-        pStream->pRcvBuffer = pRcvBuffer;
-        pendingReadStreams.addTail(head);
-
-        if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
-            // first one, then no-one to start it up but here
-            serialDebugTwiDataPrintf_P(PSTR("AutoStart req %d\n"), head);
-            startProcessing = 1;
-        } else {
-            // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
-            // and new request processing started if needed
-        }
-
-        // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
-        pWriteStream->nHead = pWriteStream->nTail;
-
-        sei();
-
-        if (startProcessing) {
-            pStream->flags |= STREAM_FLAGS_PROCESSING;
-            startProcessingRequest(pStream);
-        }
-
-        // make sure loop task is enabled start our loop task to monitor its completion
-        this->resume(0);
-        return pStream;
-    }
+    ByteStream *processStream(ByteStream *pWriteStream, CByteBuffer_t *pRcvBuffer = NULL);
 
     /**
          * Start processing given request. This should start the interrupt calls for handling TWI data. 
@@ -428,53 +317,10 @@ public:
      * 
      * @param pStream   stream processed
      */
-    void endProcessingRequest(ByteStream *pStream) {
-        pStream->flags &= ~(STREAM_FLAGS_PENDING | STREAM_FLAGS_PROCESSING);
-
-        // make sure it is a shared request stream
-        uint8_t id = getReadStreamId(pStream);
-        if (id < maxStreams) {
-            if (pStream->pData == writeBuffer.pData) {
-                // at this point the buffer used by this request is no longer needed, so the buffer head can be moved to processed request tail.
-                writeBuffer.nHead = pStream->nTail;
-            }
-
-            uint8_t head = pendingReadStreams.removeHead();
-            completedStreams.addTail(head);
-
-            // don't start next request if trace processing is pending
-            if (isRequestAutoStart()) {
-                // start processing next request
-                startNextRequest();
-            }
-
-            // restart loop
-            resume(0);
-        }
-    }
-
-    // IMPORTANT: called with interrupts disabled, but they can be enabled inside the function 
-    //     to allow TWI processing to proceed
-    virtual void requestCompleted(ByteStream *pStream) {
-    };
+    void endProcessingRequest(ByteStream *pStream);
 
     // IMPORTANT: called with interrupts disabled
-    void handleCompletedRequests() {
-        while (!completedStreams.isEmpty()) {
-            const uint8_t head = completedStreams.removeHead();
-            ByteStream *completedStream = getReadStream(head);
-            // serialDebugTwiDataPrintf_P(PSTR("Completing Request: %d \n"), head);
-
-            requestCompleted(completedStream);
-
-            // put its handled info back to writeBuffer and it back in the free queue
-            // unless it is an own buffer request
-            completedStream->triggerComplete();
-            completedStream->flags = 0;
-            completedStream->pRcvBuffer = NULL;
-            freeReadStreams.addTail(getReadStreamId(completedStream));
-        }
-    }
+    void handleCompletedRequests();
 
     void begin() override;
 
@@ -488,6 +334,11 @@ public:
 #endif
 };
 
+#ifdef CONSOLE_DEBUG
+#define printf_P(...)    addActualOutput(__VA_ARGS__)
+#else
+#include <stdio.h>
+#endif
 
 #ifdef RESOURCE_TRACE
 #define resourceTracePrintf_P(...) printf_P(__VA_ARGS__)
@@ -503,6 +354,14 @@ public:
 #else
 #define serialDebugResourceTracePrintf_P(...) ((void)0)
 #define serialDebugResourceTracePuts_P(...) ((void)0)
+#endif
+
+#ifdef SERIAL_DEBUG_RESOURCE_DETAIL_TRACE
+#define serialDebugResourceDetailTracePrintf_P(...) printf_P(__VA_ARGS__)
+#define serialDebugResourceDetailTracePuts_P(...) puts_P(__VA_ARGS__)
+#else
+#define serialDebugResourceDetailTracePrintf_P(...) ((void)0)
+#define serialDebugResourceDetailTracePuts_P(...) ((void)0)
 #endif
 
 #endif //SCHEDULER_CONTROLLER_H

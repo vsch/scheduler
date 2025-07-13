@@ -10,6 +10,7 @@ class Mutex
 {
     friend class Controller;
 
+protected:    
     ByteQueue queue;
 
 public:

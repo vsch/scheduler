@@ -94,8 +94,6 @@ void twiint_flush(void);
  */
 void twint_cancel_rd(CByteStream_t *pStream);
 
-
-
 /**
  * Starts a TWI transmission writing or reading multiple bytes.
  * The address byte should be provided already manipulated by
@@ -124,10 +122,11 @@ void twiint_start(CByteStream_t *pStream);
  */
 void complete_request(CByteStream_t *pStream);
 
+CByteStream_t *twi_get_write_buffer(uint8_t addr);
+
 #define TWI_CO_0_DC_1 (0x40) // Co = 0, D/C = 1
 #define TWI_CO_0_DC_0 (0x00) // Co = 0, D/C = 0
 
-CByteStream_t *twi_get_write_buffer(uint8_t addr);
 
 #define TWI_FLAGS_HAVE_READ           (0x01)
 #define TWI_FLAGS_TRC_PENDING         (0x02)          // trace pending, do not initiate new twi requests
@@ -142,9 +141,11 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define TWI_TRACE_SIZE (32)
 #endif
 
-#include <util/twi.h>
+//#include <util/twi.h>
 
-#ifndef SERIAL_DEBUG_TWI_RAW_TRACER
+#ifdef SERIAL_DEBUG_TWI_RAW_TRACER
+// no trace codes defined, all are raw data
+#else
 #define TRC_BUS_ERROR    (0x00)   
 #define TRC_START        (0x01)   
 #define TRC_REP_START    (0x02)   

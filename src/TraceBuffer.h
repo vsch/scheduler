@@ -115,10 +115,12 @@ public:
                 *pPos++ = traceByte;
                 nCapacity--;
             }
-            
+
+#ifndef SERIAL_DEBUG_TWI_RAW_TRACER
             if (traceByte == TRC_STOP || !nCapacity) {
                 nextAfterStop = pPos - this->data;
             }
+#endif            
 
             traceByte = 0;
             traceCount = 0;
@@ -175,11 +177,12 @@ public:
     }
 
     void dump();
-    
+
     static TraceBuffer twiTraceBuffer;
+
     static void dumpTrace();
-    
-private:    
+
+private:
     static void dumpTrace(TraceBuffer *pBuffer);
 };
 
@@ -187,13 +190,7 @@ private:
 extern "C" {
 #endif
 
-#ifdef SERIAL_DEBUG_TWI_TRACER
-
 extern void twi_dump_trace();
-
-#endif
-
-
 
 #ifdef __cplusplus
 }

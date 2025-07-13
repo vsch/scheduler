@@ -2,6 +2,7 @@
 #define SCHEDULER_QUEUE_H
 
 #include <stdint.h>
+#include <avr/pgmspace.h>
 #include "common_defs.h"
 #include "CByteQueue.h"
 
@@ -79,7 +80,7 @@ public:
     inline uint8_t pop() { return removeTail(); }
     
 #ifdef SERIAL_DEBUG
-    void serialDebugDump();
+    void serialDebugDump(PGM_P name);
 #else
     inline void serialDebugDump() { }
 #endif

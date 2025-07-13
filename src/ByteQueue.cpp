@@ -299,9 +299,11 @@ uint8_t queue_put(CByteQueue_t *thizz, uint8_t data) {
 
 #ifdef SERIAL_DEBUG
 
-void ByteQueue::serialDebugDump() {
+const char strQueue[] PROGMEM = "Queue";
+
+void ByteQueue::serialDebugDump(PGM_P name) {
     uint8_t iMax = getCount();
-    serialDebugPrintf_P(PSTR("Queue: 0x%2.2x {"));
+    serialDebugPrintf_P(PSTR("%S: {"), name ? name : strQueue);
     for (uint8_t i = 0; i < iMax; i++) {
         uint8_t byte = peekHead(i);
         serialDebugPrintf_P(PSTR("  %2.2x"), byte);

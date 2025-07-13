@@ -297,7 +297,7 @@ class LedFlasher : public AsyncTask {
         }
 
         yieldResume(1000);
-        ledLock.release();
+        ledLock.makeAvailable();
         yield();
 
         Serial.print(F("LED Loop"));

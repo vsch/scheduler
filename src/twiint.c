@@ -39,9 +39,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#ifndef CONSOLE_DEBUG
 #include <avr/io.h>         //hardware registers
 #include <avr/interrupt.h>  //interrupt vectors
 #include <util/twi.h>       //TWI status masks
+#endif
+
 #include "twiint.h"
 #include "CByteBuffer.h"
 
@@ -50,6 +53,32 @@ CByteBuffer_t rdBuffer;
 uint16_t twiint_errors;
 uint8_t twiint_flags;
 
+#ifdef CONSOLE_DEBUG
+
+void twiint_init(void) {
+    twiint_flags = 0;
+}
+
+bool twiint_busy(void) {
+    return 0;
+}
+
+void twiint_flush(void) {
+}
+
+void twiint_start(CByteStream_t *pStream) {
+    twiint_flush();
+}
+
+void twint_cancel_rd(CByteStream_t *pStream) {
+    if (twiint_flags & TWI_FLAGS_HAVE_READ) {
+        if (pTwiStream == pStream) {
+            twiint_flags &= ~TWI_FLAGS_HAVE_READ;
+        }
+    }
+}
+
+#else
 void twiint_init(void) {
     twiint_flags = 0;
 
@@ -87,6 +116,8 @@ void twint_cancel_rd(CByteStream_t *pStream) {
         }
     }
 }
+
+#endif // CONSOLE_DEBUG
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
 
@@ -129,13 +160,11 @@ PGM_P const trcStrings[] PROGMEM = {
 #ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
         sSTR_TRC_RCV_OVR1,
         sSTR_TRC_RCV_OVR2,
-#endif
+#endif // SERIAL_DEBUG_WI_TRACE_OVERRUNS
+
 };
 #endif //SERIAL_DEBUG_TWI_RAW_TRACER
 
-#endif //SERIAL_DEBUG_TWI_TRACER
-
-#ifdef SERIAL_DEBUG_TWI_TRACER
 #ifdef SERIAL_DEBUG_TWI_RAW_TRACER
 #define twi_raw_tracer(s) twi_trace(twi_trace_buffer, s)
 #define twi_tracer(d) ((void)0)
@@ -151,18 +180,22 @@ uint16_t elapsedTime;
 
 #define twi_tracer_start() startTime = micros(); twi_trace(twi_trace_buffer, TRC_START)
 #define twi_tracer_stop() elapsedTime = (uint16_t)(micros() - startTime); twi_trace_bytes(twi_trace_buffer, TRC_STOP, &elapsedTime, sizeof(elapsedTime))
-#else
+#else  // DEBUG_MODE_TWI_TRACE_TIMEIT
 #define twi_tracer_start() twi_trace(twi_trace_buffer, TRC_START)
 #define twi_tracer_stop() twi_trace(twi_trace_buffer, TRC_STOP)
-#endif
+#endif // DEBUG_MODE_TWI_TRACE_TIMEIT
 
-#endif
-#else
+#endif //SERIAL_DEBUG_TWI_RAW_TRACER
+
+#else  // SERIAL_DEBUG_TWI_TRACER
 #define twi_raw_tracer(s) ((void)0)
 #define twi_tracer(d) ((void)0)
 #define twi_tracer_start() ((void)0)
 #define twi_tracer_stop() ((void)0)
-#endif
+#endif // SERIAL_DEBUG_TWI_TRACER
+
+
+#ifndef CONSOLE_DEBUG
 
 ISR(TWI_vect) {
 #if SERIAL_DEBUG_TWI_TRACER
@@ -331,3 +364,5 @@ ISR(TWI_vect) {
             complete_request(pTwiStream);
     }
 }
+
+#endif // CONSOLE_DEBUG

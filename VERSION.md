@@ -11,13 +11,13 @@
 ## Version 2.1
 
 * Change: renamed classes and methods, `AsyncTask`, `Mutex`, `Signal`,
-  added byte queue and byte queue stream to use from C interrupts or C
+  added byte resourceReq and byte resourceReq stream to use from C interrupts or C
   code.
 
 ## Version 2.0
 
 * Add: `AsyncTask` type which can use yielding methods from within
-  its loop to release the CPU to other tasks or the main loop. Execution
+  its loop to makeAvailable the CPU to other tasks or the main loop. Execution
   of the code will continue after the call to the yielding method, when
   the scheduler resumes the task.
 
