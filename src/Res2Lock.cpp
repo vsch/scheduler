@@ -22,7 +22,8 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
                                                                , taskQueue.getCount()
                                                                , available1, nAvailable1
                                                                , available2, nAvailable2);
-                        
+
+                        // make it the owner of TWI resourceLock
                         return Mutex::reserve(taskId);
                     } else {
                         serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: suspend: a1:%d > nA1:%d || a2:%d > nA2:%d\n")
@@ -111,9 +112,15 @@ void Res2Lock::makeAvailable(uint8_t available1, uint8_t available2) {
                                                    , nResCount1, available1
                                                    , nResCount2, available2);
 
-            // resume the task, in case it is first 
-            scheduler.resume(taskId, 0);
-            Mutex::reserve(taskId);
+            // CAVEAT: these tasks are already suspended, there is no need to call Mutex::reserve for the newly enabled 
+            //  tasks because if they are not the first, then they will be suspended, but they are already suspended.
+            //  suspened AsyncTasks should not call their yieldSuspend().  
+            if (Mutex::isFree()) {
+                // resume the task, if it is first. 
+                scheduler.resume(taskId, 0);
+            }
+            // add it to the mutex list
+            Mutex::queue.addTail(taskId);
         }
     }
 }
