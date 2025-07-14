@@ -9,7 +9,7 @@
 #define sizeOfByteQueue(s)          (sizeOfQueue((s), uint8_t))
 
 // Simple queueing both read and write for use in C interrupts and C code, provided from C/C++ code
-// has the same layout as Queue
+// has the same layout as Queue.
 typedef struct CByteQueue {
     // CAVEAT: nHead is modified in code called from interrupt routine, if size changed from a byte, then code accessing 
     //      nHead in write buffer will need to be protected with cli()/sei() wrapper

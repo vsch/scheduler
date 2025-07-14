@@ -250,18 +250,14 @@ uint8_t ByteQueue::addHead(uint8_t data) {
     return data;
 }
 
-ByteQueue::ByteQueue(uint8_t *pData, uint8_t nSize) {
-    this->nSize = nSize;
-    nHead = 0;
-    nTail = 0;
-    this->pData = pData;
-}
-
 void queue_init(CByteQueue_t *thizz, uint8_t *pData, uint8_t nSize) {
     thizz->nSize = nSize;
     thizz->nHead = 0;
     thizz->nTail = 0;
     thizz->pData = pData;
+#ifdef DEBUG_MODE_QUEUE_MEMORY
+    memset(pData, DEBUG_MODE_QUEUE_MEMORY, nSize);
+#endif
 }
 
 // test if any more data to read
@@ -302,11 +298,24 @@ uint8_t queue_put(CByteQueue_t *thizz, uint8_t data) {
 const char strQueue[] PROGMEM = "Queue";
 
 void ByteQueue::serialDebugDump(PGM_P name) {
-    uint8_t iMax = getCount();
-    serialDebugPrintf_P(PSTR("%S: {"), name ? name : strQueue);
+    uint8_t iMax = getSize();
+    static const char strPrefix[] PROGMEM = " ["; 
+    static const char strEmpty[] PROGMEM = " []"; 
+    static const char strSuffix[] PROGMEM = " ]"; 
+    static const char strNull[] PROGMEM = ""; 
+    serialDebugPrintf_P(PSTR("%S: @ 0x%2.2X {"), name ? name : strQueue, pData);
     for (uint8_t i = 0; i < iMax; i++) {
-        uint8_t byte = peekHead(i);
-        serialDebugPrintf_P(PSTR("  %2.2x"), byte);
+        uint8_t byte = pData[i];
+        PGM_P prefix = strNull;
+        
+        if (i == nHead && i == nTail) {
+            prefix = strEmpty;
+        } else if (i == nHead) {
+            prefix = strPrefix;
+        } else if (i == nTail) {
+            prefix = strSuffix;
+        }
+        serialDebugPrintf_P(PSTR("%S %2.2x"), prefix, byte);
     }
     serialDebugPrintf_P(PSTR(" }\n"));
 }

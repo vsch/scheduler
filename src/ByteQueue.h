@@ -31,7 +31,9 @@ class ByteQueue : public CByteQueue{
     friend class TwiController2;
 
 public:
-    ByteQueue(uint8_t *pData, uint8_t nSize);
+    inline ByteQueue(uint8_t *pData, uint8_t nSize) {
+        queue_init(this, pData, nSize);
+    }
 
     void reset() {
         nHead = nTail = 0;

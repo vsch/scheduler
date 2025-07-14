@@ -85,32 +85,33 @@ void Controller::dumpResourceTrace(PGM_P id) {
 #endif // RESOURCE_TRACE
 
 uint8_t Controller::willRequire(uint8_t requests, uint8_t bytes) {
-    // serialDebugResourceTracePrintf_P(PSTR("Ctrl::require summary: a1:%d - r1:%d, a2:%d - r2:%d\n")
-    //                                  , reservationLock.getAvailable1()
-    //                                  , freeReadStreams.getCount()
-    //                                  , reservationLock.getAvailable2()
-    //                                  , writeBuffer.getCapacity());
-    
     cli();
     uint8_t reserved = reservationLock.reserve(requests, bytes);
     sei();
 
     if (reserved == NULL_BYTE) {
         // cannot ever satisfy these requirements
-        serialDebugResourceTracePrintf_P(PSTR("Ctrl:: never satisfied: R %d > maxR %d || B > maxB %d\n")
-                                         , requests, reservationLock.getMaxAvailable1()
-                                         , bytes, reservationLock.getMaxAvailable2());
+        serialDebugResourceDetailTracePrintf_P(PSTR("Ctrl:: never satisfied: R %d > maxR %d || B > maxB %d\n")
+                                               , requests, reservationLock.getMaxAvailable1()
+                                               , bytes, reservationLock.getMaxAvailable2());
     } else if (reserved) {
-        serialDebugResourceTracePrintf_P(PSTR("Ctrl:: suspend lock %d, %d avail %d %d \n"), requests, bytes, reservationLock.getAvailable1(), reservationLock.getAvailable2());
-    } else {
-        // serialDebugResourceTracePrintf_P(PSTR("Ctrl:: reserved lock %d, %d\n"), requests, bytes);
+        serialDebugResourceDetailTracePrintf_P(PSTR("Ctrl:: suspend lock %d, %d avail %d %d \n"), requests, bytes, reservationLock.getAvailable1(), reservationLock.getAvailable2());
     }
 
     return reserved;
 }
 
+#ifdef SERIAL_DEBUG_RESOURCE_DETAIL_TRACE
+
+void Controller::dumpReservationLockData() {
+    serialDebugResourceDetailTracePrintf_P(PSTR("Ctrl:: res2Lock %d %d, Max: %d %d\n")
+                                           , reservationLock.getAvailable1(), reservationLock.getAvailable2()
+                                           , reservationLock.getMaxAvailable1(), reservationLock.getMaxAvailable2());
+}
+
+#endif
+
 void Controller::begin() {
-    
 }
 
 void Controller::loop() {
@@ -140,27 +141,12 @@ void Controller::endProcessingRequest(ByteStream *pStream) {
             // at this point the buffer used by this request is no longer needed, so the buffer head can be moved to processed request tail.
             availBytes = writeBuffer.getCapacity();
             writeBuffer.nHead = pStream->nTail;
-            
-            // serialDebugResourceTracePrintf_P(PSTR("Ctrl::end proc %d: before:%d, cap after:%d, diff:%d\n")
-            //                                  , id
-            //                                  , availBytes
-            //                                  , writeBuffer.getCapacity()
-            //                                  , writeBuffer.getCapacity() - availBytes);
-            
             availBytes = writeBuffer.getCapacity() - availBytes;
         }
 
         uint8_t head = pendingReadStreams.removeHead();
         completedStreams.addTail(head);
         reservationLock.makeAvailable(0, availBytes);
-        
-        // serialDebugResourceTracePrintf_P(PSTR("Ctrl::end summary %d: a1:%d - r1:%d, a2:%d - r2:%d\n")
-        //                                  , id
-        //                                  , reservationLock.getAvailable1()
-        //                                  , freeReadStreams.getCount()
-        //                                  , reservationLock.getAvailable2()
-        //                                  , writeBuffer.getCapacity());
-
 
         // don't start next request if trace processing is pending
         if (isRequestAutoStart()) {
@@ -178,7 +164,6 @@ void Controller::handleCompletedRequests() {
     while (!completedStreams.isEmpty()) {
         const uint8_t id = completedStreams.removeHead();
         ByteStream *completedStream = getReadStream(id);
-        // serialDebugTwiDataPrintf_P(PSTR("Completing Request: %d \n"), head);
 
         // put its handled info back to writeBuffer and it back in the free queue
         // unless it is an own buffer request
@@ -188,13 +173,6 @@ void Controller::handleCompletedRequests() {
         freeReadStreams.addTail(id);
 
         reservationLock.makeAvailable(1, 0);
-
-        // serialDebugResourceTracePrintf_P(PSTR("Ctrl::handle summary %d: a1:%d - r1:%d, a2:%d - r2:%d\n")
-        //                                  , id
-        //                                  , reservationLock.getAvailable1()
-        //                                  , freeReadStreams.getCount()
-        //                                  , reservationLock.getAvailable2()
-        //                                  , writeBuffer.getCapacity());
     }
 }
 
@@ -209,7 +187,7 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream, CByteBuffer_t *p
 #ifdef RESOURCE_TRACE
     usedStreams++;
 #endif
-    
+
     ByteStream *pStream = readStreamTable + head;
 
     // incorporate tail into buffer if not own buffered stream
@@ -228,13 +206,6 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream, CByteBuffer_t *p
 
         writeBuffer.updateStreamed(pWriteStream);
         nextFreeHead = pWriteStream->nTail;
-
-        // serialDebugResourceTracePrintf_P(PSTR("Ctrl::proc summary: a1:%d - r1:%d, a2:%d - r2:%d\n")
-        //                                  , reservationLock.getAvailable1()
-        //                                  , freeReadStreams.getCount()
-        //                                  , reservationLock.getAvailable2()
-        //                                  , writeBuffer.getCapacity());
-
     }
 
     // copy the write stream info into read stream for processing
