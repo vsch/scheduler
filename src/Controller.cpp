@@ -1,6 +1,7 @@
 #include "Scheduler.h"
 #include "Controller.h"
 #include "twiint.h"
+#include "debug_config.h"
 
 #ifdef CONSOLE_DEBUG
 
@@ -84,7 +85,7 @@ void Controller::dumpResourceTrace(PGM_P id) {
 
 #endif // RESOURCE_TRACE
 
-uint8_t Controller::willRequire(uint8_t requests, uint8_t bytes) {
+uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
     cli();
     uint8_t reserved = reservationLock.reserve(requests, bytes);
     sei();

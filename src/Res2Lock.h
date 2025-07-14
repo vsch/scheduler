@@ -5,20 +5,23 @@
 #include "Scheduler.h"
 #include "ByteQueue.h"
 #include "Mutex.h"
+#include "debug_config.h"
 
 // sharable resource to be used in Task and AsyncTask calls
 
-#define RLOCK_TASK_QUEUE_SIZE(maxTasks)             (sizeOfQueue(maxTasks, uint8_t))
+#define RLOCK_MUTEX_SIZE(maxTasks)                 (sizeOfQueue((maxTasks), uint8_t))
+#define RLOCK_TASK_QUEUE_SIZE(maxTasks)             (sizeOfQueue((maxTasks), uint8_t))
 #define RLOCK_RES_QUEUE_SIZE(maxTasks)              (sizeOfQueue((maxTasks)*2, uint8_t))
 
-#define RLOCK_TASK_QUEUE_OFFS(maxTasks)             (0)
+#define RLOCK_MUTEX_OFFS(maxTasks)                  (0)
+#define RLOCK_TASK_QUEUE_OFFS(maxTasks)             (RLOCK_MUTEX_OFFS(maxTasks) + RLOCK_MUTEX_SIZE(maxTasks))
 #define RLOCK_RES_QUEUE_OFFS(maxTasks)              (RLOCK_TASK_QUEUE_OFFS(maxTasks) + RLOCK_TASK_QUEUE_SIZE(maxTasks))
 #define RLOCK_NEXT_MEMBER_OFFS(maxTasks)            (RLOCK_RES_QUEUE_OFFS(maxTasks) + RLOCK_RES_QUEUE_SIZE(maxTasks))
 
 // Use this macro to allocate space for Res2Lock queues
 #define sizeOfRes2LockBuffer(maxTasks)               (RLOCK_NEXT_MEMBER_OFFS(maxTasks))
 
-class Res2Lock {
+class Res2Lock : private Mutex {
     friend class Controller;
 
     ByteQueue taskQueue;            // required resources of waiting tasks
@@ -31,7 +34,8 @@ class Res2Lock {
 
 public:
     inline Res2Lock(uint8_t *semaBuffer, uint8_t maxTasks, uint8_t available1, uint8_t available2)
-            : taskQueue(semaBuffer + RLOCK_TASK_QUEUE_OFFS(maxTasks), RLOCK_TASK_QUEUE_SIZE(maxTasks))
+            : Mutex(semaBuffer + RLOCK_MUTEX_OFFS(maxTasks), RLOCK_MUTEX_SIZE(maxTasks))
+              , taskQueue(semaBuffer + RLOCK_TASK_QUEUE_OFFS(maxTasks), RLOCK_TASK_QUEUE_SIZE(maxTasks))
               , resQueue(semaBuffer + RLOCK_RES_QUEUE_OFFS(maxTasks), RLOCK_RES_QUEUE_SIZE(maxTasks))
               , nMaxAvailable1(available1)
               , nMaxAvailable2(available2) {
@@ -41,6 +45,7 @@ public:
 
     // IMPORTANT: must be called with interrupts disabled 
     inline void reset() {
+        Mutex::reset();
         nAvailable1 = nMaxAvailable1;
         nAvailable2 = nMaxAvailable2;
         taskQueue.reset();
@@ -48,7 +53,7 @@ public:
     }
 
     inline uint8_t isEmpty() const {
-        return taskQueue.isEmpty();
+        return Mutex::isFree() && taskQueue.isEmpty();
     }
 
     inline uint8_t isAvailable(uint8_t available1, uint8_t available2) const {
@@ -112,6 +117,10 @@ public:
     uint8_t reserve(uint8_t available1, uint8_t available2) {
         Task *pTask = scheduler.getTask();
         return pTask ? reserve(pTask->getIndex(), available1, available2) : NULL_TASK;
+    }
+    
+    inline void release() {
+        Mutex::release();
     }
 
     /**

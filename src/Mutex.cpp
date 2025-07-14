@@ -1,16 +1,19 @@
 #include <Arduino.h>
 #include "Mutex.h"
 #include "Scheduler.h"
+#include "Controller.h"
 
 uint8_t Mutex::reserve(uint8_t taskId) {
     if (scheduler.isValidId(taskId)) {
         if (queue.isEmpty()) {
             // available
             queue.addTail(taskId);
+            serialDebugResourceDetailTracePrintf_P(PSTR("Mutex:: reserved\n"));
             return 0;
         } else {
             // not available, queue up the task
             queue.addTail(taskId);
+            serialDebugResourceDetailTracePrintf_P(PSTR("Mutex:: wait\n"));
 
             Task *pTask = scheduler.getTask(taskId);
 
@@ -23,19 +26,21 @@ uint8_t Mutex::reserve(uint8_t taskId) {
             }
         }
     }
-    return NULL_BYTE;
+    return NULL_TASK;
 }
 
 uint8_t Mutex::release() {
     // remove owner from head and give to next in line
     while (!queue.isEmpty()) {
-        queue.removeHead();
+        uint8_t head = queue.removeHead();
+        serialDebugResourceDetailTracePrintf_P(PSTR("Mutex:: released %d\n"), head);
 
         // give to this task
         Task *pNextTask = scheduler.getTask(queue.peekHead());
 
         if (pNextTask) {
             pNextTask->resume(0);
+            serialDebugResourceDetailTracePrintf_P(PSTR("Mutex:: resuming %d\n"), pNextTask->getIndex());
             break;
         }
     }
@@ -51,7 +56,7 @@ uint8_t Mutex::transfer(uint8_t fromTaskId, uint8_t toTaskId) {
         scheduler.resume(toTaskId, 0);
         return 0;
     }
-    return NULL_BYTE;
+    return NULL_TASK;
 }
 
 #ifdef CONSOLE_DEBUG

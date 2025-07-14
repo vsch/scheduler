@@ -11,13 +11,19 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
             Task *pTask = scheduler.getTask(taskId);
 
             if (pTask) {
-                if (taskQueue.isEmpty()) {
+                if (!Mutex::isFree()) {
+                    serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: suspend waiting mutex: a1 %d - nA1 %d, a2:%d - nA2 %d\n")
+                                                           , available1, nAvailable1
+                                                           , available2, nAvailable2);
+                    return Mutex::reserve(taskId);
+                } else if (taskQueue.isEmpty()) {
                     if (isAvailable(available1, available2)) {
                         serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: satisfied %d: a1:%d <= nA1:%d && a2:%d <= nA2:%d\n")
                                                                , taskQueue.getCount()
                                                                , available1, nAvailable1
                                                                , available2, nAvailable2);
-                        return 0;
+                        
+                        return Mutex::reserve(taskId);
                     } else {
                         serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: suspend: a1:%d > nA1:%d || a2:%d > nA2:%d\n")
                                                                , available1, nAvailable1
@@ -48,8 +54,8 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
         }
     } else {
         serialDebugPrintf_P(PSTR("Res2Lock:: never satisfied: a1:%d > maxA1:%d || a2:%d > maxA2:%d\n")
-                                               , available1, nMaxAvailable1
-                                               , available2, nMaxAvailable2);
+                            , available1, nMaxAvailable1
+                            , available2, nMaxAvailable2);
     }
     return NULL_BYTE;
 }
@@ -105,7 +111,9 @@ void Res2Lock::makeAvailable(uint8_t available1, uint8_t available2) {
                                                    , nResCount1, available1
                                                    , nResCount2, available2);
 
-            pNextTask->resume(0);
+            // resume the task, in case it is first 
+            scheduler.resume(taskId, 0);
+            Mutex::reserve(taskId);
         }
     }
 }

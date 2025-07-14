@@ -65,9 +65,9 @@ public:
     /**
      * Construct a controller
      * @param pData             pointer to block of data for controller needs, one data block chopped up for all needs
-     * @param maxStreams        maximum number of request streams needed, at least max of requests in willRequire() calls
+     * @param maxStreams        maximum number of request streams needed, at least max of requests in reserveResources() calls
      * @param maxTasks          maximum number of tasks making reservationLock and possibly being suspended
-     * @param writeBufferSize   maximum buffer for write requests, at least max of bytes in willRequire() calls
+     * @param writeBufferSize   maximum buffer for write requests, at least max of bytes in reserveResources() calls
      */
     /* @formatter:off */     
     Controller(uint8_t *pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize, uint8_t flags = CTR_FLAGS_REQ_AUTO_START)
@@ -200,7 +200,11 @@ public:
      *                  resources
      */
 
-    uint8_t willRequire(uint8_t requests, uint8_t bytes);
+    uint8_t reserveResources(uint8_t requests, uint8_t bytes);
+    inline void releaseResources() {
+        
+        reservationLock.release();
+    }
 
     ByteStream *getWriteStream() {
         return writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
@@ -280,7 +284,7 @@ public:
      *
      * @param pWriteStream       pointer to stream to process, will be reset to new reality if needed
      * @return                  pointer to read stream or NULL if not handleProcessedRequest because of lack of readStreams
-     *                          as made in the willRequire() call.
+     *                          as made in the reserveResources() call.
      */
     ByteStream *processStream(ByteStream *pWriteStream, CByteBuffer_t *pRcvBuffer = NULL);
 
@@ -333,37 +337,5 @@ public:
 
 #endif
 };
-
-#ifdef CONSOLE_DEBUG
-#define printf_P(...)    addActualOutput(__VA_ARGS__)
-#else
-
-#include <stdio.h>
-
-#endif
-
-#ifdef RESOURCE_TRACE
-#define resourceTracePrintf_P(...) printf_P(__VA_ARGS__)
-#define resourceTracePuts_P(...) puts_P(__VA_ARGS__)
-#else
-#define resourceTracePrintf_P(...) ((void)0)
-#define resourceTracePuts_P(...) ((void)0)
-#endif
-
-#ifdef SERIAL_DEBUG_RESOURCE_TRACE
-#define serialDebugResourceTracePrintf_P(...) printf_P(__VA_ARGS__)
-#define serialDebugResourceTracePuts_P(...) puts_P(__VA_ARGS__)
-#else
-#define serialDebugResourceTracePrintf_P(...) ((void)0)
-#define serialDebugResourceTracePuts_P(...) ((void)0)
-#endif
-
-#ifdef SERIAL_DEBUG_RESOURCE_DETAIL_TRACE
-#define serialDebugResourceDetailTracePrintf_P(...) printf_P(__VA_ARGS__)
-#define serialDebugResourceDetailTracePuts_P(...) puts_P(__VA_ARGS__)
-#else
-#define serialDebugResourceDetailTracePrintf_P(...) ((void)0)
-#define serialDebugResourceDetailTracePuts_P(...) ((void)0)
-#endif
 
 #endif //SCHEDULER_CONTROLLER_H

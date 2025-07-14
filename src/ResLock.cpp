@@ -2,54 +2,99 @@
 #include "ResLock.h"
 #include "Scheduler.h"
 
-uint8_t ResLock::reserve(uint8_t taskId, uint8_t nCount) {
-    if (isMaxAvailable(nCount) && scheduler.isValidId(taskId)) {
-        // No one waiting, can check and release right away.
-        // Otherwise, have to first satisfy waiting tasks
-        if (taskQueue.isEmpty()) {
-            if (isAvailable(nCount)) {
-                return 0;
+uint8_t ResLock::reserve(uint8_t taskId, uint8_t available) {
+    if (isMaxAvailable(available)) {
+        if (scheduler.isValidId(taskId)) {
+            // No one waiting, can check and release right away.
+            // Otherwise, have to first satisfy waiting tasks
+            Task *pTask = scheduler.getTask(taskId);
+
+            if (pTask) {
+                if (!Mutex::isFree()) {
+                    serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: suspend waiting mutex: a1 %d - nA1 %d\n")
+                                                           , available, nAvailable);
+                    return Mutex::reserve(taskId);
+                } else if (taskQueue.isEmpty()) {
+                    if (isAvailable(available)) {
+                        serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: satisfied %d: a1:%d <= nA1:%d\n")
+                                                               , taskQueue.getCount()
+                                                               , available, nAvailable);
+
+                        return Mutex::reserve(taskId);
+                    } else {
+                        serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: suspend: a1:%d > nA1:%d\n")
+                                                               , available, nAvailable);
+                    }
+                } else {
+                    serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: suspend waiting task: a1 %d - nA1 %d\n")
+                                                           , available, nAvailable);
+                }
+
+
+                // need to wait until they are available
+                taskQueue.addTail(taskId);
+                resQueue.addTail(available);
+
+                if (pTask->isAsync()) {
+                    reinterpret_cast<AsyncTask *>(pTask)->yieldSuspend();
+                    return 0;
+                } else {
+                    scheduler.suspend(taskId);
+                    return 1;
+                }
             }
+        } else {
+            serialDebugPrintf_P(PSTR("ResLock:: invalid task id %d\n"), taskId);
         }
-
-        Task *pTask = scheduler.getTask(taskId);
-
-        if (pTask) {
-            // need to wait until they are available
-            taskQueue.addTail(taskId);
-            resQueue.addTail(nCount);
-
-            if (pTask->isAsync()) {
-                reinterpret_cast<AsyncTask *>(pTask)->yieldSuspend();
-                return 0;
-            } else {
-                scheduler.suspend(taskId);
-                return 1;
-            }
-        }
+    } else {
+        serialDebugPrintf_P(PSTR("ResLock:: never satisfied: a1:%d > maxA1:%d\n")
+                            , available, nMaxAvailable);
     }
     return NULL_BYTE;
 }
 
+// called from interrupt code
 void ResLock::makeAvailable(uint8_t available) {
     nAvailable += available;
     if (nAvailable > nMaxAvailable) nAvailable = nMaxAvailable;
 
+    serialDebugResourceDetailTracePrintf_P(PSTR("ResLock::make avail: a1 %d - nA1 %d\n")
+                                           , available, nAvailable);
+
     available = nAvailable;
-    
+
     // remove all that will have resources based on requested maximum
     while (!taskQueue.isEmpty()) {
         uint8_t nResCount = resQueue.peekHead();
-        if (available < nResCount) break;
-        
+
+        if (nResCount == NULL_BYTE) {
+            serialDebugPrintf_P(PSTR("ResLock:: res peek() %d\n"), nResCount);
+        }
+
+        if (available < nResCount) {
+            serialDebugResourceDetailTracePrintf_P(PSTR("ResLock::still waiting %d: a1 %d - nA1 %d\n")
+                                                   , taskQueue.getCount()
+                                                   , nResCount, available);
+
+            break;
+        }
+
         // can release the task
         resQueue.removeHead();
-        available -= nResCount;
-        
-        Task *pNextTask = scheduler.getTask(taskQueue.removeHead());
+        resQueue.removeHead();
+        uint8_t taskId = taskQueue.removeHead();
 
+        Task *pNextTask = scheduler.getTask(taskId);
         if (pNextTask) {
-            pNextTask->resume(0);
+            available -= nResCount;
+
+            serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock::resuming #%d: a1 %d - nA1 %d\n")
+                                                   , pNextTask->getIndex()
+                                                   , nResCount, available);
+
+            // resume the task, in case it is first 
+            scheduler.resume(taskId, 0);
+            Mutex::reserve(taskId);
         }
     }
 }
@@ -66,7 +111,7 @@ void ResLock::dump(uint8_t indent, uint8_t compact) {
 
     addActualOutput("%s", indentStr);
 
-    addActualOutput("%sResLock { max:%d, avail:%d\n", indentStr, nMaxAvailable, nAvailable);
+    addActualOutput("%sRes2Lock { max:%d, avail:%d\n", indentStr, nMaxAvailable, nAvailable);
     taskQueue.dump(indent + 2, compact);
     resQueue.dump(indent + 2, compact);
     addActualOutput("%s}\n", indentStr);
