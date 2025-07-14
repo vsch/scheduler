@@ -73,7 +73,7 @@ void Mutex::dump(uint8_t indent, uint8_t compact) {
     // Output: Queue { nSize:%d, nHead:%d, nTail:%d
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
-    addActualOutput("%s", indentStr);
+    // addActualOutput("%s", indentStr);
 
     addActualOutput("%sMutex { Owner:%d\n", indentStr, head);
     queue.dump(indent + 2, compact);

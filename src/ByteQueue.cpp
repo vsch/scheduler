@@ -1,3 +1,4 @@
+#include "Arduino.h"
 #include "ByteQueue.h"
 #include "CByteQueue.h"
 #include "ByteStream.h"

@@ -37,7 +37,6 @@ void Controller::dump(uint8_t indent, uint8_t compact) {
     if (!compact || compact == 2) {
         addActualOutput("%s  freeReadStreams ", indentStr);
         this->freeReadStreams.dump(indent + 2, 1);
-
     }
 
     if (!this->pendingReadStreams.isEmpty()) {
@@ -65,11 +64,8 @@ void Controller::dump(uint8_t indent, uint8_t compact) {
     addActualOutput("%s  writeStream ", indentStr);
     this->writeStream.dump(indent + 2, compact);
 
-    addActualOutput("%s  reservationLock ", indentStr);
-    this->reservationLock.dump(indent + 2, compact);
-
-    addActualOutput("%s  requirementList ", indentStr);
-    this->requirementList.dump(indent + 2, compact);
+    addActualOutput("%s  resourceLock ", indentStr);
+    this->resourceLock.dump(indent + 2, compact);
 
     addActualOutput("\n%s}\n", indentStr);
 }
@@ -79,24 +75,35 @@ void Controller::dump(uint8_t indent, uint8_t compact) {
 #ifdef RESOURCE_TRACE
 
 void Controller::dumpResourceTrace(PGM_P id) {
-    // TODO: add trace code
-    resourceTracePrintf_P(PSTR("%S::resources streams:%d, bytes:%d\n"), id ? id : PSTR("Ctrl"), usedStreams, usedBufferSize);
+#ifdef CONSOLE_DEBUG
+    resourceTracePrintf_P(PSTR("%s::resources act(locked) streams:%d(%d), bytes:%d(%d)\n"), id ? id : PSTR("Ctrl"), usedStreams, lockedStreams, usedBufferSize, lockedBufferSize);
+#else
+    resourceTracePrintf_P(PSTR("%S::resources act(locked) streams:%d(%d), bytes:%d(%d)\n"), id ? id : PSTR("Ctrl"), usedStreams, lockedStreams, usedBufferSize, lockedBufferSize);
+#endif
+
+    lockedStreams = 0;
+    lockedBufferSize = 0;
 }
 
 #endif // RESOURCE_TRACE
 
 uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
     cli();
-    uint8_t reserved = reservationLock.reserve(requests, bytes);
+    uint8_t reserved = resourceLock.reserve(requests, bytes);
     sei();
+
+#ifdef RESOURCE_TRACE
+    lockedStreams = requests;
+    lockedBufferSize = bytes;
+#endif
 
     if (reserved == NULL_BYTE) {
         // cannot ever satisfy these requirements
         serialDebugResourceDetailTracePrintf_P(PSTR("Ctrl:: never satisfied: R %d > maxR %d || B > maxB %d\n")
-                                               , requests, reservationLock.getMaxAvailable1()
-                                               , bytes, reservationLock.getMaxAvailable2());
+                                               , requests, resourceLock.getMaxAvailable1()
+                                               , bytes, resourceLock.getMaxAvailable2());
     } else if (reserved) {
-        serialDebugResourceDetailTracePrintf_P(PSTR("Ctrl:: suspend lock %d, %d avail %d %d \n"), requests, bytes, reservationLock.getAvailable1(), reservationLock.getAvailable2());
+        serialDebugResourceDetailTracePrintf_P(PSTR("Ctrl:: suspend lock %d, %d avail %d %d \n"), requests, bytes, resourceLock.getAvailable1(), resourceLock.getAvailable2());
     }
 
     return reserved;
@@ -147,7 +154,7 @@ void Controller::endProcessingRequest(ByteStream *pStream) {
 
         uint8_t head = pendingReadStreams.removeHead();
         completedStreams.addTail(head);
-        reservationLock.makeAvailable(0, availBytes);
+        resourceLock.makeAvailable(0, availBytes);
 
         // don't start next request if trace processing is pending
         if (isRequestAutoStart()) {
@@ -173,7 +180,7 @@ void Controller::handleCompletedRequests() {
         completedStream->pRcvBuffer = NULL;
         freeReadStreams.addTail(id);
 
-        reservationLock.makeAvailable(1, 0);
+        resourceLock.makeAvailable(1, 0);
     }
 }
 
@@ -197,13 +204,13 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream, CByteBuffer_t *p
 
     // NOTE: protect from mods in interrupts mid-way through this code
     cli();
-    reservationLock.useAvailable1(1);
+    resourceLock.useAvailable1(1);
 
     if (isSharedBuffer) {
 #ifdef RESOURCE_TRACE
         usedBufferSize += pWriteStream->count();
 #endif
-        reservationLock.useAvailable2(pWriteStream->count());
+        resourceLock.useAvailable2(pWriteStream->count());
 
         writeBuffer.updateStreamed(pWriteStream);
         nextFreeHead = pWriteStream->nTail;

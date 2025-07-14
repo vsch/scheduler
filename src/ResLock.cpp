@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "ResLock.h"
 #include "Scheduler.h"
+#include "debug_config.h"
 
 uint8_t ResLock::reserve(uint8_t taskId, uint8_t available) {
     if (isMaxAvailable(available)) {
@@ -118,7 +119,8 @@ void ResLock::dump(uint8_t indent, uint8_t compact) {
 
     addActualOutput("%s", indentStr);
 
-    addActualOutput("%sRes2Lock { max:%d, avail:%d\n", indentStr, nMaxAvailable, nAvailable);
+    addActualOutput("%sResLock { max:%d, avail:%d\n", indentStr, nMaxAvailable, nAvailable);
+    Mutex::dump(indent + 2, compact);
     taskQueue.dump(indent + 2, compact);
     resQueue.dump(indent + 2, compact);
     addActualOutput("%s}\n", indentStr);

@@ -1,6 +1,6 @@
 
-#ifndef SCHEDULER_SEMAPHORE_H
-#define SCHEDULER_SEMAPHORE_H
+#ifndef SCHEDULER_RESLOCK_H
+#define SCHEDULER_RESLOCK_H
 
 #include "Scheduler.h"
 #include "ByteQueue.h"
@@ -19,7 +19,7 @@
 #define RLOCK_NEXT_MEMBER_OFFS(maxTasks)            (RLOCK_RES_QUEUE_OFFS(maxTasks) + RLOCK_RES_QUEUE_SIZE(maxTasks))
 
 // Use this macro to allocate space for Res2Lock queues
-#define sizeOfRes2LockBuffer(maxTasks)               (RLOCK_NEXT_MEMBER_OFFS(maxTasks))
+#define sizeOfResLockBuffer(maxTasks)               (RLOCK_NEXT_MEMBER_OFFS(maxTasks))
 
 class ResLock : private Mutex {
     friend class Controller;

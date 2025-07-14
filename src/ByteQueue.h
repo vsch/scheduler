@@ -2,7 +2,6 @@
 #define SCHEDULER_QUEUE_H
 
 #include <stdint.h>
-#include <avr/pgmspace.h>
 #include "common_defs.h"
 #include "CByteQueue.h"
 

@@ -79,6 +79,7 @@ void twint_cancel_rd(CByteStream_t *pStream) {
 }
 
 #else
+
 void twiint_init(void) {
     twiint_flags = 0;
 
@@ -110,11 +111,7 @@ void twiint_start(CByteStream_t *pStream) {
 }
 
 void twint_cancel_rd(CByteStream_t *pStream) {
-    if (twiint_flags & TWI_FLAGS_HAVE_READ) {
-        if (pTwiStream == pStream) {
-            twiint_flags &= ~TWI_FLAGS_HAVE_READ;
-        }
-    }
+    twiint_flags &= ~TWI_FLAGS_HAVE_READ;
 }
 
 #endif // CONSOLE_DEBUG
@@ -161,7 +158,6 @@ PGM_P const trcStrings[] PROGMEM = {
         sSTR_TRC_RCV_OVR1,
         sSTR_TRC_RCV_OVR2,
 #endif // SERIAL_DEBUG_WI_TRACE_OVERRUNS
-
 };
 #endif //SERIAL_DEBUG_TWI_RAW_TRACER
 
@@ -193,7 +189,6 @@ uint16_t elapsedTime;
 #define twi_tracer_start() ((void)0)
 #define twi_tracer_stop() ((void)0)
 #endif // SERIAL_DEBUG_TWI_TRACER
-
 
 #ifndef CONSOLE_DEBUG
 

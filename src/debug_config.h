@@ -3,6 +3,9 @@
 #define SCHEDULER_DEBUG_CONFIG_H
 
 #ifdef CONSOLE_DEBUG
+#include "tests/FileTestResults_AddResult.h"
+#include "tests/FileTestResults.h"
+
 #define printf_P(...)    addActualOutput(__VA_ARGS__)
 #else
 

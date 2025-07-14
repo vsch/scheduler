@@ -1,6 +1,6 @@
 
-#ifndef SCHEDULER_SEMAPHORE_H
-#define SCHEDULER_SEMAPHORE_H
+#ifndef SCHEDULER_RES2LOCK_H
+#define SCHEDULER_RES2LOCK_H
 
 #include "Scheduler.h"
 #include "ByteQueue.h"

@@ -2,6 +2,7 @@
 #include "Res2Lock.h"
 #include "Scheduler.h"
 #include "Controller.h"
+#include "debug_config.h"
 
 uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2) {
     if (isMaxAvailable(available1, available2)) {
@@ -148,6 +149,7 @@ void Res2Lock::dump(uint8_t indent, uint8_t compact) {
     addActualOutput("%s", indentStr);
 
     addActualOutput("%sRes2Lock { max1:%d, avail1:%d max2:%d, avail2:%d\n", indentStr, nMaxAvailable1, nAvailable1, nMaxAvailable2, nAvailable2);
+    Mutex::dump(indent + 2, compact);
     taskQueue.dump(indent + 2, compact);
     resQueue.dump(indent + 2, compact);
     addActualOutput("%s}\n", indentStr);
