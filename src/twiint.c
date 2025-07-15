@@ -11,12 +11,12 @@
  *
  * Copyright (c) 2018 Sebastian Goessl
  *
- * Modified for CByteStream and CTwiController handling
- * Added rd Buffer aftwer write request handing
- * Fixed write followed by read handling
- * Added TWI status tracing for debugging drivers
- * 
  * Author:     Vladimir Schneider
+ * 
+ * Modified for CByteStream and CTwiController handling
+ * Fixed write followed by read handling
+ * Added read Buffer after write request handing
+ * Added TWI status tracing for debugging drivers
  * 
  * Copyright (c) 2025 Vladimir Schneider
  *
