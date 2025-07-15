@@ -5,32 +5,28 @@
 #include "CTwiController.h"
 #include "twiint.h"
 
-void dac_init(uint8_t addr, uint8_t flags) {
+void dac_init() {
     static const DacWriteEntry_t PROGMEM init1[] = {
             {REG_TRIGGER,        WR_TRIGGER_DEVICE_CONFIG_RESET(1)},
             {REG_GENERAL_CONFIG, WR_DAC_POWER(DAC_POWER_UP) | WR_GENERAL_CONFIG_REF_EN(DAC_VREF_VDD) /*| WR_GENERAL_CONFIG_DAC_SPAN(DAC_VREF_GAIN_1_5X)*/ },
             {REG_DATA,           WR_DATA_DAC(DATA_DAC_MAX)}, // output max so VM voltage is min
     };
 
-    twiStream = twi_get_write_buffer(TWI_ADDRESS_W(addr));
-    dac_send_byte_list(init1, sizeof(init1));
-    CByteStream_t *pStream = twi_process_stream();
+    CByteStream_t *pStream = dac_send_byte_list(init1, sizeof(init1));
     twi_wait_sent(pStream);
 }
 
-void dac_send_byte_list(const uint8_t *bytes, uint16_t count) {
+CByteStream_t * dac_send_byte_list(const uint8_t *bytes, uint16_t count) {
+    CByteStream_t *pStream = NULL;
+    
     while (count >= 3) {
         uint8_t reg = pgm_read_byte(bytes++);
         uint16_t val = pgm_read_word(bytes++);
-        if (!dac_write_wait(DAC53401_ADDRESS, reg, val)) {
-#ifdef SERIAL_DEBUG_TWI_TRACER
-            twi_dump_trace(1);
-#endif
-            break;
-        }
+        pStream = dac_write(DAC53401_ADDRESS, reg, val);
         bytes++;
         count -= 3;
     }
+    return pStream;
 }
 
 CByteStream_t *dac_write(uint8_t addr, uint8_t reg, uint16_t value) {
@@ -39,17 +35,6 @@ CByteStream_t *dac_write(uint8_t addr, uint8_t reg, uint16_t value) {
     stream_put(twiStream, (value & 0xff00) >> 8);
     stream_put(twiStream, (value & 0x00ff));
     return twi_process_stream();
-}
-
-uint8_t dac_write_wait(uint8_t addr, uint8_t reg, uint16_t value) {
-    CByteStream_t *pStream = dac_write(addr, reg, value);
-    if (twi_wait_sent(pStream)) {
-        return 1;
-    }
-#ifdef SERIAL_DEBUG_TWI_TRACER
-    twi_dump_trace(1);
-#endif
-    return 0;
 }
 
 CByteStream_t *dac_write_read(uint8_t addr, uint8_t reg, uint16_t value, uint16_t *pValue) {
@@ -64,11 +49,6 @@ CByteStream_t *dac_write_read(uint8_t addr, uint8_t reg, uint16_t value, uint16_
     return twi_process(twiStream);
 }
 
-uint8_t dac_write_read_wait(uint8_t addr, uint8_t reg, uint16_t value, uint16_t *pValue) {
-    CByteStream_t *pStream = dac_write_read(addr, reg, value, pValue);
-    return twi_wait_sent(pStream);
-}
-
 CByteStream_t *dac_read(uint8_t addr, uint8_t reg, uint16_t *pValue) {
     twiStream = twi_get_write_buffer(TWI_ADDRESS_W(addr));
     stream_put(twiStream, reg);
@@ -77,11 +57,6 @@ CByteStream_t *dac_read(uint8_t addr, uint8_t reg, uint16_t *pValue) {
     twi_set_rd_buffer(BUFFER_PUT_REVERSE, pValue, sizeof(*pValue));
     
     return twi_process(twiStream);
-}
-
-uint8_t dac_read_wait(uint8_t addr, uint8_t reg, uint16_t *pValue) {
-    CByteStream_t *pStream = dac_read(addr, reg, pValue);
-    return twi_wait_sent(pStream);
 }
 
 void dac_power_up(uint8_t addr) {

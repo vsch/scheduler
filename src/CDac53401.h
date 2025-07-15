@@ -39,13 +39,6 @@
 extern "C" {
 #endif
 
-// dac read buffer for the stream
-typedef struct DacRead {
-    uint8_t valMsb;
-    uint8_t valLsb;
-    uint8_t dummy;
-} DacRead_t;
-
 // define 3 bytes for entry: register, MSB value, LSZB value
 // this one is if the bytes are sent as defined
 // #define DAC_WRITE_ENTRY(r,v)          ((uint8_t)(r)), ((uint8_t)((r) & 0xff00)) >> 8, ((uint8_t)((r) & 0x00ff))
@@ -57,14 +50,13 @@ typedef struct DacWriteEntry {
 } DacWriteEntry_t;
 
 // count must be multiple of 3, only full 3 bytes are sent, if last entry is short it is ignored
-extern void dac_send_byte_list(const uint8_t *bytes, uint16_t count);
+extern CByteStream_t * dac_send_byte_list(const uint8_t *bytes, uint16_t count);
 
-extern void dac_init(uint8_t addr, uint8_t flags);
+extern void dac_init();
 extern void dac_power_up(uint8_t addr);
 extern void dac_power_down(uint8_t addr, uint8_t flags);
 extern void dac_output(uint8_t addr, uint16_t value);
 extern CByteStream_t *dac_write(uint8_t addr, uint8_t reg, uint16_t value);
-extern uint8_t dac_write_wait(uint8_t addr, uint8_t reg, uint16_t value);
 
 extern CByteStream_t *dac_write_read(uint8_t addr, uint8_t reg, uint16_t value, uint16_t *pValue);
 /**
@@ -76,18 +68,7 @@ extern CByteStream_t *dac_write_read(uint8_t addr, uint8_t reg, uint16_t value, 
  * @param pValue 
  * @return 1 if value read, 0 if timed out (50ms) waiting for twi stream to process
  */
-extern uint8_t dac_write_read_wait(uint8_t addr, uint8_t reg, uint16_t value, uint16_t *pValue);
-
 extern CByteStream_t *dac_read(uint8_t addr, uint8_t reg, uint16_t *pValue);
-/**
- * Read in the value from the register.
- * 
- * @param addr 
- * @param reg 
- * @param pValue 
- * @return 1 if value read, 0 if timed out (50ms) waiting for twi stream to process
- */
-extern uint8_t dac_read_wait(uint8_t addr, uint8_t reg, uint16_t *pValue);
 
 #ifdef __cplusplus
 };

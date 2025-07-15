@@ -7,6 +7,7 @@
 #include "Res2Lock.h"
 
 #include "twiint.h"
+#include "ResourceUse.h"
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
 
@@ -142,7 +143,7 @@ public:
         usedBufferSize = 0;
     }
 
-    void dumpResourceTrace(PGM_P id);
+    void dumpResourceTrace(ResourceUse *resourceUse, uint32_t *pLastDump = NULL, uint16_t dumpDelay = 0);
 
 #else
 

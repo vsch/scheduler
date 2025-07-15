@@ -74,12 +74,26 @@ void Controller::dump(uint8_t indent, uint8_t compact) {
 
 #ifdef RESOURCE_TRACE
 
-void Controller::dumpResourceTrace(PGM_P id) {
+void Controller::dumpResourceTrace(ResourceUse *resourceUse, uint32_t *pLastDump, uint16_t dumpDelay) {
+    resourceUse->addValue(usedStreams, usedBufferSize);
+
+    if (resourceUse->canDump(pLastDump, dumpDelay)) {
 #ifdef CONSOLE_DEBUG
-    resourceTracePrintf_P(PSTR("%s::resources act(locked) streams:%d(%d), bytes:%d(%d)\n"), id ? id : PSTR("Ctrl"), usedStreams, lockedStreams, usedBufferSize, lockedBufferSize);
+        resourceTracePrintf_P(PSTR("%s::resources act(locked) streams:%d(%d), bytes:%d(%d)\n")
+                              , resourceUse->id ? resourceUse->id : PSTR("Ctrl")
+                              , resourceUse->maxUsedStreams
+                              , lockedStreams
+                              , resourceUse->maxUsedBufferSize
+                              , lockedBufferSize);
 #else
-    resourceTracePrintf_P(PSTR("%S::resources act(locked) streams:%d(%d), bytes:%d(%d)\n"), id ? id : PSTR("Ctrl"), usedStreams, lockedStreams, usedBufferSize, lockedBufferSize);
+        resourceTracePrintf_P(PSTR("%S::resources act(locked) streams:%d(%d), bytes:%d(%d)\n")
+                              , resourceUse->id ? resourceUse->id : PSTR("Ctrl")
+                              , resourceUse->maxUsedStreams
+                              , lockedStreams
+                              , resourceUse->maxUsedBufferSize
+                              , lockedBufferSize);
 #endif
+    }
 
     lockedStreams = 0;
     lockedBufferSize = 0;
@@ -283,7 +297,7 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream) {
     // queue it for processing
     pStream->flags |= STREAM_FLAGS_PENDING;
     pendingReadStreams.addTail(head);
-    
+
     if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
         // first one, then no-one to start it up but here
         serialDebugTwiDataPrintf_P(PSTR("AutoStart req %d\n"), head);
