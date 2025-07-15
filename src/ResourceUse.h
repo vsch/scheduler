@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #ifndef RESOURCE_TRACE_INTERVAL_MS
-RESOURCE_TRACE_INTERVAL_MS  (2000L)
+#define RESOURCE_TRACE_INTERVAL_MS  (2000)
 #endif
 
 struct ResourceUse {

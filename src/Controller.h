@@ -118,13 +118,13 @@ public:
         freeReadStreams.reset();
         writeBuffer.reset();
         writeStream.reset();
-        
+
         for (int i = 0; i < maxStreams; i++) {
             ByteStream *pStream = readStreamTable + i;
             ByteStream::construct(pStream, &writeBuffer, 0);
             freeReadStreams.addTail(i);
         }
-        
+
         lastFreeHead = writeBuffer.nHead;
         sei();
 
@@ -149,9 +149,7 @@ public:
 
     inline void startResourceTrace() {}
 
-    inline void dumpResourceTrace() {}
-
-    inline void dumpResourceTrace(PGM_P id) {}
+    inline void dumpResourceTrace(ResourceUse *resourceUse, uint32_t *pLastDump = NULL, uint16_t dumpDelay = 0) {}
 
 #endif
 
@@ -208,7 +206,7 @@ public:
      */
 
     uint8_t reserveResources(uint8_t requests, uint8_t bytes);
-    
+
     inline void releaseResources() {
         resourceLock.release();
     }
@@ -291,12 +289,14 @@ public:
 
     void loop() override;
 
-#ifdef SERIAL_DEBUG_RESOURCE_DETAIL_TRACE   
+#ifdef SERIAL_DEBUG_RESOURCE_DETAIL_TRACE
     void dumpReservationLockData();
-#else    
-    inline void dumpReservationLockData() { }
+#else
+
+    inline void dumpReservationLockData() {}
+
 #endif // SERIAL_DEBUG_RESOURCE_DETAIL_TRACE
-    
+
 #ifdef CONSOLE_DEBUG
 
     // print out queue for testing
