@@ -6,7 +6,9 @@ ByteStream::ByteStream(ByteQueue *pByteQueue, uint8_t streamFlags) : ByteQueue(*
     flags = streamFlags;
     addr = 0;
     waitingTask = NULL_TASK;
-    pRcvBuffer = NULL;
+
+    nRdSize = 0;
+    pRdData = NULL;
 }
 
 uint8_t ByteStream::setFlags(uint8_t flags, uint8_t mask) {
@@ -16,14 +18,23 @@ uint8_t ByteStream::setFlags(uint8_t flags, uint8_t mask) {
     return this->flags;
 }
 
-uint8_t ByteStream::setOwnBuffer(uint8_t *pData, uint8_t nSize) {
-    if (can_write()) {
-        this->nTail = this->nSize = nSize;
-        this->nHead = 0;
-        this->pData = pData;
-        return 0;
+void ByteStream::setOwnBuffer(uint8_t *pData, uint8_t nSize) {
+    this->nHead = 0;
+    this->nTail = nSize ? nSize - 1 : 0;
+    this->nSize = nSize;
+    this->pData = pData;
+    this->nRdSize = 0;
+    this->pRdData = NULL;
+}
+
+void ByteStream::setRdBuffer(uint8_t rdReverse, uint8_t *pRdData, uint8_t nRdSize) {
+    this->nRdSize = nRdSize;
+    this->pRdData = pRdData;
+    if (rdReverse) {
+        this->flags |= STREAM_FLAGS_RD_REVERSE;
+    } else {
+        this->flags &= ~STREAM_FLAGS_RD_REVERSE;
     }
-    return NULL_BYTE;
 }
 
 // test if any more data to read
@@ -101,6 +112,14 @@ uint8_t stream_is_unbuffered(const CByteStream_t *thizz) {
     return thizz && ((ByteStream *) thizz)->isUnbuffered();
 }
 
+void stream_set_own_buffer(const CByteStream_t *thizz, uint8_t *pData, uint8_t nSize) {
+    ((ByteStream *) thizz)->setOwnBuffer(pData, nSize);
+}
+
+void stream_set_rd_buffer(const CByteStream_t *thizz, uint8_t rdReverse, uint8_t *pRdData, uint8_t nRdSize) {
+    ((ByteStream *) thizz)->setRdBuffer(rdReverse, pRdData, nRdSize);
+}
+
 void ByteStream::pgmByteList(const uint8_t *bytes, uint16_t count) {
     while (count-- > 0) {
         put(pgm_read_byte(bytes++));
@@ -128,8 +147,9 @@ void ByteStream::triggerComplete() {
 void ByteStream::serialDebugDump(uint8_t id) {
     uint8_t iMax = getCount();
     serialDebugPrintf_P(PSTR("TWI: @0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
-    if (pRcvBuffer) {
-        serialDebugPrintf_P(PSTR("  rcvBuffer: @0x%2.2X { flags: 0x%1.1X nSize: %d  nPos: %d pData: 0x%2.2X } "), pRcvBuffer, pRcvBuffer->flags, pRcvBuffer->nSize, pRcvBuffer->nPos, pRcvBuffer->pData);
+
+    if (nRdSize && pRdData) {
+        serialDebugPrintf_P(PSTR("  rcvBuffer: @0x%2.2X { flags: 0x%1.1X nSize: %d } "), pRdData, flags & STREAM_FLAGS_RD_REVERSE, nSize);
     }
     for (uint8_t i = 0; i < iMax; i++) {
         uint8_t byte = peekHead(i);
@@ -143,7 +163,12 @@ void ByteStream::serialDebugDump(uint8_t id) {
 ByteStream *ByteStream::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->addr = addr;
     pOther->waitingTask = waitingTask;
+    pOther->nRdSize = nRdSize;
+    pOther->pRdData = pRdData;
+
     waitingTask = NULL_TASK;
+    nRdSize = 0;
+    pRdData = NULL;
     return ByteQueue::getStream(pOther, flags);
 }
 

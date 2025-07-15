@@ -10,22 +10,21 @@ extern "C" {
 #endif
 
 extern CByteStream_t *twiStream;
+extern CByteStream_t *twi_get_write_buffer(uint8_t addr);
 
-CByteStream_t *twi_get_write_buffer(uint8_t addr);
+extern void twi_set_own_buffer(uint8_t *pData, uint8_t nSize);
+extern void twi_set_rd_buffer(uint8_t rdReverse, uint8_t *pRdData, uint8_t nRdSize);
 
 // process accumulated twiStream, with debug stats and prep twiStream for next accumulation.
 extern CByteStream_t *twi_process_stream();            // processes the twiStream and requests a new twiStream without the need to call gfx_start_twi_cmd_frame() after the call
-extern CByteStream_t *twi_process_stream_rcv(CByteBuffer_t *pBuffer);
-
-CByteStream_t *twi_process(CByteStream_t *pStream);
-CByteStream_t *twi_process_rcv(CByteStream_t *pStream, CByteBuffer_t *pRcvBuffer);
+extern CByteStream_t *twi_process(CByteStream_t *pStream);
 
 // sending operations
 extern void twi_add_byte(uint8_t byte);
 extern void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count);
 
 // wait for stream to be sent, if timeout !=0 then wait that many ms before giving up
-// return 0 if timeed out, 1 if sent (may be with twiint_errors)
+// return 0 if timeed out, 1 if sent (maybe with twiint_errors)
 extern uint8_t twi_wait_sent(CByteStream_t *pStream);
 /**
  * Send given buffered data as self-buffered twi request
@@ -35,7 +34,7 @@ extern uint8_t twi_wait_sent(CByteStream_t *pStream);
  * @param len    length of data to send
  * @return       pointer to last request, can be used to wait for completion of the send
  */
-extern CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer);
+extern CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize);
 
 #ifdef __cplusplus
 }

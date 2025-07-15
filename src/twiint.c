@@ -40,9 +40,11 @@
  */
 
 #ifndef CONSOLE_DEBUG
+
 #include <avr/io.h>         //hardware registers
 #include <avr/interrupt.h>  //interrupt vectors
 #include <util/twi.h>       //TWI status masks
+
 #endif
 
 #include "twiint.h"
@@ -102,8 +104,9 @@ void twiint_start(CByteStream_t *pStream) {
 
     pTwiStream = pStream;
     twiint_flags &= ~TWI_FLAGS_HAVE_READ;
-    if (pStream->pRcvBuffer) {
-        buffer_copy(&rdBuffer, pStream->pRcvBuffer);
+
+    if (pStream->nRdSize && pStream->pRdData) {
+        buffer_init(&rdBuffer, pStream->flags & STREAM_FLAGS_RD_REVERSE ? BUFFER_PUT_REVERSE : 0, pStream->pRdData, pStream->nRdSize);
         twiint_flags |= TWI_FLAGS_HAVE_READ;
     }
     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
@@ -200,8 +203,8 @@ ISR(TWI_vect) {
     twi_raw_tracer(twsr);
     switch (twsr & TW_STATUS_MASK) {
 #else
-        twi_raw_tracer(TWSR);
-        switch (TW_STATUS) {
+    twi_raw_tracer(TWSR);
+    switch (TW_STATUS) {
 #endif
         case TW_REP_START:
             twi_tracer(TRC_REP_START);
@@ -214,7 +217,7 @@ ISR(TWI_vect) {
             goto start;
 
         case TW_START:
-        twi_tracer_start();
+            twi_tracer_start();
 
         start:
             TWDR = pTwiStream->addr;

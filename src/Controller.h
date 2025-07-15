@@ -229,7 +229,7 @@ public:
     }
 
     /**
-     * Send given buffered data as multiple self-buffered twi requests.
+     * Send given buffered data 
      * 
      * @param addr      twi address, including read flag
      * @param pData     pointer to byte buffer, needs to be 1 byte longer than used.
@@ -237,54 +237,7 @@ public:
      * @param pRcvBuffer   extra bytes at end of buffer available for accumulating received data
      * @return          pointer to last request, can be used to wait for completion of the send or NULL if no available streams
      */
-    ByteStream *processRequest(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer = NULL) {
-
-        if (nSize > QUEUE_MAX_SIZE) {
-            nSize = QUEUE_MAX_SIZE;
-        }
-
-        if (freeReadStreams.isEmpty()) {
-            return NULL;
-        }
-        
-        uint8_t head = freeReadStreams.removeHead();
-#ifdef RESOURCE_TRACE
-        usedStreams++;
-#endif
-        cli();
-        resourceLock.useAvailable1(1);
-        sei();
-        
-        ByteStream *pStream = readStreamTable + head;
-        pStream->set_address(addr);
-        pStream->pData = pData;
-        pStream->nSize = nSize;
-        pStream->nHead = 0;
-        pStream->nTail = nSize ? nSize - 1 : 0;
-        pStream->pRcvBuffer = pRcvBuffer;
-
-        // configure twi flags
-        // serialDebugPrintf_P(PSTR("addr 0x%2.2x\n"), addr);
-        pStream->flags = (addr & 0x01 ? STREAM_FLAGS_WR : STREAM_FLAGS_RD) | STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED;
-        // pStream->flags = STREAM_FLAGS_RD | STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED;
-
-        // NOTE: protect from mods in interrupts mid-way through this code
-        cli();
-        // queue it for processing
-        pendingReadStreams.addTail(head);
-        if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
-            cliStartNextRequest();
-        } else {
-            // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
-            // and new request processing started if needed
-        }
-        sei();
-
-        // make sure loop task is enabled start our loop task to monitor its completion
-        this->resume(0);
-
-        return pStream;
-    }
+    // ByteStream *processRequest(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer = NULL);
 
     /**
      * Accept given byte stream for processing.
@@ -297,7 +250,7 @@ public:
      * @return                  pointer to read stream or NULL if not handleProcessedRequest because of lack of readStreams
      *                          as made in the reserveResources() call.
      */
-    ByteStream *processStream(ByteStream *pWriteStream, CByteBuffer_t *pRcvBuffer = NULL);
+    ByteStream *processStream(ByteStream *pWriteStream);
 
     /**
          * Start processing given request. This should start the interrupt calls for handling TWI data. 

@@ -53,17 +53,15 @@ uint8_t dac_write_wait(uint8_t addr, uint8_t reg, uint16_t value) {
 }
 
 CByteStream_t *dac_write_read(uint8_t addr, uint8_t reg, uint16_t value, uint16_t *pValue) {
-    CByteBuffer_t rdBuffer;
-
-    // CAVEAT: reverse flag is needed if the CPU is little endian, while the dac is bigendian
-    buffer_init(&rdBuffer, BUFFER_PUT_REVERSE, pValue, sizeof(*pValue));
-
     twiStream = twi_get_write_buffer(TWI_ADDRESS_W(addr));
     stream_put(twiStream, reg);
     stream_put(twiStream, (value & 0xff00) >> 8);
     stream_put(twiStream, (value & 0x00ff));
 
-    return twi_process_rcv(twiStream, &rdBuffer);
+    // CAVEAT: reverse flag is needed if the CPU is little endian, while the dac is bigendian
+    twi_set_rd_buffer(BUFFER_PUT_REVERSE, pValue, sizeof(*pValue));
+
+    return twi_process(twiStream);
 }
 
 uint8_t dac_write_read_wait(uint8_t addr, uint8_t reg, uint16_t value, uint16_t *pValue) {
@@ -72,14 +70,13 @@ uint8_t dac_write_read_wait(uint8_t addr, uint8_t reg, uint16_t value, uint16_t 
 }
 
 CByteStream_t *dac_read(uint8_t addr, uint8_t reg, uint16_t *pValue) {
-    CByteBuffer_t rdBuffer;
-
-    // CAVEAT: reverse flag is needed if the CPU is little endian, while the dac is bigendian
-    buffer_init(&rdBuffer, BUFFER_PUT_REVERSE, pValue, sizeof(*pValue));
-
     twiStream = twi_get_write_buffer(TWI_ADDRESS_W(addr));
     stream_put(twiStream, reg);
-    return twi_process_rcv(twiStream, &rdBuffer);
+    
+    // CAVEAT: reverse flag is needed if the CPU is little endian, while the dac is bigendian
+    twi_set_rd_buffer(BUFFER_PUT_REVERSE, pValue, sizeof(*pValue));
+    
+    return twi_process(twiStream);
 }
 
 uint8_t dac_read_wait(uint8_t addr, uint8_t reg, uint16_t *pValue) {

@@ -24,7 +24,9 @@ struct ByteStream : protected ByteQueue {
     
     volatile uint8_t flags;
     uint8_t addr; // Slave address byte (with read/write bit). in case of Twi
-    CByteBuffer_t *pRcvBuffer;
+
+    uint8_t nRdSize;
+    uint8_t *pRdData;
     // IMPORTANT: above fields must be the same as in CByteStream
     
     uint8_t waitingTask; // if not NULL_TASK then index of task waiting for this request to complete
@@ -84,7 +86,8 @@ public:
      * @param nSize     amount of data in buffer
      * @return 0 if all done, NULL_BYTE if not a write buffer
      */
-    uint8_t setOwnBuffer(uint8_t *pData, uint8_t nSize);
+    void setOwnBuffer(uint8_t *pData, uint8_t nSize);
+    void setRdBuffer(uint8_t rdReverse, uint8_t *pRdData, uint8_t nRdSize);
 
     inline uint8_t is_empty() const { return isEmpty(); }
 

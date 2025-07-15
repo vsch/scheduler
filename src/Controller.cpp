@@ -177,14 +177,69 @@ void Controller::cliHandleCompletedRequests() {
         // unless it is an own buffer request
         completedStream->triggerComplete();
         completedStream->flags = 0;
-        completedStream->pRcvBuffer = NULL;
+        completedStream->nRdSize = 0;
+        completedStream->pRdData = NULL;
         freeReadStreams.addTail(id);
 
         resourceLock.makeAvailable(1, 0);
     }
 }
 
-ByteStream *Controller::processStream(ByteStream *pWriteStream, CByteBuffer_t *pRcvBuffer) {
+/*
+ByteStream *Controller::processRequest(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer) {
+
+    if (nSize > QUEUE_MAX_SIZE) {
+        nSize = QUEUE_MAX_SIZE;
+    }
+
+    if (freeReadStreams.isEmpty()) {
+        return NULL;
+    }
+
+    uint8_t head = freeReadStreams.removeHead();
+#ifdef RESOURCE_TRACE
+    usedStreams++;
+#endif
+
+    ByteStream *pStream = readStreamTable + head;
+    pStream->set_address(addr);
+    pStream->pData = pData;
+    pStream->nSize = nSize;
+    pStream->nHead = 0;
+    pStream->nTail = nSize ? nSize - 1 : 0;
+    pStream->nRdSize = pRcvBuffer->nSize;
+    pStream->pRdData = pRcvBuffer->pData;
+
+    // configure twi flags
+    // serialDebugPrintf_P(PSTR("addr 0x%2.2x\n"), addr);
+    pStream->flags = (addr & 0x01 ? STREAM_FLAGS_WR : STREAM_FLAGS_RD) | STREAM_FLAGS_UNBUFFERED;
+    if (pRcvBuffer->flags & BUFFER_PUT_REVERSE) {
+        pStream->flags |= STREAM_FLAGS_RD_REVERSE;
+    }
+    // pStream->flags = STREAM_FLAGS_RD | STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED;
+
+    // NOTE: protect from mods in interrupts mid-way through this code
+    cli();
+    resourceLock.useAvailable1(1);
+    // queue it for processing
+    pStream->flags |= STREAM_FLAGS_PENDING;
+    pendingReadStreams.addTail(head);
+    if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
+        cliStartNextRequest();
+    } else {
+        // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
+        // and new request processing started if needed
+    }
+    sei();
+
+    // make sure loop task is enabled start our loop task to monitor its completion
+    this->resume(0);
+
+    return pStream;
+}
+*/
+
+ByteStream *Controller::processStream(ByteStream *pWriteStream) {
     uint8_t nextFreeHead;       // where next request head position should start
 
     if (freeReadStreams.isEmpty()) {
@@ -227,28 +282,21 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream, CByteBuffer_t *p
 
     // queue it for processing
     pStream->flags |= STREAM_FLAGS_PENDING;
-    pStream->pRcvBuffer = pRcvBuffer;
     pendingReadStreams.addTail(head);
-
+    
     if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
         // first one, then no-one to start it up but here
         serialDebugTwiDataPrintf_P(PSTR("AutoStart req %d\n"), head);
-        startProcessing = 1;
+        cliStartProcessingRequest(pStream);
     } else {
         // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
         // and new request processing started if needed
     }
+    sei();
+
 
     // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
     pWriteStream->nHead = pWriteStream->nTail;
-
-
-    if (startProcessing) {
-        pStream->flags |= STREAM_FLAGS_PROCESSING;
-        cliStartProcessingRequest(pStream);
-    }
-    
-    sei();
 
     // make sure loop task is enabled start our loop task to monitor its completion
     this->resume(0);

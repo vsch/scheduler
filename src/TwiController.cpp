@@ -14,15 +14,13 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr) {
 }
 
 CByteStream_t *twi_process(CByteStream_t *pStream) {
-    return (CByteStream_t *) twiController.processStream((ByteStream *) pStream, NULL);
+    return (CByteStream_t *) twiController.processStream((ByteStream *) pStream);
 }
 
-CByteStream_t *twi_process_rcv(CByteStream_t *pStream, CByteBuffer_t *pRcvBuffer) {
-    return (CByteStream_t *) twiController.processStream((ByteStream *) pStream, pRcvBuffer);
-}
-
-CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer) {
-    return (CByteStream_t *) twiController.processRequest(addr, pData, nSize, pRcvBuffer);
+CByteStream_t *twi_unbuffered_request(uint8_t addr, uint8_t *pData, uint8_t nSize) {
+    ((ByteStream *)twiStream)->setOwnBuffer(pData, nSize);
+    twiStream->addr = addr;
+    return (CByteStream_t *) twiController.processStream((ByteStream *)twiStream);
 }
 
 #ifdef SERIAL_DEBUG_DETAIL_TWI_STATS
@@ -78,7 +76,7 @@ uint8_t twi_wait_sent(CByteStream_t *pStream) {
     return 1;
 }
 
-CByteStream_t *twi_process_stream_rcv(CByteBuffer_t *pBuffer) {
+CByteStream_t *twi_process_stream() {
     // send the accumulated buffer
     CByteStream_t *pStream = NULL;
 
@@ -87,7 +85,7 @@ CByteStream_t *twi_process_stream_rcv(CByteBuffer_t *pBuffer) {
     uint16_t reqSize = stream_count(twiStream);
 #endif
     // returns the same stream but updated head/tail, so address is unchanged
-    pStream = (CByteStream_t *) twiController.processStream((ByteStream *) twiStream, pBuffer);
+    pStream = (CByteStream_t *) twiController.processStream((ByteStream *) twiStream);
 
     END_SERIAL_DEBUG_TWI_STATS(reqSize);
 
@@ -98,13 +96,20 @@ CByteStream_t *twi_process_stream_rcv(CByteBuffer_t *pBuffer) {
     return pStream;
 }
 
-CByteStream_t *twi_process_stream() {
-    return twi_process_stream_rcv(NULL);
+void twi_set_own_buffer(uint8_t *pData, uint8_t nSize) {
+    ((ByteStream *) twiStream)->setOwnBuffer(pData, nSize);
 }
+
+void twi_set_rd_buffer(uint8_t rdReverse, uint8_t *pRdData, uint8_t nRdSize) {
+    ((ByteStream *) twiStream)->setRdBuffer(rdReverse, pRdData, nRdSize);
+}
+
 
 // IMPORTANT: must be called with interrupts disabled
 void TwiController::cliStartProcessingRequest(ByteStream *pStream) {
     // output stream content and call endProcessingRequest
+    pStream->flags |= STREAM_FLAGS_PROCESSING;
+    
 #ifndef CONSOLE_DEBUG
 
 #ifdef SERIAL_DEBUG_TWI_DATA

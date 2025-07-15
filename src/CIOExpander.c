@@ -23,11 +23,9 @@ CByteStream_t *iox_send_byte(uint8_t addr, uint8_t reg, uint8_t data) {
 }
 
 CByteStream_t *iox_rcv_data(uint8_t addr, uint8_t reg, void *pData, uint8_t len) {
-    CByteBuffer_t rdBuffer;
-    buffer_init(&rdBuffer, 0, pData, len);
-
     iox_prep_write(addr, reg);
-    return twi_process_rcv(twiStream, &rdBuffer);
+    twi_set_rd_buffer(0, pData, len);
+    return twi_process(twiStream);
 }
 
 uint8_t iox_rcv_data_wait(uint8_t addr, uint8_t reg, void *pData, uint8_t len) {

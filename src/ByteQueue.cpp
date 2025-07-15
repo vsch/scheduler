@@ -209,8 +209,9 @@ ByteStream *ByteQueue::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->nHead = nHead;
     pOther->nTail = nTail;
     pOther->pData = pData;
-    pOther->flags = flags;
-    pOther->pRcvBuffer = NULL;
+    
+    // start with no rd information
+    pOther->flags = flags & ~(STREAM_FLAGS_RD_REVERSE);
 
     if ((flags & (STREAM_FLAGS_WR | STREAM_FLAGS_RD | STREAM_FLAGS_APPEND)) == STREAM_FLAGS_WR) {
         // reset to empty at tail if it is a write only stream    
