@@ -3,8 +3,8 @@
 #include "CTwiController.h"
 #include "twiint.h"
 
-void complete_request(CByteStream_t *pStream) {
-    twiController.endProcessingRequest((ByteStream *) pStream);
+void cli_complete_request(CByteStream_t *pStream) {
+    twiController.cliEndProcessingRequest((ByteStream *) pStream);
 }
 
 CByteStream_t *twi_get_write_buffer(uint8_t addr) {
@@ -56,10 +56,11 @@ uint8_t twi_wait_sent(CByteStream_t *pStream) {
         if (diff >= timeoutMic) {
             cli();
             twint_cancel_rd(pStream);
-            sei();
 #ifdef SERIAL_DEBUG_TWI_TRACER
-            TraceBuffer::dumpTrace();
+            TraceBuffer::cliDumpTrace();
 #endif
+            sei();
+            
             serialDebugTwiPrintf_P(PSTR("  TWI: #%d wait_sent timed out %ld.\n"), twiController.getReadStreamId((ByteStream *) pStream), diff / 1000L);
 
 #ifdef SERIAL_DEBUG
@@ -70,7 +71,9 @@ uint8_t twi_wait_sent(CByteStream_t *pStream) {
     }
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-    TraceBuffer::dumpTrace();
+    cli();
+    TraceBuffer::cliDumpTrace();
+    sei();
 #endif
     return 1;
 }
@@ -99,7 +102,8 @@ CByteStream_t *twi_process_stream() {
     return twi_process_stream_rcv(NULL);
 }
 
-void TwiController::startProcessingRequest(ByteStream *pStream) {
+// IMPORTANT: must be called with interrupts disabled
+void TwiController::cliStartProcessingRequest(ByteStream *pStream) {
     // output stream content and call endProcessingRequest
 #ifndef CONSOLE_DEBUG
 

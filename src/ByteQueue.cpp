@@ -304,7 +304,7 @@ void ByteQueue::serialDebugDump(PGM_P name) {
     static const char strEmpty[] PROGMEM = " []"; 
     static const char strSuffix[] PROGMEM = " ]"; 
     static const char strNull[] PROGMEM = ""; 
-    serialDebugPrintf_P(PSTR("%S: @ 0x%2.2X {"), name ? name : strQueue, pData);
+    serialDebugPrintf_P(PSTR("%S: @0x%2.2X {"), name ? name : strQueue, pData);
     for (uint8_t i = 0; i < iMax; i++) {
         uint8_t byte = pData[i];
         PGM_P prefix = strNull;

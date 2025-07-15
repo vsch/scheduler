@@ -127,7 +127,7 @@ void ByteStream::triggerComplete() {
 
 void ByteStream::serialDebugDump(uint8_t id) {
     uint8_t iMax = getCount();
-    serialDebugPrintf_P(PSTR("TWI: 0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
+    serialDebugPrintf_P(PSTR("TWI: @0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
     if (pRcvBuffer) {
         serialDebugPrintf_P(PSTR("  rcvBuffer: @0x%2.2X { flags: 0x%1.1X nSize: %d  nPos: %d pData: 0x%2.2X } "), pRcvBuffer, pRcvBuffer->flags, pRcvBuffer->nSize, pRcvBuffer->nPos, pRcvBuffer->pData);
     }

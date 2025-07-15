@@ -235,7 +235,7 @@ public:
      * @param pData     pointer to byte buffer, needs to be 1 byte longer than used.
      * @param nSize     length of data buffer, sent data will be nSize-1
      * @param pRcvBuffer   extra bytes at end of buffer available for accumulating received data
-     * @return          pointer to last request, can be used to wait for completion of the send
+     * @return          pointer to last request, can be used to wait for completion of the send or NULL if no available streams
      */
     ByteStream *processRequest(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer = NULL) {
 
@@ -243,6 +243,10 @@ public:
             nSize = QUEUE_MAX_SIZE;
         }
 
+        if (freeReadStreams.isEmpty()) {
+            return NULL;
+        }
+        
         uint8_t head = freeReadStreams.removeHead();
 #ifdef RESOURCE_TRACE
         usedStreams++;
@@ -250,6 +254,7 @@ public:
         cli();
         resourceLock.useAvailable1(1);
         sei();
+        
         ByteStream *pStream = readStreamTable + head;
         pStream->set_address(addr);
         pStream->pData = pData;
@@ -268,7 +273,7 @@ public:
         // queue it for processing
         pendingReadStreams.addTail(head);
         if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
-            startNextRequest();
+            cliStartNextRequest();
         } else {
             // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
             // and new request processing started if needed
@@ -300,15 +305,17 @@ public:
          * 
          * @param pStream 
          */
-    virtual void startProcessingRequest(ByteStream *pStream) = 0;
+    // IMPORTANT: must be called with interrupts disabled
+    virtual void cliStartProcessingRequest(ByteStream *pStream) = 0;
 
-    void startNextRequest() {
+    // IMPORTANT: must be called with interrupts disabled
+    void cliStartNextRequest() {
         if (!pendingReadStreams.isEmpty() && !isTracePending()) {
             uint8_t nexHead = pendingReadStreams.peekHead();
             ByteStream *pNextStream = getReadStream(nexHead);
             if (!(pNextStream->isProcessing())) {
                 pNextStream->flags |= STREAM_FLAGS_PROCESSING;
-                startProcessingRequest(pNextStream);
+                cliStartProcessingRequest(pNextStream);
             }
         }
     }
@@ -321,10 +328,10 @@ public:
      * 
      * @param pStream   stream processed
      */
-    void endProcessingRequest(ByteStream *pStream);
+    void cliEndProcessingRequest(ByteStream *pStream);
 
     // IMPORTANT: called with interrupts disabled
-    void handleCompletedRequests();
+    void cliHandleCompletedRequests();
 
     void begin() override;
 

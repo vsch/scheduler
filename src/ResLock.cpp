@@ -13,10 +13,6 @@ uint8_t ResLock::reserve(uint8_t taskId, uint8_t available1) {
                                                            , taskQueue.getCount()
                                                            , available1, nAvailable1);
 
-                    serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: satisfied %d: a1:%d <= nA1:%d\n")
-                                                           , taskQueue.getCount()
-                                                           , available1, nAvailable1);
-
                     // make it the owner of TWI resourceLock
                     owner = taskId;
                     return 0;

@@ -12,6 +12,7 @@
 #define STREAM_FLAGS_PROCESSING (0x08)      // marks the stream as being processed
 #define STREAM_FLAGS_UNBUFFERED (0x10)      // marks the stream is unbuffered
 #define STREAM_FLAGS_APPEND     (0x20)      // used in getStream to disable resetting content to 0 for write streams
+#define STREAM_FLAGS_RD_REVERSE (0x20)      // when writing to rdbuffer, do it in reverse
 
 // Simple streaming both read and write for use in C interrupts and C code, provided from C/C++ code
 // has the same layout as ByteStream

@@ -27,7 +27,7 @@
 #define IOX_I2C_ADDRESS(v)      (XL9535_BASE_ADDRESS | ((v) & 0x07))
 
 #define IOX_FLAGS_ADDRESS       (0x07)
-#define IOX_FLAGS_FREE_1        (0x08)
+#define IOX_FLAGS_FIRST_IN      (0x08)
 #define IOX_FLAGS_STEPPER_PHASE (0x30)
 #define IOX_FLAGS_FREE_2        (0xC0)
 

@@ -14,7 +14,8 @@ public:
 
     defineSchedulerTaskId("TwiController");
 
-    void startProcessingRequest(ByteStream *pStream) override;
+    // IMPORTANT: must be called with interrupts disabled
+    void cliStartProcessingRequest(ByteStream *pStream) override;
 };
 
 extern TwiController twiController;

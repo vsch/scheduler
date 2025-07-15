@@ -120,7 +120,7 @@ void twiint_start(CByteStream_t *pStream);
  * 
  * @param pStream pointer to stream whose processing was completed 
  */
-void complete_request(CByteStream_t *pStream);
+void cli_complete_request(CByteStream_t *pStream);
 
 CByteStream_t *twi_get_write_buffer(uint8_t addr);
 
@@ -164,7 +164,8 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #else
 #define TRC_RCV_OVR1     (0x0D)
 #define TRC_RCV_OVR2     (0x0E)
-#define TRC_MAX          (0x0F)
+#define TRC_RCV_ADDR     (0x0F)
+#define TRC_MAX          (0x10)
 #endif // SERIAL_DEBUG_WI_TRACE_OVERRUNS
 
 #ifdef SERIAL_DEBUG_TWI_TRACER_CODES
@@ -188,6 +189,7 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
 #define STR_TRC_RCV_OVR1     "RCV_OVERRUN1()"
 #define STR_TRC_RCV_OVR2     "RCV_OVERRUN2()"
+#define STR_TRC_RCV_ADDR     "TRC_RCV_ADDR"
 #endif
 #else // SERIAL_DEBUG_TWI_TRACER_CODES
 #define STR_TRC_BUS_ERROR    "BUS_ERROR"   
@@ -206,6 +208,7 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
 #define STR_TRC_RCV_OVR1     "RCV_OVERRUN1"
 #define STR_TRC_RCV_OVR2     "RCV_OVERRUN2"
+#define STR_TRC_RCV_ADDR     "TRC_RCV_ADDR"
 #endif
 #endif //SERIAL_DEBUG_TWI_TRACER_CODES
 #endif // SERIAL_DEBUG_TWI_RAW_TRACER

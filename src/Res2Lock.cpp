@@ -10,13 +10,8 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
         if (pTask) {
             if (isFree()) {
                 if (isAvailable(available1, available2)) {
-                    serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: satisfied %d: a1:%d <= nA1:%d && a2:%d <= nA2:%d\n")
-                                                           , taskQueue.getCount()
-                                                           , available1, nAvailable1
-                                                           , available2, nAvailable2);
-
-                    serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: satisfied %d: a1:%d <= nA1:%d && a2:%d <= nA2:%d\n")
-                                                           , taskQueue.getCount()
+                    serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: satisfied #%d: a1:%d <= nA1:%d && a2:%d <= nA2:%d\n")
+                                                           , taskId
                                                            , available1, nAvailable1
                                                            , available2, nAvailable2);
 
@@ -28,11 +23,13 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
 
             // make it wait either for resources or its turn
             if (!isAvailable(available1, available2)) {
-                serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: suspend: a1:%d > nA1:%d || a2:%d > nA2:%d\n")
+                serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: suspend #%d: a1:%d > nA1:%d || a2:%d > nA2:%d\n")
+                                                       , taskId
                                                        , available1, nAvailable1
                                                        , available2, nAvailable2);
             } else {
-                serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: suspend waiting task: a1 %d - nA1 %d, a2:%d - nA2 %d\n")
+                serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: suspend waiting task #%d: a1 %d - nA1 %d, a2:%d - nA2 %d\n")
+                                                       , taskId
                                                        , available1, nAvailable1
                                                        , available2, nAvailable2);
             }

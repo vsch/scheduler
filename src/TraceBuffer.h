@@ -180,17 +180,17 @@ public:
 
     static TraceBuffer twiTraceBuffer;
 
-    static void dumpTrace();
+    static void cliDumpTrace();
 
 private:
-    static void dumpTrace(TraceBuffer *pBuffer);
+    static void cliDumpTrace(TraceBuffer *pBuffer);
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern void twi_dump_trace();
+extern void twi_cli_dump_trace();
 
 #ifdef __cplusplus
 }

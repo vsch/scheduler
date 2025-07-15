@@ -124,20 +124,20 @@ void Controller::begin() {
 
 void Controller::loop() {
     cli();
-    handleCompletedRequests();
+    cliHandleCompletedRequests();
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-    TraceBuffer::dumpTrace();
+    TraceBuffer::cliDumpTrace();
 #endif
 
-    startNextRequest();
+    cliStartNextRequest();
     sei();
 
     resume(1);
 }
 
 // IMPORTANT: called from interrupt code
-void Controller::endProcessingRequest(ByteStream *pStream) {
+void Controller::cliEndProcessingRequest(ByteStream *pStream) {
     pStream->flags &= ~(STREAM_FLAGS_PENDING | STREAM_FLAGS_PROCESSING);
 
     // make sure it is a shared request stream
@@ -159,7 +159,7 @@ void Controller::endProcessingRequest(ByteStream *pStream) {
         // don't start next request if trace processing is pending
         if (isRequestAutoStart()) {
             // start processing next request
-            startNextRequest();
+            cliStartNextRequest();
         }
 
         // restart loop
@@ -168,7 +168,7 @@ void Controller::endProcessingRequest(ByteStream *pStream) {
 }
 
 // IMPORTANT: interrupts disabled when called
-void Controller::handleCompletedRequests() {
+void Controller::cliHandleCompletedRequests() {
     while (!completedStreams.isEmpty()) {
         const uint8_t id = completedStreams.removeHead();
         ByteStream *completedStream = getReadStream(id);
@@ -242,12 +242,13 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream, CByteBuffer_t *p
     // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
     pWriteStream->nHead = pWriteStream->nTail;
 
-    sei();
 
     if (startProcessing) {
         pStream->flags |= STREAM_FLAGS_PROCESSING;
-        startProcessingRequest(pStream);
+        cliStartProcessingRequest(pStream);
     }
+    
+    sei();
 
     // make sure loop task is enabled start our loop task to monitor its completion
     this->resume(0);

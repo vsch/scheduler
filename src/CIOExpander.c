@@ -53,10 +53,10 @@ uint8_t iox_rcv_word_wait(uint8_t addr, uint8_t reg, uint16_t *pData) {
 
 // IOX Tilt Tower Module
 CByteStream_t *ciox_init(CIOExpander_t *thizz, uint8_t addressVar, uint8_t extraOutputs) {
-    thizz->flags = (addressVar & IOX_FLAGS_ADDRESS) | IOX_FLAGS_STEPPER_PHASE;
+    thizz->flags = (addressVar & IOX_FLAGS_ADDRESS) | IOX_FLAGS_STEPPER_PHASE | IOX_FLAGS_FIRST_IN;
     thizz->outputs = 0x00;
     thizz->inputs = 0xff;
-    thizz->lastInputs = 0xff;
+    thizz->lastInputs = 0x00;
     return iox_init(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), TILT_CONFIGURATION, extraOutputs | TILT_INVERT_OUT);
 }
 
@@ -127,7 +127,7 @@ CByteStream_t *ciox_step_ccw(CIOExpander_t *thizz) {
 }
 
 CByteStream_t *ciox_in(CIOExpander_t *thizz) {
-    thizz->lastInputs = thizz->inputs;
+    //thizz->lastInputs = thizz->inputs;
     CByteStream_t *pStream = iox_rcv_byte(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), IOX_REG_INPUT_PORT1, &thizz->inputs);
     // twi_wait_sent(pStream);
     return pStream;

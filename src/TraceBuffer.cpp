@@ -9,9 +9,11 @@ void twi_trace(CTwiTraceBuffer_t *thizz, uint8_t traceByte) {
 }
 
 #ifdef DEBUG_MODE_TWI_TRACE_TIMEIT
+
 void twi_trace_bytes(CTwiTraceBuffer_t *thizz, uint8_t traceByte, void *data, uint8_t count) {
     ((TraceBuffer *) thizz)->traceBytes(traceByte, data, count);
 }
+
 #endif
 
 #ifdef CONSOLE_DEBUG
@@ -23,18 +25,18 @@ uint8_t twiint_flags;
 
 TraceBuffer TraceBuffer::twiTraceBuffer;
 
-void TraceBuffer::dumpTrace() {
-    cli();
-    dumpTrace(&twiTraceBuffer);
-    sei();
-}
-
-void twi_dump_trace() {
-    TraceBuffer::dumpTrace();
+// IMPORTANT: called with interrupts disabled, so it should return with interrupts disabled
+void TraceBuffer::cliDumpTrace() {
+    cliDumpTrace(&twiTraceBuffer);
 }
 
 // IMPORTANT: called with interrupts disabled, so it should return with interrupts disabled
-void TraceBuffer::dumpTrace(TraceBuffer *pBuffer) {
+void twi_cli_dump_trace() {
+    TraceBuffer::cliDumpTrace();
+}
+
+// IMPORTANT: called with interrupts disabled, so it should return with interrupts disabled
+void TraceBuffer::cliDumpTrace(TraceBuffer *pBuffer) {
     if (!(twiint_flags & TWI_FLAGS_TRC_HAD_EMPTY) || !pBuffer->isEmpty()) {
         if (pBuffer->isEmpty()) {
             twiint_flags |= TWI_FLAGS_TRC_HAD_EMPTY;
@@ -50,9 +52,8 @@ void TraceBuffer::dumpTrace(TraceBuffer *pBuffer) {
         uint32_t start = micros();
         uint32_t timeoutMic = TWI_WAIT_TIMEOUT * 2 * 1000L;
         uint8_t timedOut = 0;
-        
+
         sei();
-        
         while (twiint_busy()) {
             uint32_t diff = micros() - start;
             if (diff >= timeoutMic) {
@@ -61,10 +62,10 @@ void TraceBuffer::dumpTrace(TraceBuffer *pBuffer) {
             }
         }
         cli();
-        
-#ifdef SERIAL_DEBUG       
+
+#ifdef SERIAL_DEBUG
         if (timedOut) serialDebugPrintf_P(PSTR("timed out %d ms. "), TWI_WAIT_TIMEOUT * 2);
-        if (timedOut) while (1);
+        // if (timedOut) while (1);
         serialDebugPrintf_P(PSTR("done.\n"));
 #endif
 #endif //CONSOLE_DEBUG
@@ -125,28 +126,35 @@ void TraceBuffer::dump() {
             }
         }
 #else
-        const char *pStr = (const char *) pgm_read_ptr(trcStrings + trc);
+            const char *pStr = (const char *) pgm_read_ptr(trcStrings + trc);
+
+            for (;;) {
+#ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
+                if (trc == TRC_RCV_ADDR) {
+                    uint16_t rcvAddr;
+                    readBytes(&rcvAddr, sizeof(rcvAddr));
+                    serialDebugPrintf_P(PSTR("  %S(0x%2.2X)"), pStr, rcvAddr);
+                    break;
+                }
+#endif //SERIAL_DEBUG_WI_TRACE_OVERRUNS
 
 #ifdef DEBUG_MODE_TWI_TRACE_TIMEIT
-        if (trc == TRC_STOP) {
-            uint16_t elapsedMicros;
-            readBytes(&elapsedMicros, sizeof(elapsedMicros));
-            serialDebugPrintf_P(PSTR("  %S(%dus)"), pStr, elapsedMicros);
-        } else {
-            if (count > 1) {
-                serialDebugPrintf_P(PSTR("  %S(%d)"), pStr, count);
-            } else {
-                serialDebugPrintf_P(PSTR("  %S"), pStr);
+                if (trc == TRC_STOP) {
+                    uint16_t elapsedMicros;
+                    readBytes(&elapsedMicros, sizeof(elapsedMicros));
+                    serialDebugPrintf_P(PSTR("  %S(%dus)"), pStr, elapsedMicros);
+                    break;
+                }
+#endif // DEBUG_MODE_TWI_TRACE_TIMEIT
+
+                if (count > 1) {
+                    serialDebugPrintf_P(PSTR("  %S(%d)"), pStr, count);
+                } else {
+                    serialDebugPrintf_P(PSTR("  %S"), pStr);
+                }
+                break;
             }
         }
-#else
-        if (count > 1) {
-            serialDebugPrintf_P(PSTR("  %S(%d)"), pStr, count);
-        } else {
-            serialDebugPrintf_P(PSTR("  %S"), pStr);
-        }
-#endif // DEBUG_MODE_TWI_TRACE_TIMEIT
-    }
 
 #endif //CONSOLE_DEBUG
 #endif //SERIAL_DEBUG_TWI_RAW_TRACER
