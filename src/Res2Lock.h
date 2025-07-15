@@ -4,64 +4,54 @@
 
 #include "Scheduler.h"
 #include "ByteQueue.h"
-#include "Mutex.h"
 #include "debug_config.h"
 
 // sharable resource to be used in Task and AsyncTask calls
 
-#define RLOCK_MUTEX_SIZE(maxTasks)                 (sizeOfQueue((maxTasks), uint8_t))
 #define RLOCK_TASK_QUEUE_SIZE(maxTasks)             (sizeOfQueue((maxTasks), uint8_t))
 #define RLOCK_RES_QUEUE_SIZE(maxTasks)              (sizeOfQueue((maxTasks)*2, uint8_t))
 
-#define RLOCK_MUTEX_OFFS(maxTasks)                  (0)
-#define RLOCK_TASK_QUEUE_OFFS(maxTasks)             (RLOCK_MUTEX_OFFS(maxTasks) + RLOCK_MUTEX_SIZE(maxTasks))
+#define RLOCK_TASK_QUEUE_OFFS(maxTasks)             (0)
 #define RLOCK_RES_QUEUE_OFFS(maxTasks)              (RLOCK_TASK_QUEUE_OFFS(maxTasks) + RLOCK_TASK_QUEUE_SIZE(maxTasks))
 #define RLOCK_NEXT_MEMBER_OFFS(maxTasks)            (RLOCK_RES_QUEUE_OFFS(maxTasks) + RLOCK_RES_QUEUE_SIZE(maxTasks))
 
 // Use this macro to allocate space for Res2Lock queues
 #define sizeOfRes2LockBuffer(maxTasks)               (RLOCK_NEXT_MEMBER_OFFS(maxTasks))
 
-// FIX: can only have one task queue. The first task in the queue either owns the resource, which has enough
-//  available for its needs, or it is waiting for enough resources to be freed. When the owner releases the resources,
-//  the next task in line will be tested to see if it has enough resources available. It becomes either the owner or the 
-//  next waiter. 
-//
-//  ISSUE: current tasks in the Mutex waiting for release, may not have enough resources when the release occurs becuase
-//    they were added to the list before the previous task released the resource lock.
-
-class Res2Lock : private Mutex {
+class Res2Lock {
     friend class Controller;
     
-    ByteQueue taskQueue;            // required resources of waiting tasks
+    uint8_t owner;                  // task that owns the resource or NULL_TASK
+    ByteQueue taskQueue;            // list of tasks waiting for resources.
     ByteQueue resQueue;             // required resources of waiting tasks
 
     const uint8_t nMaxAvailable1;    // max resources available
     const uint8_t nMaxAvailable2;    // max resources available
-    volatile uint8_t nAvailable1;             // amount of available resources
-    volatile uint8_t nAvailable2;             // amount of available resources
+    uint8_t nAvailable1;    // amount of available resources
+    uint8_t nAvailable2;    // amount of available resources
 
 public:
     inline Res2Lock(uint8_t *semaBuffer, uint8_t maxTasks, uint8_t available1, uint8_t available2)
-            : Mutex(semaBuffer + RLOCK_MUTEX_OFFS(maxTasks), RLOCK_MUTEX_SIZE(maxTasks))
-              , taskQueue(semaBuffer + RLOCK_TASK_QUEUE_OFFS(maxTasks), RLOCK_TASK_QUEUE_SIZE(maxTasks))
+              : taskQueue(semaBuffer + RLOCK_TASK_QUEUE_OFFS(maxTasks), RLOCK_TASK_QUEUE_SIZE(maxTasks))
               , resQueue(semaBuffer + RLOCK_RES_QUEUE_OFFS(maxTasks), RLOCK_RES_QUEUE_SIZE(maxTasks))
               , nMaxAvailable1(available1)
               , nMaxAvailable2(available2) {
         nAvailable1 = nMaxAvailable1;
         nAvailable2 = nMaxAvailable2;
+        owner = NULL_TASK;
     }
 
     // IMPORTANT: must be called with interrupts disabled 
     inline void reset() {
-        Mutex::reset();
         nAvailable1 = nMaxAvailable1;
         nAvailable2 = nMaxAvailable2;
+        owner = NULL_TASK;
         taskQueue.reset();
         resQueue.reset();
     }
 
-    inline uint8_t isEmpty() const {
-        return Mutex::isFree() && taskQueue.isEmpty();
+    inline uint8_t isFree() const {
+        return owner == NULL_TASK && taskQueue.isEmpty();
     }
 
     inline uint8_t isAvailable(uint8_t available1, uint8_t available2) const {
@@ -127,9 +117,7 @@ public:
         return pTask ? reserve(pTask->getIndex(), available1, available2) : NULL_TASK;
     }
     
-    inline void release() {
-        Mutex::release();
-    }
+    void release();
 
     /**
      * Release resource from the current task and resume next task in line giving it the resource when the resource 

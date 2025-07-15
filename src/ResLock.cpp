@@ -3,106 +3,110 @@
 #include "Scheduler.h"
 #include "debug_config.h"
 
-uint8_t ResLock::reserve(uint8_t taskId, uint8_t available) {
-    if (isMaxAvailable(available)) {
-        if (scheduler.isValidId(taskId)) {
-            // No one waiting, can check and release right away.
-            // Otherwise, have to first satisfy waiting tasks
-            Task *pTask = scheduler.getTask(taskId);
+uint8_t ResLock::reserve(uint8_t taskId, uint8_t available1) {
+    if (isMaxAvailable(available1)) {
+        Task *pTask = scheduler.getTask(taskId);
+        if (pTask) {
+            if (isFree()) {
+                if (isAvailable(available1)) {
+                    serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: satisfied %d: a1:%d <= nA1:%d\n")
+                                                           , taskQueue.getCount()
+                                                           , available1, nAvailable1);
 
-            if (pTask) {
-                if (!Mutex::isFree()) {
-                    serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: suspend waiting mutex: a1 %d - nA1 %d\n")
-                                                           , available, nAvailable);
-                    return Mutex::reserve(taskId);
-                } else if (taskQueue.isEmpty()) {
-                    if (isAvailable(available)) {
-                        serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: satisfied %d: a1:%d <= nA1:%d\n")
-                                                               , taskQueue.getCount()
-                                                               , available, nAvailable);
+                    serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: satisfied %d: a1:%d <= nA1:%d\n")
+                                                           , taskQueue.getCount()
+                                                           , available1, nAvailable1);
 
-                        // make it the owner of TWI resourceLock
-                        return Mutex::reserve(taskId);
-                    } else {
-                        serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: suspend: a1:%d > nA1:%d\n")
-                                                               , available, nAvailable);
-                    }
-                } else {
-                    serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: suspend waiting task: a1 %d - nA1 %d\n")
-                                                           , available, nAvailable);
-                }
-
-
-                // need to wait until they are available
-                taskQueue.addTail(taskId);
-                resQueue.addTail(available);
-
-                if (pTask->isAsync()) {
-                    reinterpret_cast<AsyncTask *>(pTask)->yieldSuspend();
+                    // make it the owner of TWI resourceLock
+                    owner = taskId;
                     return 0;
-                } else {
-                    scheduler.suspend(taskId);
-                    return 1;
                 }
+            }
+
+            // make it wait either for resources or its turn
+            if (!isAvailable(available1)) {
+                serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: suspend: a1:%d > nA1:%d\n")
+                                                       , available1, nAvailable1);
+            } else {
+                serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: suspend waiting task: a1 %d - nA1 %d\n")
+                                                       , available1, nAvailable1);
+            }
+
+
+            // need to wait until they are available
+            taskQueue.addTail(taskId);
+            resQueue.addTail(available1);
+
+            if (pTask->isAsync()) {
+                reinterpret_cast<AsyncTask *>(pTask)->yieldSuspend();
+                return 0;
+            } else {
+                scheduler.suspend(taskId);
+                return 1;
             }
         } else {
             serialDebugPrintf_P(PSTR("ResLock:: invalid task id %d\n"), taskId);
         }
     } else {
         serialDebugPrintf_P(PSTR("ResLock:: never satisfied: a1:%d > maxA1:%d\n")
-                            , available, nMaxAvailable);
+                            , available1, nMaxAvailable1);
     }
     return NULL_BYTE;
 }
 
-// called from interrupt code
-void ResLock::makeAvailable(uint8_t available) {
-    nAvailable += available;
-    if (nAvailable > nMaxAvailable) nAvailable = nMaxAvailable;
+void ResLock::release() {
+    if (owner != NULL_TASK) {
+        owner = NULL_TASK;
 
+        // just test for available resources
+        cli();
+        makeAvailable(0);
+        sei();
+    }
+}
+
+// IMPORTANT: called from interrupt code, so interrupts should be disabled.
+void ResLock::makeAvailable(uint8_t available1) {
+    nAvailable1 += available1;
+    if (nAvailable1 > nMaxAvailable1) nAvailable1 = nMaxAvailable1;
+    
     serialDebugResourceDetailTracePrintf_P(PSTR("ResLock::make avail: a1 %d - nA1 %d\n")
-                                           , available, nAvailable);
+                                           , available1, nAvailable1);
 
-    available = nAvailable;
+    if (owner == NULL_TASK) {
+        // remove all that will have resources based on requested maximum
+        while (!taskQueue.isEmpty()) {
+            uint8_t nResCount1 = resQueue.peekHead();
 
-    // remove all that will have resources based on requested maximum
-    while (!taskQueue.isEmpty()) {
-        uint8_t nResCount = resQueue.peekHead();
-
-        if (nResCount == NULL_BYTE) {
-            serialDebugPrintf_P(PSTR("ResLock:: res peek() %d\n"), nResCount);
-        }
-
-        if (available < nResCount) {
-            serialDebugResourceDetailTracePrintf_P(PSTR("ResLock::still waiting %d: a1 %d - nA1 %d\n")
-                                                   , taskQueue.getCount()
-                                                   , nResCount, available);
-
-            break;
-        }
-
-        // can release the task
-        resQueue.removeHead();
-        resQueue.removeHead();
-        uint8_t taskId = taskQueue.removeHead();
-
-        Task *pNextTask = scheduler.getTask(taskId);
-        if (pNextTask) {
-            available -= nResCount;
-
-            serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock::resuming #%d: a1 %d - nA1 %d\n")
-                                                   , pNextTask->getIndex()
-                                                   , nResCount, available);
-
-            // CAVEAT: these tasks are already suspended, there is no need to call Mutex::reserve for the newly enabled 
-            //  tasks because if they are not the first, then they will be suspended, but they are already suspended.
-            //  suspened AsyncTasks should not call their yieldSuspend().  
-            if (Mutex::isFree()) {
-                // resume the task, if it is first. 
-                scheduler.resume(taskId, 0);
+            if (nResCount1 == NULL_BYTE) {
+                serialDebugPrintf_P(PSTR("ResLock:: res peek() %d\n"), nResCount1);
             }
-            // add it to the mutex list
-            Mutex::queue.addTail(taskId);
+
+            if (nAvailable1 < nResCount1) {
+                serialDebugResourceDetailTracePrintf_P(PSTR("ResLock::still waiting %d: a1 %d - nA1 %d\n")
+                                                       , taskQueue.getCount()
+                                                       , nResCount1, nAvailable1);
+
+                break;
+            }
+
+            // can release the task
+            resQueue.removeHead();
+            uint8_t taskId = taskQueue.removeHead();
+
+            Task *pNextTask = scheduler.getTask(taskId);
+            if (pNextTask) {
+                serialDebugResourceDetailTracePrintf_P(PSTR("ResLock::resuming #%d: a1 %d - nA1 %d\n")
+                                                       , taskId
+                                                       , nResCount1, nAvailable1);
+
+                // CAVEAT: these tasks are already suspended, there is no need to call Mutex::reserve for the newly enabled 
+                //  tasks because if they are not the first, then they will be suspended, but they are already suspended.
+                //  suspened AsyncTasks should not call their yieldSuspend().  
+                owner = taskId;
+                scheduler.resume(taskId, 0);
+                break;
+            }
         }
     }
 }
@@ -119,8 +123,7 @@ void ResLock::dump(uint8_t indent, uint8_t compact) {
 
     addActualOutput("%s", indentStr);
 
-    addActualOutput("%sResLock { max:%d, avail:%d\n", indentStr, nMaxAvailable, nAvailable);
-    Mutex::dump(indent + 2, compact);
+    addActualOutput("%sResLock { owner: %d, max:%d, avail:%d\n", indentStr, owner,  nMaxAvailable1, nAvailable1);
     taskQueue.dump(indent + 2, compact);
     resQueue.dump(indent + 2, compact);
     addActualOutput("%s}\n", indentStr);
