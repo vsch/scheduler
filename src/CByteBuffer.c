@@ -14,6 +14,11 @@ void buffer_copy(CByteBuffer_t *thizz, CByteBuffer_t *other) {
         thizz->nPos = other->nPos;
         thizz->nSize = other->nSize;
         thizz->pData = other->pData;
+    } else {
+        thizz->flags = 0;
+        thizz->nPos = 0;
+        thizz->nSize = 0;
+        thizz->pData = NULL;
     }
 }
 

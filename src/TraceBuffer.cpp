@@ -48,19 +48,26 @@ void TraceBuffer::dumpTrace(TraceBuffer *pBuffer) {
 #ifndef CONSOLE_DEBUG
         serialDebugPrintf_P(PSTR("Waiting for TWI TRACER. "));
         uint32_t start = micros();
-        uint32_t timeoutMic = TWI_WAIT_TIMEOUT * 1000L;
-
+        uint32_t timeoutMic = TWI_WAIT_TIMEOUT * 2 * 1000L;
+        uint8_t timedOut = 0;
+        
         sei();
+        
         while (twiint_busy()) {
             uint32_t diff = micros() - start;
             if (diff >= timeoutMic) {
-                serialDebugPrintf_P(PSTR("timed out %dms. "), TWI_WAIT_TIMEOUT);
+                timedOut = 1;
                 break;
             }
         }
         cli();
+        
+#ifdef SERIAL_DEBUG       
+        if (timedOut) serialDebugPrintf_P(PSTR("timed out %d ms. "), TWI_WAIT_TIMEOUT * 2);
+        if (timedOut) while (1);
         serialDebugPrintf_P(PSTR("done.\n"));
 #endif
+#endif //CONSOLE_DEBUG
 
         TraceBuffer traceBuffer;
 

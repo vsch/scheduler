@@ -21,9 +21,17 @@
 // Use this macro to allocate space for Res2Lock queues
 #define sizeOfRes2LockBuffer(maxTasks)               (RLOCK_NEXT_MEMBER_OFFS(maxTasks))
 
+// FIX: can only have one task queue. The first task in the queue either owns the resource, which has enough
+//  available for its needs, or it is waiting for enough resources to be freed. When the owner releases the resources,
+//  the next task in line will be tested to see if it has enough resources available. It becomes either the owner or the 
+//  next waiter. 
+//
+//  ISSUE: current tasks in the Mutex waiting for release, may not have enough resources when the release occurs becuase
+//    they were added to the list before the previous task released the resource lock.
+
 class Res2Lock : private Mutex {
     friend class Controller;
-
+    
     ByteQueue taskQueue;            // required resources of waiting tasks
     ByteQueue resQueue;             // required resources of waiting tasks
 

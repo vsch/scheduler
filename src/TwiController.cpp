@@ -50,7 +50,7 @@ void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count) {
 uint8_t twi_wait_sent(CByteStream_t *pStream) {
     uint32_t start = micros();
     uint32_t timeoutMic = TWI_WAIT_TIMEOUT * 1000L;
-
+    
     while (stream_is_pending(pStream)) {
         uint32_t diff = micros() - start;
         if (diff >= timeoutMic) {
@@ -61,6 +61,10 @@ uint8_t twi_wait_sent(CByteStream_t *pStream) {
             TraceBuffer::dumpTrace();
 #endif
             serialDebugTwiPrintf_P(PSTR("  TWI: #%d wait_sent timed out %ld.\n"), twiController.getReadStreamId((ByteStream *) pStream), diff / 1000L);
+
+#ifdef SERIAL_DEBUG
+            ((ByteStream *)pStream)->serialDebugDump(twiController.getReadStreamId((ByteStream *)pStream));
+#endif
             return 0;
         }
     }
@@ -95,3 +99,20 @@ CByteStream_t *twi_process_stream() {
     return twi_process_stream_rcv(NULL);
 }
 
+void TwiController::startProcessingRequest(ByteStream *pStream) {
+    // output stream content and call endProcessingRequest
+#ifndef CONSOLE_DEBUG
+
+#ifdef SERIAL_DEBUG_TWI_DATA
+    pStream->serialDebugDump(getReadStreamId(pStream));
+#endif
+
+#endif
+    this->resume(0);
+
+#ifndef CONSOLE_DEBUG
+    
+    twiint_start((CByteStream_t *) pStream);
+
+#endif
+}

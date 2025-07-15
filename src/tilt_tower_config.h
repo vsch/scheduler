@@ -2,22 +2,22 @@
 #ifndef ARDUINOPROJECTMODULE_DEBUG_TILT_TOWER_CONFIG_H
 #define ARDUINOPROJECTMODULE_DEBUG_TILT_TOWER_CONFIG_H
 
-#define TILT_MOT1_B1_IN       ((uint16_t)0x0001)
-#define TILT_MOT1_A1_IN       ((uint16_t)0x0002)
-#define TILT_MOT1_B2_IN       ((uint16_t)0x0004)
-#define TILT_MOT1_A2_IN       ((uint16_t)0x0008)
-#define TILT_MOT1_EN          ((uint16_t)0x0010)
-#define TILT_LED_RED          ((uint16_t)0x0020)
-#define TILT_LED_GREEN        ((uint16_t)0x0040)
-#define TILT_LED_BLUE         ((uint16_t)0x0080)
-#define TILT_BTN_HIGH_LIMIT   ((uint16_t)0x0100)
-#define TILT_BTN_LOW_LIMIT    ((uint16_t)0x0200)
-#define TILT_FEED_MOTOR_IN    ((uint16_t)0x0400)
-#define TILT_FEED_VALVE_IN    ((uint16_t)0x0800)
+#define TILT_MOT_B1           (0x0001)
+#define TILT_MOT_A1           (0x0002)
+#define TILT_MOT_B2           (0x0004)
+#define TILT_MOT_A2           (0x0008)
+#define TILT_MOT_EN           (0x0010)
+#define TILT_LED_RED          (0x0020)
+#define TILT_LED_GREEN        (0x0040)
+#define TILT_LED_BLUE         (0x0080)
+#define TILT_BTN_HIGH_LIMIT   (0x0100)
+#define TILT_BTN_LOW_LIMIT    (0x0200)
+#define TILT_FEED_MOTOR_IN    (0x0400)
+#define TILT_FEED_VALVE_IN    (0x0800)
 
-#define TILT_INVERT_OUT       ((uint16_t)(TILT_LED_RED | TILT_LED_GREEN | TILT_LED_BLUE))  
+#define TILT_INVERT_OUT       ((TILT_LED_RED | TILT_LED_GREEN | TILT_LED_BLUE))  
 
-#define TILT_CONFIGURATION    ((uint16_t)~(TILT_MOT1_B1_IN | TILT_MOT1_A1_IN | TILT_MOT1_B2_IN | TILT_MOT1_A2_IN | TILT_MOT1_EN | TILT_LED_RED | TILT_LED_GREEN | TILT_LED_BLUE))
+#define TILT_CONFIGURATION    (~(TILT_MOT_B1 | TILT_MOT_A1 | TILT_MOT_B2 | TILT_MOT_A2 | TILT_MOT_EN | TILT_LED_RED | TILT_LED_GREEN | TILT_LED_BLUE) & 0xfff)
 
 #define TILT_INPUT_MASK       (TILT_BTN_HIGH_LIMIT | TILT_BTN_LOW_LIMIT | TILT_FEED_MOTOR_IN | TILT_FEED_VALVE_IN)
 

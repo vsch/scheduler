@@ -102,9 +102,8 @@ void twiint_start(CByteStream_t *pStream) {
 
     pTwiStream = pStream;
     twiint_flags &= ~TWI_FLAGS_HAVE_READ;
-    CByteBuffer_t *pRcvBuffer = pStream->pRcvBuffer;
-    if (pRcvBuffer) {
-        buffer_copy(&rdBuffer, pRcvBuffer);
+    if (pStream->pRcvBuffer) {
+        buffer_copy(&rdBuffer, pStream->pRcvBuffer);
         twiint_flags |= TWI_FLAGS_HAVE_READ;
     }
     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);

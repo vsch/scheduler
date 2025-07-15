@@ -17,8 +17,8 @@ void Controller::dump(uint8_t indent, uint8_t compact) {
     //    ByteStream *readStreams;            // pointer to first element in array of ByteSteam entries
     //    Queue writeBuffer;                  // shared write byte buffer
     //    ByteStream writeStream;             // write stream, must be requested and released in the same task invocation or pending data will not be handleProcessedRequest
-    //    Mutex reservationLock;              // reservationLock for requests and buffer writes
-    //    Queue requirementList;                 // byte queue of requirementList: max 8 reservationLock and 31*8 buffer, b7:b5+1 is reservationLock, B4:b0*8 = 248 bytes see Note below.
+    //    Mutex resourceLock;              // resourceLock for requests and buffer writes
+    //    Queue requirementList;                 // byte queue of requirementList: max 8 resourceLock and 31*8 buffer, b7:b5+1 is resourceLock, B4:b0*8 = 248 bytes see Note below.
 
     char indentStr[32];
     memset(indentStr, ' ', sizeof indentStr);
@@ -113,8 +113,8 @@ uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
 
 void Controller::dumpReservationLockData() {
     serialDebugResourceDetailTracePrintf_P(PSTR("Ctrl:: res2Lock %d %d, Max: %d %d\n")
-                                           , reservationLock.getAvailable1(), reservationLock.getAvailable2()
-                                           , reservationLock.getMaxAvailable1(), reservationLock.getMaxAvailable2());
+                                           , resourceLock.getAvailable1(), resourceLock.getAvailable2()
+                                           , resourceLock.getMaxAvailable1(), resourceLock.getMaxAvailable2());
 }
 
 #endif
