@@ -133,9 +133,7 @@ void Scheduler::loop(uint16_t timeSlice) {
 
             if (pTask->isAsync()) {
                 AsyncTask *pAsyncTask = reinterpret_cast<AsyncTask *>(pTask);
-                pAsyncTask->activating();
                 resumeContext(pAsyncTask->pContext);
-                pAsyncTask->deactivated();
             } else {
                 // just a Task
                 pTask->loop();
@@ -251,13 +249,9 @@ AsyncTask::AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() {
  *
  * @return 0 if successfully yielded. 1 if no yield because was not the active task
  */
-uint8_t AsyncTask::yieldSuspend() {
+void AsyncTask::yieldSuspend() {
     suspend();
-    if (isInAsyncContext()) {
-        yieldContext();
-        return false;
-    }
-    return true;
+    yieldContext();
 }
 
 /**
@@ -270,20 +264,14 @@ uint8_t AsyncTask::yieldSuspend() {
  * @param milliseconds delay in milliseconds to wait before resuming calls to loop()
  * @return 0 if successfully yielded. 1 if no yield because was not the active task
  */
-uint8_t AsyncTask::yieldResume(uint16_t milliseconds) {
+void AsyncTask::yieldResume(uint16_t milliseconds) {
     resume(milliseconds);
-    if (isInAsyncContext()) {
-        yieldContext();
-        return 0;
-    }
-    return 1;
+    yieldContext();
 }
 
 void AsyncTask::yield() {
     resume(0);
-    if (isInAsyncContext()) {
-        yieldContext();
-    }
+    yieldContext();
 }
 
 uint8_t AsyncTask::hasYielded() const {

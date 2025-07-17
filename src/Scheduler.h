@@ -78,14 +78,6 @@ protected:
 
     uint8_t isAsync() override;
 
-    virtual void activating() {         // about to run in scheduler
-
-    };
-
-    virtual void deactivated() {      // just ran in scheduler
-
-    };
-
 public:
     /**
      * Constructor of a yielding task.
@@ -104,10 +96,8 @@ public:
      *
      * If the task is not the current context, it will not yield and return immediately.
      * Check return value for true if it did not yield and handle it, if needed.
-     *
-     * @return 0 if successfully yielded. 1 if no yield because was not the active task
      */
-    uint8_t yieldSuspend();
+    void yieldSuspend();
 
     /**
      * Set the resume milliseconds and yield the task's execution context. If successfully yielded, this
@@ -117,9 +107,8 @@ public:
      * Check return value for true if it did not yield and handle it, if needed.
      *
      * @param milliseconds delay in milliseconds to addWaitingTask before resuming calls to loop()
-     * @return 0 if successfully yielded. 1 if no yield because was not the active task
      */
-    uint8_t yieldResume(uint16_t milliseconds);
+    void yieldResume(uint16_t milliseconds);
 
     /**
      * Yield cpu to other tasks. Returns to caller after the task was resumed.
@@ -127,9 +116,7 @@ public:
     void yield();
 
     /**
-     * Test if the task has yielded or exited its loop function.
-     *
-     * @return 0 if has exited its loop function, otherwise it is the number of bytes in its saved context.
+     * Test if the task has yielded or exited its loop function. Applies outside the task
     */
     uint8_t hasYielded() const;
 
