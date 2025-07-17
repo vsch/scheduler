@@ -42,31 +42,36 @@ void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count) {
     }
 }
 
+uint8_t twi_wait_sent(CByteStream_t *pStream) {
+    return twi_wait((TwiWaitCallback) stream_is_pending, pStream);
+    
+}
 // IMPORTANT: assumes: interrupts are enabled, processing of requests should be done by interrupt 
 //            routine sequentially sending all pending requests. 
 //            i.e. set CTR_FLAGS_REQ_AUTO_START in controller constructor flags
-uint8_t twi_wait_sent(CByteStream_t *pStream) {
+uint8_t twi_wait(TwiWaitCallback callback, void *pParam) {
     uint32_t start = micros();
+    uint32_t diff = 0;
     uint32_t timeoutMic = TWI_WAIT_TIMEOUT * 1000L;
     
-    while (stream_is_pending(pStream)) {
-        uint32_t diff = micros() - start;
+    while (callback(pParam)) {
+        diff = micros() - start;
         if (diff >= timeoutMic) {
             cli();
-            twint_cancel_rd(pStream);
 #ifdef SERIAL_DEBUG_TWI_TRACER
             TraceBuffer::cliDumpTrace();
 #endif
             sei();
             
-            serialDebugTwiPrintf_P(PSTR("  TWI: #%d wait_sent timed out %ld.\n"), twiController.getReadStreamId((ByteStream *) pStream), diff / 1000L);
+            serialDebugTwiPrintf_P(PSTR("  TWI: #%d twi_wait timed out %ld.\n"), twiController.getReadStreamId((ByteStream *) pParam), diff / 1000L);
 
 #ifdef SERIAL_DEBUG
-            ((ByteStream *)pStream)->serialDebugDump(twiController.getReadStreamId((ByteStream *)pStream));
+            ((ByteStream *)pParam)->serialDebugDump(twiController.getReadStreamId((ByteStream *)pParam));
 #endif
             return 0;
         }
     }
+    serialDebugTwiPrintf_P(PSTR("  TWI: #%d twi_wait done %ld.\n"), twiController.getReadStreamId((ByteStream *) pParam), diff / 1000L);
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
     cli();

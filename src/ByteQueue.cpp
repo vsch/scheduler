@@ -204,21 +204,20 @@ uint16_t ByteQueue::peekHeadW() const {
 
 #endif
 
-ByteStream *ByteQueue::getStream(ByteStream *pOther, uint8_t flags) {
+void ByteQueue::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->nSize = nSize;
     pOther->nHead = nHead;
     pOther->nTail = nTail;
     pOther->pData = pData;
     
-    // start with no rd information
-    pOther->flags = flags & ~(STREAM_FLAGS_RD_REVERSE);
-
+    // only change the rd/wr flags
+    pOther->flags &= ~(STREAM_FLAGS_WR | STREAM_FLAGS_RD | STREAM_FLAGS_APPEND);
+    pOther->flags |= flags & (STREAM_FLAGS_WR | STREAM_FLAGS_RD | STREAM_FLAGS_APPEND);
+    
     if ((flags & (STREAM_FLAGS_WR | STREAM_FLAGS_RD | STREAM_FLAGS_APPEND)) == STREAM_FLAGS_WR) {
         // reset to empty at tail if it is a write only stream    
         pOther->nHead = pOther->nTail;
     }
-
-    return pOther;
 }
 
 uint8_t ByteQueue::addTail(uint8_t data) {

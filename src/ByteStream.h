@@ -23,14 +23,14 @@ struct ByteStream : protected ByteQueue {
     friend class TwiController2;
     
     volatile uint8_t flags;
-    uint8_t addr; // Slave address byte (with read/write bit). in case of Twi
+    uint8_t addr;               // Slave address byte (with read/write bit). in case of Twi
+    void *pCallbackParam;                   // an arbitrary parameter to be used by callback function.
+    CTwiCallback_t fCallback;
 
     uint8_t nRdSize;
     uint8_t *pRdData;
     // IMPORTANT: above fields must be the same as in CByteStream
     
-    uint8_t waitingTask; // if not NULL_TASK then index of task waiting for this request to complete
-
 public:
     ByteStream(ByteQueue *pByteQueue, uint8_t streamFlags);
 
@@ -42,13 +42,19 @@ public:
         return addr;
     }
 
-    void waitComplete();
-    void triggerComplete();
-
-    inline uint8_t getWaitingTask() const {
-        return waitingTask;
+    inline void setCallback(CTwiCallback_t fCallback, void *pCallbackParam = NULL) {
+        this->fCallback = fCallback;
+        this->pCallbackParam = pCallbackParam;
     }
-    
+
+    inline void *getCallbackParam() {
+        return pCallbackParam;
+    }
+
+    inline void triggerCallback() const {
+        if (fCallback) fCallback((const CByteStream_t *)this);
+    }
+
 #ifdef SERIAL_DEBUG   
     void serialDebugDump(uint8_t id);
 #else    
@@ -77,7 +83,7 @@ public:
 
     NO_DISCARD inline uint8_t isUnbufferedPending() const { return allFlags(STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED); }
 
-    ByteStream *getStream(ByteStream *pOther, uint8_t flags);
+    void getStream(ByteStream *pOther, uint8_t rdWrFlags);
 
     /**
      * Setup write stream for own buffer.

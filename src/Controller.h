@@ -212,7 +212,8 @@ public:
     }
 
     ByteStream *getWriteStream() {
-        return writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
+        writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
+        return &writeStream;
     }
 
     ByteStream *getStreamRequest() {

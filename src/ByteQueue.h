@@ -170,7 +170,7 @@ public:
     uint8_t updateQueued(ByteQueue *pOther, uint8_t flags);
     uint8_t updateStreamed(ByteStream *pOther);
 
-    ByteStream *getStream(ByteStream *pOther, uint8_t flags);
+    void getStream(ByteStream *pOther, uint8_t flags);
 
 #ifdef CONSOLE_DEBUG
     // print out queue for testing

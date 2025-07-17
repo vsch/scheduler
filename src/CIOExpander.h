@@ -18,6 +18,7 @@
 #define IOX_OUT_LED_BLUE        TILT_LED_BLUE
 
 #define IOX_OUT_LED             (TILT_LED_COLOR_WHITE)
+#define IOX_OUT_MOT_PHASES      (IOX_OUT_MOT_B1 | IOX_OUT_MOT_A1 | IOX_OUT_MOT_B2 | IOX_OUT_MOT_A2)
 
 #define IOX_IN_BTN_HIGH_LIMIT   (TILT_BTN_HIGH_LIMIT >> 8)
 #define IOX_IN_BTN_LOW_LIMIT    (TILT_BTN_LOW_LIMIT >> 8)
@@ -47,7 +48,7 @@ typedef struct CIOExpander {
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+    
 extern CByteStream_t *ciox_init(CIOExpander_t *thizz, uint8_t addressVar, uint8_t extraOutputs);
 extern void ciox_stepper_power(CIOExpander_t *thizz, uint8_t enable);
 extern void ciox_led_color(CIOExpander_t *thizz, uint8_t ledColor);

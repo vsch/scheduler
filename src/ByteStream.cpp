@@ -1,11 +1,13 @@
 #include "Arduino.h"
 #include "ByteStream.h"
 #include "Scheduler.h"
+#include "CByteStream.h"
 
 ByteStream::ByteStream(ByteQueue *pByteQueue, uint8_t streamFlags) : ByteQueue(*pByteQueue) {
     flags = streamFlags;
     addr = 0;
-    waitingTask = NULL_TASK;
+    pCallbackParam = NULL;
+    fCallback = NULL;
 
     nRdSize = 0;
     pRdData = NULL;
@@ -23,17 +25,15 @@ void ByteStream::setOwnBuffer(uint8_t *pData, uint8_t nSize) {
     this->nTail = nSize ? nSize - 1 : 0;
     this->nSize = nSize;
     this->pData = pData;
-    this->nRdSize = 0;
-    this->pRdData = NULL;
 }
 
 void ByteStream::setRdBuffer(uint8_t rdReverse, uint8_t *pRdData, uint8_t nRdSize) {
     this->nRdSize = nRdSize;
     this->pRdData = pRdData;
     if (rdReverse) {
-        this->flags |= STREAM_FLAGS_RD_REVERSE;
+        this->flags |= STREAM_FLAGS_BUFF_REVERSE;
     } else {
-        this->flags &= ~STREAM_FLAGS_RD_REVERSE;
+        this->flags &= ~STREAM_FLAGS_BUFF_REVERSE;
     }
 }
 
@@ -126,30 +126,21 @@ void ByteStream::pgmByteList(const uint8_t *bytes, uint16_t count) {
     }
 }
 
-void ByteStream::waitComplete() {
-    Task *pTask = scheduler.getTask();
-    if (pTask) {
-        scheduler.suspend(pTask);
-        waitingTask = pTask->getIndex();
-    }
+#ifndef SERIAL_DEBUG
+void stream_serialDebugDump(const CByteStream_t *thizz, uint8_t id) {
 }
+#else
 
-void ByteStream::triggerComplete() {
-    if (waitingTask != NULL_TASK) {
-        Task *pTask = scheduler.getTask(waitingTask);
-        waitingTask = NULL_TASK;
-        scheduler.resume(pTask, 0);
-    }
+void stream_serial_debug_dump(const CByteStream_t *thizz, uint8_t id) {
+    ((ByteStream *) thizz)->serialDebugDump(id);
 }
-
-#ifdef SERIAL_DEBUG
 
 void ByteStream::serialDebugDump(uint8_t id) {
     uint8_t iMax = getCount();
-    serialDebugPrintf_P(PSTR("TWI: @0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
+    serialDebugPrintf_P(PSTR("Stream: @0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
 
     if (nRdSize && pRdData) {
-        serialDebugPrintf_P(PSTR("  rcvBuffer: @0x%2.2X { flags: 0x%1.1X nSize: %d } "), pRdData, flags & STREAM_FLAGS_RD_REVERSE, nSize);
+        serialDebugPrintf_P(PSTR("  rcvBuffer: @0x%2.2X { flags: 0x%1.1X nSize: %d } "), pRdData, flags & STREAM_FLAGS_BUFF_REVERSE, nSize);
     }
     for (uint8_t i = 0; i < iMax; i++) {
         uint8_t byte = peekHead(i);
@@ -160,16 +151,21 @@ void ByteStream::serialDebugDump(uint8_t id) {
 
 #endif
 
-ByteStream *ByteStream::getStream(ByteStream *pOther, uint8_t flags) {
+void ByteStream::getStream(ByteStream *pOther, uint8_t rdWrFlags) {
     pOther->addr = addr;
-    pOther->waitingTask = waitingTask;
+    pOther->pCallbackParam = pCallbackParam;
+    pOther->fCallback = fCallback;
     pOther->nRdSize = nRdSize;
     pOther->pRdData = pRdData;
 
-    waitingTask = NULL_TASK;
+    pOther->flags = flags;
+    
+    pCallbackParam = NULL;
+    fCallback = NULL;
     nRdSize = 0;
     pRdData = NULL;
-    return ByteQueue::getStream(pOther, flags);
+    
+    ByteQueue::getStream(pOther, rdWrFlags);
 }
 
 #ifdef CONSOLE_DEBUG

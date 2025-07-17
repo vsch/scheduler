@@ -2,10 +2,10 @@
 #ifndef ARDUINOPROJECTMODULE_DEBUG_TILT_TOWER_CONFIG_H
 #define ARDUINOPROJECTMODULE_DEBUG_TILT_TOWER_CONFIG_H
 
-#define TILT_MOT_B1           (0x0001)
+#define TILT_MOT_A2           (0x0001)
 #define TILT_MOT_A1           (0x0002)
 #define TILT_MOT_B2           (0x0004)
-#define TILT_MOT_A2           (0x0008)
+#define TILT_MOT_B1           (0x0008)
 #define TILT_MOT_EN           (0x0010)
 #define TILT_LED_RED          (0x0020)
 #define TILT_LED_GREEN        (0x0040)

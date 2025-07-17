@@ -106,7 +106,7 @@ void twiint_start(CByteStream_t *pStream) {
     twiint_flags &= ~TWI_FLAGS_HAVE_READ;
 
     if (pStream->nRdSize && pStream->pRdData) {
-        buffer_init(&rdBuffer, pStream->flags & STREAM_FLAGS_RD_REVERSE ? BUFFER_PUT_REVERSE : 0, pStream->pRdData, pStream->nRdSize);
+        buffer_init(&rdBuffer, pStream->flags & STREAM_FLAGS_BUFF_REVERSE, pStream->pRdData, pStream->nRdSize);
         twiint_flags |= TWI_FLAGS_HAVE_READ;
     }
     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);

@@ -108,11 +108,13 @@ CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw) {
         phase++;
     }
     phase &= IOX_STEPPER_PHASE_MASK;
-    uint8_t motOut = pgm_read_byte(phases);
-    thizz->flags &= IOX_FLAGS_STEPPER_PHASE;
+    uint8_t motOut = pgm_read_byte(phases + phase);
 
     // enable motor output by default
-    thizz->flags |= IOX_STEPPER_PHASE_TO_FLAGS(motOut) | IOX_OUT_MOT_EN;
+    thizz->flags &= ~IOX_FLAGS_STEPPER_PHASE;
+    thizz->flags |= IOX_STEPPER_PHASE_TO_FLAGS(phase);
+    thizz->outputs &= ~IOX_OUT_MOT_PHASES;
+    thizz->outputs |= (motOut & IOX_OUT_MOT_PHASES) | IOX_OUT_MOT_EN;
     return iox_send_byte(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), IOX_REG_OUTPUT_PORT0, thizz->outputs);
 }
 

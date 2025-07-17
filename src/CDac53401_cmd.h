@@ -81,6 +81,10 @@
 // 01: Power down to 10K
 // 10: Power down to high impedance (default) 
 // 11: Power down to 10K
+#define DAC_PDN_UP                  (0x00)
+#define DAC_PDN_10K                 (0x01)
+#define DAC_PDN_HI_Z                (0x02)
+#define DAC_PDN_10K_2               (0x03)
 #define WR_GENERAL_CONFIG_DAC_PDN(v)         (((v) << 3) & 0x0018)
 // 0: Internal reference disabled, VDD is DAC reference voltage, DAC output range from 0 to VDD.
 // 1: Internal reference enabled, DAC reference = 1.21 V
@@ -90,6 +94,14 @@
 // 01: Reference to VOUT gain 2X
 // 10: Reference to VOUT gain 3X
 // 11: Reference to VOUT gain 4X
+// 00: Reference to VOUT gain 1_5X
+// 01: Reference to VOUT gain 2X
+// 10: Reference to VOUT gain 3X
+// 11: Reference to VOUT gain 4X
+#define DAC_SPAN_VREF_GAIN_1_5X              (0x00)
+#define DAC_SPAN_VREF_GAIN_2X                (0x01)
+#define DAC_SPAN_VREF_GAIN_3X                (0x02)
+#define DAC_SPAN_VREF_GAIN_4X                (0x03)
 #define WR_GENERAL_CONFIG_DAC_SPAN(v)        ((v) & 0x0003)
 
 // #define REG_MED_ALARM_CONFIG
@@ -224,14 +236,6 @@
 // PMBus version = 0x2200
 #define RD_PMBUS_VERSION(v)         (((v) & 0xFF00))
 
-// 00: Reference to VOUT gain 1_5X
-// 01: Reference to VOUT gain 2X
-// 10: Reference to VOUT gain 3X
-// 11: Reference to VOUT gain 4X
-#define DAC_VREF_GAIN_1_5X       (0x00)
-#define DAC_VREF_GAIN_2X         (0x01)
-#define DAC_VREF_GAIN_3X         (0x02)
-#define DAC_VREF_GAIN_4X         (0x03)
 #define WR_DAC_VREF(v)           WR_GENERAL_CONFIG_DAC_SPAN(v)
 #define RD_DAC_VREF(v)           RD_GENERAL_CONFIG_DAC_SPAN(v)
 

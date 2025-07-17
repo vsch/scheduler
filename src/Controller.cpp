@@ -153,6 +153,7 @@ void Controller::loop() {
 // IMPORTANT: called from interrupt code
 void Controller::cliEndProcessingRequest(ByteStream *pStream) {
     pStream->flags &= ~(STREAM_FLAGS_PENDING | STREAM_FLAGS_PROCESSING);
+    pStream->triggerCallback();
 
     // make sure it is a shared request stream
     uint8_t id = getReadStreamId(pStream);
@@ -189,7 +190,6 @@ void Controller::cliHandleCompletedRequests() {
 
         // put its handled info back to writeBuffer and it back in the free queue
         // unless it is an own buffer request
-        completedStream->triggerComplete();
         completedStream->flags = 0;
         completedStream->nRdSize = 0;
         completedStream->pRdData = NULL;

@@ -15,29 +15,17 @@
 #define DAC_DATA_TO_VM_MV(d)    ((uint16_t)(DAC_DATA_TO_VM(d)*1000+.5))
 #define VM_MIN                  (DAC_DATA_TO_VM_MV(1023))
 #define VM_MAZ                  (DAC_DATA_TO_VM_MV(0))
+#define DAC_VREF                (1.21f)
 
-// 00: Power up
-// 01: Power down to 10K
-// 10: Power down to high impedance (default) 
-// 11: Power down to 10K
-#define DAC_POWER_FLAGS_UP             (0x00)
-#define DAC_POWER_FLAGS_DN_10K         (0x08)
-#define DAC_POWER_FLAGS_DN_HIGH_IMP    (0x10)
-#define DAC_POWER_FLAGS_DN_10K2        (0x18)
 #define WR_DAC_POWER(v)          WR_GENERAL_CONFIG_DAC_PDN(v)
 #define RD_DAC_POWER(v)          RD_GENERAL_CONFIG_DAC_PDN(v)
 
-#define DAC_POWER_UP             (WR_DAC_POWER(DAC_POWER_FLAGS_UP))
-#define DAC_POWER_DN_10K         (WR_DAC_POWER(DAC_POWER_FLAGS_DN_10K))
-#define DAC_POWER_DN_HIGH_IMP    (WR_DAC_POWER(DAC_POWER_FLAGS_DN_HIGH_IMP))
-#define DAC_POWER_DN_10K2        (WR_DAC_POWER(DAC_POWER_FLAGS_DN_10K2))
-#define DAC_POWER(f)             (RD_DAC_POWER(f))
+#define DAC_POWER_UP            (WR_DAC_POWER(DAC_PDN_UP))
+#define DAC_POWER_DN_10K        (WR_DAC_POWER(DAC_PDN_10K))
+#define DAC_POWER_DN_HI_Z       (WR_DAC_POWER(DAC_PDN_HI_Z))
+#define DAC_POWER_DN_10K2       (WR_DAC_POWER(DAC_PDN_10K_2))
+#define DAC_POWER(f)            (RD_DAC_POWER(f))
 
-#define DAC_VREF    (1.21f)
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 // define 3 bytes for entry: register, MSB value, LSZB value
 // this one is if the bytes are sent as defined
@@ -49,13 +37,17 @@ typedef struct DacWriteEntry {
     uint16_t value;
 } DacWriteEntry_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // count must be multiple of 3, only full 3 bytes are sent, if last entry is short it is ignored
 extern CByteStream_t * dac_send_byte_list(const uint8_t *bytes, uint16_t count);
 
 extern void dac_init();
-extern void dac_power_up(uint8_t addr);
-extern void dac_power_down(uint8_t addr, uint8_t flags);
-extern void dac_output(uint8_t addr, uint16_t value);
+extern CByteStream_t *dac_power_up(uint8_t addr);
+extern CByteStream_t *dac_power_down(uint8_t addr, uint8_t flags);
+extern CByteStream_t *dac_output(uint8_t addr, uint16_t value);
 extern CByteStream_t *dac_write(uint8_t addr, uint8_t reg, uint16_t value);
 
 extern CByteStream_t *dac_write_read(uint8_t addr, uint8_t reg, uint16_t value, uint16_t *pValue);
