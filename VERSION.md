@@ -2,11 +2,23 @@
 
 [TOC]: #
 
+- [Version 2.2](#version-22)
 - [Version 2.1](#version-21)
 - [Version 2.0](#version-20)
 - [Version 1.1](#version-11)
 - [Version 1.0](#version-10)
 
+
+## Version 2.2
+
+* Upcoming: change scheduler 3.0 to use microseconds from now or from
+  start of task invocation for task resume delay.
+* Add: `Controller`, `TwiController` to allow shared I2C write requests
+  and shared byte buffer with resource reservation.
+* Add: modified version of `twiint.c` to handle requests, debug traces.
+* Add: `Dac53401` module to provide primitive function and command
+  definitions.
+* Add: `XL9535` I2C I/O expander module to communicate with chip.
 
 ## Version 2.1
 
