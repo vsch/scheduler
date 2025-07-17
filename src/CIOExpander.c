@@ -76,7 +76,7 @@ const uint8_t phases[] PROGMEM = {
 void ciox_update(CIOExpander_t *thizz) {
     // update if motor is off, assuming no stepping
     if (!(thizz->outputs & IOX_OUT_MOT_EN)) {
-        // turn it off rightaway since there may not be any stepping for a while.
+        // update it rightaway since there may not be any stepping for a while.
         iox_send_byte(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), IOX_REG_OUTPUT_PORT0, thizz->outputs);
     }
 }

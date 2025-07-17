@@ -103,6 +103,11 @@ void Controller::dumpResourceTrace(ResourceUse *resourceUse, uint32_t *pLastDump
 
 uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
     cli();
+    
+    if (freeReadStreams.getCount() != resourceLock.getAvailable1() || writeBuffer.getCapacity() != resourceLock.getAvailable2()) {
+        serialDebugPrintf_P(PSTR("Ctrl:: reserve mismatch ctrl: %d, %d lock: %d %d \n"), freeReadStreams.getCount(), writeBuffer.getCapacity(), resourceLock.getAvailable1(), resourceLock.getAvailable2());
+    }
+    
     uint8_t reserved = resourceLock.reserve(requests, bytes);
     sei();
 
@@ -113,7 +118,7 @@ uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
 
     if (reserved == NULL_BYTE) {
         // cannot ever satisfy these requirements
-        serialDebugResourceDetailTracePrintf_P(PSTR("Ctrl:: never satisfied: R %d > maxR %d || B > maxB %d\n")
+        serialDebugPrintf_P(PSTR("Ctrl:: never satisfied: R %d > maxR %d || B > maxB %d\n")
                                                , requests, resourceLock.getMaxAvailable1()
                                                , bytes, resourceLock.getMaxAvailable2());
     } else if (reserved) {
@@ -203,6 +208,7 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream) {
     uint8_t nextFreeHead;       // where next request head position should start
 
     if (freeReadStreams.isEmpty()) {
+        serialDebugPuts_P(PSTR("Ctrl:: no requests avail"));
         return NULL;
     }
 
@@ -259,7 +265,7 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream) {
     pWriteStream->nHead = pWriteStream->nTail;
 
     // make sure loop task is enabled start our loop task to monitor its completion
-    this->resume(0);
+    this->resume(1);
     return pStream;
 }
 
