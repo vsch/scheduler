@@ -22,6 +22,7 @@
 
 // Simple streaming both read and write for use in C interrupts and C code, provided from C/C++ code
 // has the same layout as ByteStream.
+struct CByteStream;
 typedef void (*CTwiCallback_t)(const struct CByteStream *pStream);
 
 typedef struct CByteStream {

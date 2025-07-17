@@ -211,10 +211,10 @@ void ByteQueue::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->pData = pData;
     
     // only change the rd/wr flags
-    pOther->flags &= ~(STREAM_FLAGS_WR | STREAM_FLAGS_RD | STREAM_FLAGS_APPEND);
-    pOther->flags |= flags & (STREAM_FLAGS_WR | STREAM_FLAGS_RD | STREAM_FLAGS_APPEND);
+    pOther->flags &= ~STREAM_FLAGS_RD_WR_APPEND;
+    pOther->flags |= flags & (STREAM_FLAGS_RD_WR_APPEND);
     
-    if ((flags & (STREAM_FLAGS_WR | STREAM_FLAGS_RD | STREAM_FLAGS_APPEND)) == STREAM_FLAGS_WR) {
+    if ((flags & STREAM_FLAGS_RD_WR_APPEND) == STREAM_FLAGS_WR) {
         // reset to empty at tail if it is a write only stream    
         pOther->nHead = pOther->nTail;
     }

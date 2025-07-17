@@ -25,6 +25,7 @@ void ByteStream::setOwnBuffer(uint8_t *pData, uint8_t nSize) {
     this->nTail = nSize ? nSize - 1 : 0;
     this->nSize = nSize;
     this->pData = pData;
+    this->flags |= STREAM_FLAGS_UNBUFFERED;
 }
 
 void ByteStream::setRdBuffer(uint8_t rdReverse, uint8_t *pRdData, uint8_t nRdSize) {

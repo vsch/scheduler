@@ -199,60 +199,6 @@ void Controller::cliHandleCompletedRequests() {
     }
 }
 
-/*
-ByteStream *Controller::processRequest(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer) {
-
-    if (nSize > QUEUE_MAX_SIZE) {
-        nSize = QUEUE_MAX_SIZE;
-    }
-
-    if (freeReadStreams.isEmpty()) {
-        return NULL;
-    }
-
-    uint8_t head = freeReadStreams.removeHead();
-#ifdef RESOURCE_TRACE
-    usedStreams++;
-#endif
-
-    ByteStream *pStream = readStreamTable + head;
-    pStream->set_address(addr);
-    pStream->pData = pData;
-    pStream->nSize = nSize;
-    pStream->nHead = 0;
-    pStream->nTail = nSize ? nSize - 1 : 0;
-    pStream->nRdSize = pRcvBuffer->nSize;
-    pStream->pRdData = pRcvBuffer->pData;
-
-    // configure twi flags
-    // serialDebugPrintf_P(PSTR("addr 0x%2.2x\n"), addr);
-    pStream->flags = (addr & 0x01 ? STREAM_FLAGS_WR : STREAM_FLAGS_RD) | STREAM_FLAGS_UNBUFFERED;
-    if (pRcvBuffer->flags & BUFFER_PUT_REVERSE) {
-        pStream->flags |= STREAM_FLAGS_RD_REVERSE;
-    }
-    // pStream->flags = STREAM_FLAGS_RD | STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED;
-
-    // NOTE: protect from mods in interrupts mid-way through this code
-    cli();
-    resourceLock.useAvailable1(1);
-    // queue it for processing
-    pStream->flags |= STREAM_FLAGS_PENDING;
-    pendingReadStreams.addTail(head);
-    if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
-        cliStartNextRequest();
-    } else {
-        // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
-        // and new request processing started if needed
-    }
-    sei();
-
-    // make sure loop task is enabled start our loop task to monitor its completion
-    this->resume(0);
-
-    return pStream;
-}
-*/
-
 ByteStream *Controller::processStream(ByteStream *pWriteStream) {
     uint8_t nextFreeHead;       // where next request head position should start
 
@@ -286,7 +232,7 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream) {
     }
 
     // copy the write stream info into read stream for processing
-    pWriteStream->getStream(pStream, isSharedBuffer ? STREAM_FLAGS_RD : STREAM_FLAGS_RD | STREAM_FLAGS_UNBUFFERED);
+    pWriteStream->getStream(pStream, STREAM_FLAGS_RD);
 
     if (isSharedBuffer) {
         // new read stream starts where last read stream left off

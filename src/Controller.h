@@ -212,6 +212,7 @@ public:
     }
 
     ByteStream *getWriteStream() {
+        writeStream.flags = 0;
         writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
         return &writeStream;
     }
@@ -227,17 +228,6 @@ public:
         ByteStream *pStream = readStreamTable + head;
         return pStream;
     }
-
-    /**
-     * Send given buffered data 
-     * 
-     * @param addr      twi address, including read flag
-     * @param pData     pointer to byte buffer, needs to be 1 byte longer than used.
-     * @param nSize     length of data buffer, sent data will be nSize-1
-     * @param pRcvBuffer   extra bytes at end of buffer available for accumulating received data
-     * @return          pointer to last request, can be used to wait for completion of the send or NULL if no available streams
-     */
-    // ByteStream *processRequest(uint8_t addr, uint8_t *pData, uint8_t nSize, CByteBuffer_t *pRcvBuffer = NULL);
 
     /**
      * Accept given byte stream for processing.
