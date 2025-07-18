@@ -1,6 +1,10 @@
 #ifndef SCHEDULER_STREAM_H
 #define SCHEDULER_STREAM_H
 
+#ifdef CONSOLE_DEBUG
+#include <time.h>
+#endif
+
 #include "common_defs.h"
 #include "CByteQueue.h"
 #include "CByteBuffer.h"
@@ -12,9 +16,11 @@
 #define STREAM_FLAGS_PROCESSING     (0x10)      // marks the stream as being processed
 #define STREAM_FLAGS_UNBUFFERED     (0x20)      // marks the stream is unbuffered
 #define STREAM_FLAGS_APPEND         (0x40)      // used in getStream to disable resetting content to 0 for write streams.
+#define STREAM_FLAGS_UNPROCESSED    (0x80)      // cleared on write stream when processStream was called on it
 
 #define STREAM_FLAGS_RD_WR          (STREAM_FLAGS_RD |  STREAM_FLAGS_WR)      // marks the stream as write enabled, can put to it
 #define STREAM_FLAGS_RD_WR_APPEND   (STREAM_FLAGS_RD_WR |  STREAM_FLAGS_APPEND)      // marks the stream as write enabled, can put to it
+
 
 #if STREAM_FLAGS_BUFF_REVERSE != BUFFER_PUT_REVERSE
 #error STREAM_FLAGS_BUFF_REVERSE != BUFFER_PUT_REVERSE
@@ -31,6 +37,9 @@ typedef struct CByteStream {
     uint8_t addr;
     void *pCallbackParam;                   // an arbitrary parameter to be used by callback function.
     CTwiCallback_t fCallback;
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+    time_t startTime;                       // if it is 0, then twiint will set it to micros() on start of processing, else it will be left as is
+#endif
 
     uint8_t nRdSize;
     uint8_t *pRdData;
@@ -42,7 +51,7 @@ extern "C" {
 #endif
 
 // get the callback index for given callback and cache it (*pCache == 0 if cache not initialized, NULL_BYTE means not found, 0 will be returned)
-extern uint8_t stream_get_callback_id(CTwiCallback_t callback, uint8_t *pCache);   
+extern uint8_t stream_get_callback_id(CTwiCallback_t callback, uint8_t *pCache);
 
 extern uint8_t stream_is_empty(const CByteStream_t *thizz); // test if any more data to read
 extern uint8_t stream_is_full(const CByteStream_t *thizz); // test if room for more data to write

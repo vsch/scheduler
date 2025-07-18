@@ -8,6 +8,24 @@ ByteStream::ByteStream(ByteQueue *pByteQueue, uint8_t streamFlags) : ByteQueue(*
     addr = 0;
     pCallbackParam = NULL;
     fCallback = NULL;
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+    startTime = 0;
+#endif
+
+    nRdSize = 0;
+    pRdData = NULL;
+}
+
+void ByteStream::reset() {
+    ByteQueue::reset();
+
+    flags = 0;
+    addr = 0;
+    pCallbackParam = NULL;
+    fCallback = NULL;
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+    startTime = 0;
+#endif
 
     nRdSize = 0;
     pRdData = NULL;
@@ -140,7 +158,11 @@ void stream_serial_debug_dump(const CByteStream_t *thizz, uint8_t id) {
 
 void ByteStream::serialDebugDump(uint8_t id) {
     uint8_t iMax = getCount();
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+    serialDebugPrintf_P(PSTR("Stream: @0x%2.2x %8.8lx %c #%d {"), addr >> 1, startTime, addr & 0x01 ? 'R' : 'W', id);
+#else
     serialDebugPrintf_P(PSTR("Stream: @0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
+#endif
 
     if (nRdSize && pRdData) {
         serialDebugPrintf_P(PSTR("  rcvBuffer: @0x%2.2X { flags: 0x%1.1X nSize: %d } "), pRdData, flags & STREAM_FLAGS_BUFF_REVERSE, nSize);
@@ -155,18 +177,23 @@ void ByteStream::serialDebugDump(uint8_t id) {
 #endif
 
 void ByteStream::getStream(ByteStream *pOther, uint8_t rdWrFlags) {
+    pOther->flags = flags;
     pOther->addr = addr;
     pOther->pCallbackParam = pCallbackParam;
     pOther->fCallback = fCallback;
     pOther->nRdSize = nRdSize;
     pOther->pRdData = pRdData;
-
-    pOther->flags = flags;
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+    pOther->startTime = startTime;
+#endif
 
     pCallbackParam = NULL;
     fCallback = NULL;
     nRdSize = 0;
     pRdData = NULL;
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+    startTime = 0;
+#endif
 
     ByteQueue::getStream(pOther, rdWrFlags);
 }
@@ -187,6 +214,7 @@ void ByteStream::dump(uint8_t indent, uint8_t compact) {
     flagStr[0] = '0';
     flagStr[1] = '\0';
 
+    if (!isUnprocessed()) *pFlag++ = '!';
     if (isProcessing()) *pFlag++ = '*';
     if (canRead()) *pFlag++ = 'R';
     if (canWrite()) *pFlag++ = 'W';
@@ -197,7 +225,11 @@ void ByteStream::dump(uint8_t indent, uint8_t compact) {
     // Output: ByteQueue { nSize:%d, nHead:%d, nTail:%d
     // 0xdd ... [ 0xdd ... 0xdd ] ... 0xdd
     // }
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+    addActualOutput("%sStream { start:%8.8lx flags:%s nSize:%d, nHead:%d, nTail:%d\n", indentStr, startTime, flagStr, nSize, nHead, nTail);
+#else
     addActualOutput("%sStream { flags:%s nSize:%d, nHead:%d, nTail:%d\n", indentStr, flagStr, nSize, nHead, nTail);
+#endif
     addActualOutput("%s  isEmpty() = %d isFull() = %d getCount() = %d getCapacity() = %d\n%s", indentStr, isEmpty(), isFull(), getCount(), getCapacity(), indentStr);
     uint16_t cnt = 0, last_cnt = -1;
 

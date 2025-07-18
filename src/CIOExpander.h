@@ -52,7 +52,7 @@ extern "C" {
 extern CByteStream_t *ciox_init(CIOExpander_t *thizz, uint8_t addressVar, uint8_t extraOutputs);
 extern void ciox_stepper_power(CIOExpander_t *thizz, uint8_t enable);
 extern void ciox_led_color(CIOExpander_t *thizz, uint8_t ledColor);
-extern CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw, CTwiCallback_t whenDone, void *pParam);
+extern CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw);
 extern CByteStream_t *ciox_step_cw(CIOExpander_t *thizz);
 extern CByteStream_t *ciox_step_ccw(CIOExpander_t *thizz);
 extern CByteStream_t *ciox_in(CIOExpander_t *thizz);

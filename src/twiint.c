@@ -12,12 +12,12 @@
  * Copyright (c) 2018 Sebastian Goessl
  *
  * Author:     Vladimir Schneider
- * 
+ *
  * Modified for CByteStream and CTwiController handling
  * Fixed write followed by read handling
  * Added read Buffer after write request handing
  * Added TWI status tracing for debugging drivers
- * 
+ *
  * Copyright (c) 2025 Vladimir Schneider
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -109,6 +109,13 @@ void twiint_start(CByteStream_t *pStream) {
         buffer_init(&rdBuffer, pStream->flags & STREAM_FLAGS_BUFF_REVERSE, pStream->pRdData, pStream->nRdSize);
         twiint_flags |= TWI_FLAGS_HAVE_READ;
     }
+
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+    if (!pStream->startTime) {
+        pStream->startTime = micros();
+    }
+#endif
+
     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
 }
 
@@ -253,7 +260,7 @@ ISR(TWI_vect) {
             {
                 uint8_t capacity = buffer_capacity(&rdBuffer);
                 if (!capacity) {
-                    // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
+                    // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte
                     twi_tracer(TRC_RCV_OVR1);
                     TWCR = (1 << TWINT) | (1 << TWEN) /*| (1 << TWEA)*/ | (1 << TWSTO);
                     twi_tracer_stop();
@@ -276,7 +283,7 @@ ISR(TWI_vect) {
 
 #ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
             if (!capacity) {
-                // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
+                // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte
                 twi_tracer(TRC_RCV_OVR1);
                 TWCR = (1 << TWINT) | (1 << TWEN) /*| (1 << TWEA)*/ | (1 << TWSTO);
                 twi_tracer_stop();
@@ -289,12 +296,12 @@ ISR(TWI_vect) {
             capacity--;
 
             if (capacity > 1) {
-                // data byte received, send ack since we have room for more 
+                // data byte received, send ack since we have room for more
                 TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA);
             } else {
 #ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
                 if (!capacity) {
-                    // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte 
+                    // this is an error, should have generatged MR_DATA_NACK when receiving second to last byte
                     twi_tracer(TRC_RCV_OVR2);
                     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTO);
                     twi_tracer_stop();

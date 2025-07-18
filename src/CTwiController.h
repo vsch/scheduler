@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 extern CByteStream_t *twiStream;
+extern void twi_fresh_stream();
 extern CByteStream_t *twi_get_write_buffer(uint8_t addr);
 
 extern void twi_set_own_buffer(uint8_t *pData, uint8_t nSize);
@@ -29,11 +30,11 @@ extern void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count);
 // return 0 if timeed out, 1 if sent (maybe with twiint_errors)
 extern uint8_t twi_wait_sent(CByteStream_t *pStream);
 
-// use arbitrary function to determine completion, with TWI_WAIT_TIMEOUT in ms. 
+// use arbitrary function to determine completion, with TWI_WAIT_TIMEOUT in ms.
 extern uint8_t twi_wait(TwiWaitCallback callback, void *pParam);
 /**
  * Send given buffered data as self-buffered twi request
- * 
+ *
  * @param addr   twi address, including read flag
  * @param pData  pointer to byte buffer
  * @param len    length of data to send

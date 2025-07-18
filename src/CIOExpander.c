@@ -5,7 +5,7 @@
 #include "twiint.h"
 
 void iox_prep_write(uint8_t addr, uint8_t reg) {
-    twiStream = twi_get_write_buffer(TWI_ADDRESS_W(addr));
+    twi_get_write_buffer(TWI_ADDRESS_W(addr));
     stream_put(twiStream, reg);
 }
 
@@ -100,7 +100,7 @@ void ciox_led_color(CIOExpander_t *thizz, uint8_t ledColor) {
     }
 }
 
-CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw, CTwiCallback_t whenDone, void *pParam) {
+CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw) {
     uint8_t phase = IOX_FLAGS_TO_STEPPER_PHASE(thizz->flags);
     if (ccw) {
         phase--;
@@ -117,17 +117,15 @@ CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw, CTwiCallback_t whenD
     thizz->outputs |= (motOut & IOX_OUT_MOT_PHASES) | IOX_OUT_MOT_EN;
     iox_prep_write(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), IOX_REG_OUTPUT_PORT0);
     stream_put(twiStream, thizz->outputs);
-    twiStream->fCallback = whenDone;
-    twiStream->pCallbackParam = pParam;
     return twi_process(twiStream);
 }
 
 CByteStream_t *ciox_step_cw(CIOExpander_t *thizz) {
-    return ciox_step(thizz, 0, NULL, NULL);
+    return ciox_step(thizz, 0);
 }
 
 CByteStream_t *ciox_step_ccw(CIOExpander_t *thizz) {
-    return ciox_step(thizz, 1, NULL, NULL);
+    return ciox_step(thizz, 1);
 }
 
 CByteStream_t *ciox_in(CIOExpander_t *thizz) {

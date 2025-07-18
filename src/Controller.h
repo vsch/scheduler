@@ -16,7 +16,7 @@
 extern TraceBuffer twiTraceBuffer;
 #endif
 
-// @formatter:off 
+// @formatter:off
 #define CTRL_PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)   (sizeOfQueue(maxStreams, uint8_t))
 #define CTRL_COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)      (sizeOfQueue(maxStreams, uint8_t))
 #define CTRL_FREE_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize)      (sizeOfQueue(maxStreams, uint8_t))
@@ -33,7 +33,7 @@ extern TraceBuffer twiTraceBuffer;
 #define CTRL_READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize)      (CTRL_WRITE_STREAM_OFFS(maxStreams, maxTasks, writeBufferSize) + CTRL_WRITE_STREAM_SIZE(maxStreams, maxTasks, writeBufferSize))
 #define CTRL_WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize)           (CTRL_READ_STREAM_TABLE_OFFS(maxStreams, maxTasks, writeBufferSize) + CTRL_READ_STREAM_TABLE_SIZE(maxStreams, maxTasks, writeBufferSize))
 #define CTRL_NEXT_MEMBER_OFFS(maxStreams, maxTasks, writeBufferSize)            (CTRL_WRITE_BUFFER_OFFS(maxStreams, maxTasks, writeBufferSize) + CTRL_WRITE_BUFFER_SIZE(maxStreams, maxTasks, writeBufferSize))
-// @formatter:on 
+// @formatter:on
 
 // Use this macro to allocate space for all the queues and buffers in the controller.
 #define sizeOfControllerBuffer(maxStreams, maxTasks, writeBufferSize) (CTRL_NEXT_MEMBER_OFFS(maxStreams, maxTasks, writeBufferSize))
@@ -53,7 +53,7 @@ protected:
     uint8_t maxStreams;
     uint8_t maxTasks;
     uint8_t writeBufferSize;
-    uint8_t lastFreeHead;  // where next processing head position is  
+    uint8_t lastFreeHead;  // where next processing head position is
     uint8_t flags;
 
 public:
@@ -72,7 +72,7 @@ public:
      * @param maxTasks          maximum number of tasks making reservationLock and possibly being suspended
      * @param writeBufferSize   maximum buffer for write requests, at least max of bytes in reserveResources() calls
      */
-    /* @formatter:off */     
+    /* @formatter:off */
     Controller(uint8_t *pData, uint8_t maxStreams, uint8_t maxTasks, uint8_t writeBufferSize, uint8_t flags = CTR_FLAGS_REQ_AUTO_START)
             : pendingReadStreams(pData + CTRL_PENDING_READ_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), CTRL_PENDING_READ_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
             , completedStreams(pData + CTRL_COMPLETED_STREAMS_OFFS(maxStreams, maxTasks, writeBufferSize), CTRL_COMPLETED_STREAMS_SIZE(maxStreams, maxTasks, writeBufferSize))
@@ -211,11 +211,7 @@ public:
         resourceLock.release();
     }
 
-    ByteStream *getWriteStream() {
-        writeStream.flags = 0;
-        writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
-        return &writeStream;
-    }
+    ByteStream *getWriteStream();
 
     ByteStream *getStreamRequest() {
         uint8_t head = freeReadStreams.removeHead();
@@ -243,10 +239,10 @@ public:
     ByteStream *processStream(ByteStream *pWriteStream);
 
     /**
-         * Start processing given request. This should start the interrupt calls for handling TWI data. 
+         * Start processing given request. This should start the interrupt calls for handling TWI data.
          * Any request in the pending request queue will automatically start when this request is completed.
-         * 
-         * @param pStream 
+         *
+         * @param pStream
          */
     // IMPORTANT: must be called with interrupts disabled
     virtual void cliStartProcessingRequest(ByteStream *pStream) = 0;
@@ -264,11 +260,11 @@ public:
     }
 
     /**
-     * mark end of request processing by the interrupt, this should be the 
-     * first request in the pending streams. 
-     * 
+     * mark end of request processing by the interrupt, this should be the
+     * first request in the pending streams.
+     *
      * IMPORTANT: called from interrupt so no cli/sei needed
-     * 
+     *
      * @param pStream   stream processed
      */
     void cliEndProcessingRequest(ByteStream *pStream);

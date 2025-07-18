@@ -5,6 +5,7 @@
 #include "Arduino.h"
 
 #ifdef CONSOLE_DEBUG
+#include <time.h>
 #include "stdlib.h"
 #include "new"
 #else
@@ -21,18 +22,23 @@ struct ByteStream : protected ByteQueue {
     friend class ByteQueue;
     friend class Controller;
     friend class TwiController2;
-    
+
     volatile uint8_t flags;
     uint8_t addr;               // Slave address byte (with read/write bit). in case of Twi
     void *pCallbackParam;                   // an arbitrary parameter to be used by callback function.
     CTwiCallback_t fCallback;
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+    time_t startTime;                       // if it is 0, then twiint will set it to micros() on start of processing, else it will be left as is
+#endif
 
     uint8_t nRdSize;
     uint8_t *pRdData;
     // IMPORTANT: above fields must be the same as in CByteStream
-    
+
 public:
     ByteStream(ByteQueue *pByteQueue, uint8_t streamFlags);
+
+    void reset();
 
     inline void setAddress(uint8_t addr) {
         this->addr = addr;
@@ -55,9 +61,9 @@ public:
         if (fCallback) fCallback((const CByteStream_t *)this);
     }
 
-#ifdef SERIAL_DEBUG   
+#ifdef SERIAL_DEBUG
     void serialDebugDump(uint8_t id);
-#else    
+#else
     inline void serialDebugDump(uint8_t id) { }
 #endif
 
@@ -82,6 +88,8 @@ public:
     NO_DISCARD inline uint8_t isAppend() const { return getFlags(STREAM_FLAGS_APPEND); }
 
     NO_DISCARD inline uint8_t isUnbufferedPending() const { return allFlags(STREAM_FLAGS_PENDING | STREAM_FLAGS_UNBUFFERED); }
+
+    NO_DISCARD inline uint8_t isUnprocessed() const { return getFlags(STREAM_FLAGS_UNPROCESSED); }
 
     void getStream(ByteStream *pOther, uint8_t rdWrFlags);
 
@@ -154,5 +162,17 @@ public:
     void dump(uint8_t indent, uint8_t compact);
 #endif
 };
+
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+#define serialDebugTwiReqTimingPrintf_P(...) printf_P(__VA_ARGS__)
+#define serialDebugTwiReqTimingPuts_P(...) puts_P(__VA_ARGS__)
+#else
+#ifdef CONSOLE_DEBUG
+#define serialDebugPrintf_P(...) addActualOutput(__VA_ARGS__)
+#else
+#define serialDebugPrintf_P(...) ((void)0)
+#define serialDebugPuts_P(...) ((void)0)
+#endif
+#endif
 
 #endif //SCHEDULER_BYTESTREAM_H

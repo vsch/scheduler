@@ -104,11 +104,11 @@ void Controller::dumpResourceTrace(ResourceUse *resourceUse, uint32_t *pLastDump
 
 uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
     cli();
-    
+
     if (freeReadStreams.getCount() != resourceLock.getAvailable1() || writeBuffer.getCapacity() != resourceLock.getAvailable2()) {
         serialDebugPrintf_P(PSTR("Ctrl:: reserve mismatch ctrl: %d, %d lock: %d %d \n"), freeReadStreams.getCount(), writeBuffer.getCapacity(), resourceLock.getAvailable1(), resourceLock.getAvailable2());
     }
-    
+
     uint8_t reserved = resourceLock.reserve(requests, bytes);
     sei();
 
@@ -196,13 +196,30 @@ void Controller::cliHandleCompletedRequests() {
 
         // put its handled info back to writeBuffer and it back in the free queue
         // unless it is an own buffer request
+        // completedStream->reset();
         completedStream->flags = 0;
         completedStream->nRdSize = 0;
         completedStream->pRdData = NULL;
+        completedStream->fCallback = NULL;
+        completedStream->pCallbackParam = NULL;
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+        completedStream->startTime = 0;
+#endif
+
         freeReadStreams.addTail(id);
 
         resourceLock.makeAvailable(1, 0);
     }
+}
+
+ByteStream *Controller::getWriteStream() {
+    // don't do anything until process is called on the write stream.
+    // this allows pre-configuring some data before calling functions to fill it with actual request
+    if (!(writeStream.flags & STREAM_FLAGS_UNPROCESSED)) {
+        writeStream.flags = STREAM_FLAGS_UNPROCESSED;
+        writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
+    }
+    return &writeStream;
 }
 
 ByteStream *Controller::processStream(ByteStream *pWriteStream) {
@@ -212,6 +229,9 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream) {
         serialDebugPuts_P(PSTR("Ctrl:: no requests avail"));
         return NULL;
     }
+
+    // mark as processed, need to make new request before writing
+    pWriteStream->flags &= ~STREAM_FLAGS_UNPROCESSED;
 
     uint8_t head = freeReadStreams.removeHead();
 #ifdef RESOURCE_TRACE

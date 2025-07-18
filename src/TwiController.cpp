@@ -7,10 +7,14 @@ void cli_complete_request(CByteStream_t *pStream) {
     twiController.cliEndProcessingRequest((ByteStream *) pStream);
 }
 
+void twi_fresh_stream() {
+    twiStream = (CByteStream_t *) twiController.getWriteStream();
+}
+
 CByteStream_t *twi_get_write_buffer(uint8_t addr) {
     ByteStream *pStream = twiController.getWriteStream();
     pStream->set_address(addr);
-    return (CByteStream_t *) pStream;
+    return twiStream = (CByteStream_t *) pStream;
 }
 
 CByteStream_t *twi_process(CByteStream_t *pStream) {
@@ -44,16 +48,16 @@ void twi_add_pgm_byte_list(const uint8_t *bytes, uint16_t count) {
 
 uint8_t twi_wait_sent(CByteStream_t *pStream) {
     return twi_wait((TwiWaitCallback) stream_is_pending, pStream);
-    
+
 }
-// IMPORTANT: assumes: interrupts are enabled, processing of requests should be done by interrupt 
-//            routine sequentially sending all pending requests. 
+// IMPORTANT: assumes: interrupts are enabled, processing of requests should be done by interrupt
+//            routine sequentially sending all pending requests.
 //            i.e. set CTR_FLAGS_REQ_AUTO_START in controller constructor flags
 uint8_t twi_wait(TwiWaitCallback callback, void *pParam) {
     uint32_t start = micros();
     uint32_t diff = 0;
     uint32_t timeoutMic = TWI_WAIT_TIMEOUT * 1000L;
-    
+
     while (callback(pParam)) {
         diff = micros() - start;
         if (diff >= timeoutMic) {
@@ -62,7 +66,7 @@ uint8_t twi_wait(TwiWaitCallback callback, void *pParam) {
             TraceBuffer::cliDumpTrace();
 #endif
             sei();
-            
+
             serialDebugTwiPrintf_P(PSTR("  TWI: #%d twi_wait timed out %ld.\n"), twiController.getReadStreamId((ByteStream *) pParam), diff / 1000L);
 
 #ifdef SERIAL_DEBUG
@@ -114,7 +118,7 @@ void twi_set_rd_buffer(uint8_t rdReverse, uint8_t *pRdData, uint8_t nRdSize) {
 void TwiController::cliStartProcessingRequest(ByteStream *pStream) {
     // output stream content and call endProcessingRequest
     pStream->flags |= STREAM_FLAGS_PROCESSING;
-    
+
 #ifndef CONSOLE_DEBUG
 
 #ifdef SERIAL_DEBUG_TWI_DATA
@@ -125,7 +129,7 @@ void TwiController::cliStartProcessingRequest(ByteStream *pStream) {
     this->resume(0);
 
 #ifndef CONSOLE_DEBUG
-    
+
     twiint_start((CByteStream_t *) pStream);
 
 #endif
