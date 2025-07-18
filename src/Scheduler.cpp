@@ -60,13 +60,15 @@ void Scheduler::dumpDelays(PGM_P msg) {
 
 #endif
 
-void Scheduler::loop(uint16_t timeSlice) {
+void Scheduler::loopMicros(time_t timeSlice) {
     time_t tick = micros();
 
+#if defined(SCHED_MIN_LOOP_DELAY_MICROS) && SCHED_MIN_LOOP_DELAY_MICROS
     if (!isElapsed(tick, clockTick + SCHED_MIN_LOOP_DELAY_MICROS)) {
         // this is to avoid needlessly scanning the delay table too frequently
         return;
     }
+#endif
 
     flags |= SCHED_FLAGS_IN_LOOP;
     clockTick = tick;
@@ -80,7 +82,7 @@ void Scheduler::loop(uint16_t timeSlice) {
     // offset task index by nextTask so we can interrupt at a getTask
     // and continue with the same getTask next time slice
     uint8_t lastId;
-    time_t timeSliceLimit = timeSlice * 1000UL + tick;
+    time_t timeSliceLimit = timeSlice + tick;
 
     for (uint8_t i = 0; i < taskCount; i++) {
         uint8_t id = i + nextTask;
@@ -100,7 +102,7 @@ void Scheduler::loop(uint16_t timeSlice) {
         pTask = NULL;
 
         time_t end = micros();
-        
+
         if (timeSlice) {
             if (isElapsed(tick, timeSliceLimit)) {
 #ifdef SERIAL_DEBUG_SCHEDULER

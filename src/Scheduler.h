@@ -160,7 +160,9 @@ private:
 
 #define SCHED_FLAGS_IN_LOOP     (0x01)           // scheduler is currently in loop() execution
 
+#ifndef SCHED_MIN_LOOP_DELAY_MICROS
 #define SCHED_MIN_LOOP_DELAY_MICROS (250UL)      // least delay between loop() executions, ie. max resolution of task delay is this.
+#endif
 
 class Scheduler {
     friend class Task;
@@ -212,7 +214,7 @@ public:
      *  assumed that anything greater is caused by wrap around, which means
      *  waiting for micros to roll around. This means that there is a
      *  maximum of 1,073.741824 seconds delay.
-     *                  
+     *
      * @return true if task is ready to run
      */
     static uint8_t isElapsed(time_t now, time_t endTime);
@@ -258,13 +260,17 @@ public:
     /**
      * call loop() of ready tasks, return when all ready tasks have been called once or time slice in ms exceeded
      *
-     * @param timeSlice     maximum time allotted to single loop() in ms, usually should be
+     * @param timeSlice     maximum time allotted to single loop() in microseconds, usually should be
      *                      set to minimum of all tasks' resume calls. 0 means no limit,
      *                      and will execute all ready tasks once. Otherwise, will execute as many tasks as complete within
      *                      the timeSlice and exit the loop. Next call to loop(), will continue with the next getCurrentTask, after
      *                      the last one that ran.
      */
-    void loop(uint16_t timeSlice = 0);
+    void loopMicros(time_t timeSlice = 0);
+
+    inline void loop(uint16_t timeSlice = 0) {
+        loopMicros(timeSlice * 1000UL);
+    }
 
     /**
      * Execute the given task as if in a scheduler loop. Used mainly for testing
