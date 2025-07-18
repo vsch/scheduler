@@ -67,10 +67,10 @@ CByteStream_t *ciox_init(CIOExpander_t *thizz, uint8_t addressVar, uint8_t extra
  *    4  1  0  0  1
  */
 const uint8_t phases[] PROGMEM = {
-        IOX_OUT_MOT_A1 | IOX_OUT_MOT_B1, // 1  0  1  0        
-        IOX_OUT_MOT_A2 | IOX_OUT_MOT_B1, // 0  1  1  0        
-        IOX_OUT_MOT_A2 | IOX_OUT_MOT_B2, // 0  1  0  1        
-        IOX_OUT_MOT_A1 | IOX_OUT_MOT_B2, // 1  0  0  1        
+        IOX_OUT_MOT_A1 | IOX_OUT_MOT_B1, // 1  0  1  0
+        IOX_OUT_MOT_A2 | IOX_OUT_MOT_B1, // 0  1  1  0
+        IOX_OUT_MOT_A2 | IOX_OUT_MOT_B2, // 0  1  0  1
+        IOX_OUT_MOT_A1 | IOX_OUT_MOT_B2, // 1  0  0  1
 };
 
 void ciox_update(CIOExpander_t *thizz) {
@@ -100,7 +100,7 @@ void ciox_led_color(CIOExpander_t *thizz, uint8_t ledColor) {
     }
 }
 
-CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw) {
+CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw, CTwiCallback_t whenDone, void *pParam) {
     uint8_t phase = IOX_FLAGS_TO_STEPPER_PHASE(thizz->flags);
     if (ccw) {
         phase--;
@@ -115,21 +115,23 @@ CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw) {
     thizz->flags |= IOX_STEPPER_PHASE_TO_FLAGS(phase);
     thizz->outputs &= ~IOX_OUT_MOT_PHASES;
     thizz->outputs |= (motOut & IOX_OUT_MOT_PHASES) | IOX_OUT_MOT_EN;
-    return iox_send_byte(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), IOX_REG_OUTPUT_PORT0, thizz->outputs);
+    iox_prep_write(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), IOX_REG_OUTPUT_PORT0);
+    stream_put(twiStream, thizz->outputs);
+    twiStream->fCallback = whenDone;
+    twiStream->pCallbackParam = pParam;
+    return twi_process(twiStream);
 }
 
 CByteStream_t *ciox_step_cw(CIOExpander_t *thizz) {
-    return ciox_step(thizz, 0);
+    return ciox_step(thizz, 0, NULL, NULL);
 }
 
 CByteStream_t *ciox_step_ccw(CIOExpander_t *thizz) {
-    return ciox_step(thizz, 1);
+    return ciox_step(thizz, 1, NULL, NULL);
 }
 
 CByteStream_t *ciox_in(CIOExpander_t *thizz) {
-    //thizz->lastInputs = thizz->inputs;
     CByteStream_t *pStream = iox_rcv_byte(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), IOX_REG_INPUT_PORT1, &thizz->inputs);
-    // twi_wait_sent(pStream);
     return pStream;
 }
 
