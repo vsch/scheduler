@@ -1,36 +1,37 @@
 #include "Arduino.h"
 #include "Scheduler.h"
 
-Scheduler::Scheduler(uint8_t count, const char *taskTable, uint16_t *delayTable) {
+Scheduler::Scheduler(uint8_t count, const char *taskTable, time_t *delayTable) {
     taskCount = count;
     tasks = taskTable;
-    delays = delayTable;
+    taskTimes = delayTable;
+    flags = 0;
     clockTick = 0;
     nextTask = 0;
-    inLoop = 0;
+    pTask = NULL;
 #ifdef SERIAL_DEBUG_SCHEDULER
     iteration = 0;
 #endif
 }
 
-Task *Scheduler::getTask(uint8_t index) {
-    if (index >= taskCount) return NULL;
+Task *Scheduler::getTask(uint8_t taskId) {
+    if (taskId >= taskCount) return NULL;
 
     (void) tasks;
-    return (Task *) (pgm_read_ptr(tasks + sizeof(Task *) * index));
+    return (Task *) (pgm_read_ptr(tasks + sizeof(Task *) * taskId));
 }
 
 void Scheduler::begin() {
-    memset(delays, 0, sizeof(*delays) * taskCount);
+    // start off with all suspended
+    memset(taskTimes, 0, sizeof(*taskTimes) * taskCount);
 
-#if defined(DEBUG_MODE_SCHEDULER_VALIDATE) && defined(SERIAL_DEBUG_SCHEDULER_ERRORS)   
+#if defined(DEBUG_MODE_SCHEDULER_VALIDATE) && defined(SERIAL_DEBUG_SCHEDULER_ERRORS)
     for (uint8_t i = 0; i < taskCount; i++) {
         Task *pTask = getTask(i);
-        if (pTask->index != NULL_TASK) {
-            debugSchedulerErrorsPrintf_P(PSTR("Task %S, is duplicated in scheduler at %d and %d"), pTask->id(),
-                                         pTask->index, i);
+        if (pTask->taskId != NULL_TASK) {
+            debugSchedulerErrorsPrintf_P(PSTR("Task %S, is duplicated in scheduler at %d and %d"), pTask->id(), pTask->taskId, i);
         } else {
-            pTask->index = i;
+            pTask->taskId = i;
         }
     }
 #endif
@@ -38,7 +39,7 @@ void Scheduler::begin() {
     clockTick = micros();
     for (uint8_t i = 0; i < taskCount; i++) {
         pTask = getTask(i);
-        pTask->index = i;
+        pTask->taskId = i;
         pTask->begin();
         pTask = NULL;
     }
@@ -53,62 +54,24 @@ void Scheduler::dumpDelays(PGM_P msg) {
 
     for (uint8_t i = 0; i < taskCount; i++) {
         Task *pTask = getTask(i);
-        serialDebugPrintf_P(PSTR("%S [%d] { %d }\n")
-                            , pTask->id()
-                            , pTask->index
-                            , delays[i]
-        );
+        serialDebugPrintf_P(PSTR("%S [%d] { %d }\n"), pTask->id(), pTask->taskId, taskTimes[i]);
     }
 }
 
 #endif
 
-bool Scheduler::reduceDelays(uint16_t milliseconds) {
-    bool haveTasks = false;
-    uint8_t i = taskCount;
-
-    while (i-- > 0) {
-        uint16_t delay = delays[i];
-        if (delay) {
-            if (milliseconds && delay != INFINITE_DELAY) {
-                if (delay <= milliseconds) {
-                    delay = 0;
-                    haveTasks = true;
-                } else {
-                    delay -= milliseconds;
-                }
-
-                delays[i] = delay;
-            }
-        } else {
-            haveTasks = true;
-        }
-    }
-    return haveTasks;
-}
-
 void Scheduler::loop(uint16_t timeSlice) {
-    uint32_t tick = micros();
-    uint32_t diff = tick - clockTick;
+    time_t tick = micros();
 
-    inLoop = true;
-
-    uint16_t diffMs = (uint16_t) (diff / 1000);
-    serialDebugSchedulerDumpDelays("Scheduler loop before ");
-    debugSchedulerDelaysPrintf_P(PSTR("Tick %ld clockTick %ld diff %ld diffMs %d\n"), tick, clockTick, tick - clockTick,
-                                 diffMs);
-
-    bool haveTasks = reduceDelays(diffMs);
-
-    serialDebugSchedulerDumpDelays("Scheduler loop after ");
-
-    // adjust by ms used to reduce delay and to eliminate error accumulation
-    clockTick += (uint32_t) diffMs * 1000;
-
-    if (!haveTasks) {
-        inLoop = 0;
+    if (!isElapsed(tick, clockTick + SCHED_MIN_LOOP_DELAY_MICROS)) {
+        // this is to avoid needlessly scanning the delay table too frequently
         return;
     }
+
+    flags |= SCHED_FLAGS_IN_LOOP;
+    clockTick = tick;
+
+    serialDebugSchedulerDumpDelays("Scheduler loop ");
 
 #ifdef SERIAL_DEBUG_SCHEDULER
     iteration++;
@@ -117,56 +80,45 @@ void Scheduler::loop(uint16_t timeSlice) {
     // offset task index by nextTask so we can interrupt at a getTask
     // and continue with the same getTask next time slice
     uint8_t lastId;
+    time_t timeSliceLimit = timeSlice * 1000UL + tick;
 
     for (uint8_t i = 0; i < taskCount; i++) {
         uint8_t id = i + nextTask;
         if (id >= taskCount) id -= taskCount;
         lastId = id;
 
-        if (delays[id] == 0) {
-            pTask = getTask(id);
+        time_t start = micros();
+
+        if (!isElapsed(start, taskTimes[id])) continue;
+
+        // the task is ready
+        executeTask(id);
 
 #ifdef SERIAL_DEBUG_SCHEDULER
-            uint32_t start = micros();
-            Task *pLastTask = pTask;
+        Task *pLastTask = pTask;
 #endif
+        pTask = NULL;
 
-            if (pTask->isAsync()) {
-                AsyncTask *pAsyncTask = reinterpret_cast<AsyncTask *>(pTask);
-                resumeContext(pAsyncTask->pContext);
-            } else {
-                // just a Task
-                pTask->loop();
-            }
-            pTask = NULL;
-
-            unsigned long end = micros();
-
-            if (timeSlice) {
-                uint32_t timeSliceLimit = timeSlice * 1000L;
-
-                if ((uint32_t) (end - tick) > timeSliceLimit) {
+        time_t end = micros();
+        
+        if (timeSlice) {
+            if (isElapsed(tick, timeSliceLimit)) {
 #ifdef SERIAL_DEBUG_SCHEDULER
-                    debugSchedulerPrintf_P(PSTR("Scheduler[%u] time slice ended %lu limit %u last getTask %S[%d] took %lu\n")
-                                           , iteration
-                                           , (uint32_t)(end - tick)
-                                           , timeSlice
-                                           , pLastTask->id()
-                                           , pLastTask->index
-                                           , (uint32_t) (end - start)
-                    );
+                debugSchedulerPrintf_P(PSTR("Scheduler[%u] time slice ended %lu limit %u last getTask %S[%d] took %lu\n"),
+                                       iteration, (uint32_t) (end - tick), timeSlice, pLastTask->id(), pLastTask->taskId, (uint32_t) (end - start)
+                );
 #endif
-                    // next time continue checking after the current getTask
-                    nextTask = id + 1;
-                    if (nextTask >= taskCount) nextTask = 0;
-                    lastId = -1;
-                    break;
-                }
+                // next time continue checking after the current getTask
+                nextTask = id + 1;
+                if (nextTask >= taskCount) nextTask = 0;
+                lastId = -1;
+                break;
             }
-
-            debugSchedulerPrintf_P(PSTR("Scheduler[%d] getTask %S[%d] done in %lu\n"), iteration, pLastTask->id(),
-                                   pLastTask->index, (uint32_t) (end - start));
         }
+
+        debugSchedulerPrintf_P(PSTR("Scheduler[%d] getCurrentTask %S[%d] done in %lu\n"),
+                               iteration, pLastTask->id(), pLastTask->taskId, (uint32_t) (end - start));
+
     }
 
     if (lastId != (uint8_t) -1) {
@@ -176,17 +128,22 @@ void Scheduler::loop(uint16_t timeSlice) {
 
 #ifdef SERIAL_DEBUG_SCHEDULER
     uint32_t time = micros();
-    debugSchedulerPrintf_P(PSTR("Scheduler end run %ld\n")
-                           , time - tick
+    debugSchedulerPrintf_P(PSTR("Scheduler end run %ld\n"), time - tick
     );
 #endif
 
-    inLoop = 0;
+    flags &= SCHED_FLAGS_IN_LOOP;
 }
 
-void Scheduler::resume(uint8_t taskId, uint16_t milliseconds) {
-    if (taskId < taskCount) {
-        delays[taskId] = milliseconds == INFINITE_DELAY ? INFINITE_DELAY - 1 : milliseconds;
+void Scheduler::executeTask(uint8_t taskId) {
+    pTask = getTask(taskId);
+
+    if (pTask->isAsync()) {
+        AsyncTask *pAsyncTask = reinterpret_cast<AsyncTask *>(pTask);
+        resumeContext(pAsyncTask->pContext);
+    } else {
+        // just a Task
+        pTask->loop();
     }
 }
 
@@ -196,42 +153,44 @@ uint8_t Scheduler::isAsyncTask(uint8_t taskId) {
 }
 
 bool Scheduler::isSuspended(Task *task) {
-    return delays[task->index] == INFINITE_DELAY;
+    return taskTimes[task->taskId] == TASK_DELAY_SUSPENDED;
 }
 
 /**
- * Set current getTask's delay to infinite
+ * Set current getCurrentTask's delay to infinite
  */
 void Scheduler::suspend(uint8_t taskId) {
-    delays[taskId] = INFINITE_DELAY;
+    taskTimes[taskId] = TASK_DELAY_SUSPENDED;
 }
 
-uint8_t Scheduler::canLoop() const {
-    return !inLoop;
+void Scheduler::resumeMicros(uint8_t taskId, time_t microseconds) {
+    if (taskId < taskCount) {
+        if (microseconds >= TASK_DELAY_MAX) {
+            microseconds = TASK_DELAY_MAX - 1;
+        }
+
+        time_t endTime = (time_t) (microseconds + micros());
+        if (endTime == TASK_DELAY_SUSPENDED) endTime++;
+        taskTimes[taskId] = endTime;
+    }
 }
 
-uint8_t Scheduler::getTaskId() {
-    return pTask ? pTask->index : NULL_TASK;
+uint8_t Scheduler::getCurrentTaskId() {
+    return pTask ? pTask->taskId : NULL_TASK;
 }
 
-void Task::resume(uint16_t milliseconds) {
-    scheduler.resume(this, milliseconds);
-}
-
-void Task::suspend() {
-    scheduler.suspend(this);
-}
-
-bool Task::isSuspended() {
-    return scheduler.isSuspended(this);
-}
-
-uint8_t Task::isAsync() {
-    return false;
-}
-
-uint8_t AsyncTask::isAsync() {
-    return true;
+uint8_t Scheduler::isElapsed(time_t now, time_t endTime) {
+    if (endTime != TASK_DELAY_SUSPENDED) {
+        if (endTime <= now) {
+            time_t diff = now - endTime;
+            if (diff < TASK_DELAY_MAX) {
+                // timed out
+                return 1;
+            }
+            // not timed out, or wait for wrap around
+        }
+    }
+    return 0;
 }
 
 AsyncTask::AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() {
@@ -251,6 +210,19 @@ AsyncTask::AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() {
  */
 void AsyncTask::yieldSuspend() {
     suspend();
+    yieldContext();
+}
+
+/**
+ * Set the resume milliseconds and yield the task's execution context. If successfully yielded, this
+ * function will return after at least the given delay has passed.
+ *
+ * If there is no async context, it will not yield and return immediately.
+ *
+ * @param microseconds delay in microseconds before resuming task
+ */
+void AsyncTask::yieldResumeMicros(time_t microseconds) {
+    resumeMicros(microseconds);
     yieldContext();
 }
 
@@ -329,7 +301,7 @@ void Scheduler::dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent) {
         *buffer++ = ' ';
         sizeofBuffer--;
 
-        snprintf(buffer, sizeofBuffer, "0x%2.2x", pTask->getIndex());
+        snprintf(buffer, sizeofBuffer, "0x%2.2x", pTask->getTaskId());
 
         len = strlen(buffer);
         buffer += len;

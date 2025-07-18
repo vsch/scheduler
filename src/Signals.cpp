@@ -9,7 +9,7 @@
 
 uint8_t Signal::wait(Task *pTask) {
     if (!queue.isFull()) {
-        queue.addTail(pTask->getIndex());
+        queue.addTail(pTask->getTaskId());
 
         if (pTask->isAsync()) {
             reinterpret_cast<AsyncTask *>(pTask)->yieldSuspend();
@@ -30,7 +30,7 @@ void Signal::trigger() {
 
         if (pNextTask) {
 #ifdef CONSOLE_DEBUG
-            addActualOutput("Resuming task %d\n", pNextTask->getIndex());
+            addActualOutput("Resuming task %d\n", pNextTask->getTaskId());
 #endif // CONSOLE_DEBUG
             pNextTask->resume(0);
         }

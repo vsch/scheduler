@@ -50,31 +50,31 @@ public:
         resQueue.reset();
     }
 
-    inline uint8_t isFree() const {
+    NO_DISCARD inline uint8_t isFree() const {
         return owner == NULL_TASK && taskQueue.isEmpty();
     }
 
-    inline uint8_t isAvailable(uint8_t available1, uint8_t available2) const {
+    NO_DISCARD inline uint8_t isAvailable(uint8_t available1, uint8_t available2) const {
         return nAvailable1 >= available1 && nAvailable2 >= available2;
     }
 
-    inline uint8_t isMaxAvailable(uint8_t available1, uint8_t available2) const {
+    NO_DISCARD inline uint8_t isMaxAvailable(uint8_t available1, uint8_t available2) const {
         return nMaxAvailable1 >= available1 && nMaxAvailable2 >= available2;
     }
 
-    inline uint8_t getAvailable1() const {
+    NO_DISCARD inline uint8_t getAvailable1() const {
         return nAvailable1;
     }
 
-    inline uint8_t getAvailable2() const {
+    NO_DISCARD inline uint8_t getAvailable2() const {
         return nAvailable2;
     }
 
-    inline uint8_t getMaxAvailable1() const {
+    NO_DISCARD inline uint8_t getMaxAvailable1() const {
         return nMaxAvailable1;
     }
 
-    inline uint8_t getMaxAvailable2() const {
+    NO_DISCARD inline uint8_t getMaxAvailable2() const {
         return nMaxAvailable2;
     }
 
@@ -86,7 +86,13 @@ public:
         }
     }
 
-    void useAvailable2(uint8_t available2);
+    inline void useAvailable2(uint8_t available2) {
+        if (available2 > nAvailable2) {
+            nAvailable2 = 0;
+        } else {
+            nAvailable2 -= available2;
+        }
+    }
 
     inline void useAvailable(uint8_t available1, uint8_t available2) {
         useAvailable1(available1);
@@ -113,8 +119,8 @@ public:
      * @return              0 if available, 1 if need to suspend, NULL_BYTE if can never be satisfied
      */
     uint8_t reserve(uint8_t available1, uint8_t available2) {
-        Task *pTask = scheduler.getTask();
-        return pTask ? reserve(pTask->getIndex(), available1, available2) : NULL_TASK;
+        Task *pTask = scheduler.getCurrentTask();
+        return pTask ? reserve(pTask->getTaskId(), available1, available2) : NULL_TASK;
     }
     
     void release();

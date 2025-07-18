@@ -90,8 +90,8 @@ public:
      *           for it
      */
     uint8_t reserve(uint8_t available1) {
-        Task *pTask = scheduler.getTask();
-        return pTask ? reserve(pTask->getIndex(), available1) : NULL_TASK;
+        Task *pTask = scheduler.getCurrentTask();
+        return pTask ? reserve(pTask->getTaskId(), available1) : NULL_TASK;
     }
     
     void release();

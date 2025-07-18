@@ -389,7 +389,11 @@ void ByteQueue::dump(uint8_t indent, uint8_t compact) {
                 }
 
                 if (i == nTail) {
-                    addActualOutput("] ");
+                    if (compact) {
+                        addActualOutput("]");
+                    } else {
+                        addActualOutput("] ");
+                    }
                 } else {
                     addSpace = !hadHead;
                 }

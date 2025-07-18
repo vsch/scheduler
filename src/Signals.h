@@ -24,7 +24,7 @@ public:
     uint8_t wait(Task *pTask);
 
     inline uint8_t wait() {
-        return wait(scheduler.getTask());
+        return wait(scheduler.getCurrentTask());
     }
 
     /**

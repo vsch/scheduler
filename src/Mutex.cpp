@@ -4,7 +4,7 @@
 #include "Controller.h"
 
 uint8_t Mutex::reserve(uint8_t taskId) {
-    if (scheduler.isValidId(taskId)) {
+    if (scheduler.isValidTaskId(taskId)) {
         if (queue.isEmpty()) {
             // available
             queue.addTail(taskId);
@@ -40,7 +40,7 @@ uint8_t Mutex::release() {
 
         if (pNextTask) {
             pNextTask->resume(0);
-            serialDebugResourceDetailTracePrintf_P(PSTR("Mutex:: resuming %d\n"), pNextTask->getIndex());
+            serialDebugResourceDetailTracePrintf_P(PSTR("Mutex:: resuming %d\n"), pNextTask->getTaskId());
             break;
         }
     }

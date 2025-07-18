@@ -2,7 +2,6 @@
 #ifndef SCHEDULER_COMMON_DEFS_H
 #define SCHEDULER_COMMON_DEFS_H
 
-#define INFINITE_DELAY  ((uint16_t)-1)
 #define NULL_BYTE  ((uint8_t)-1)
 #define NULL_WORD  ((uint16_t)-1)
 #define NULL_TASK  NULL_BYTE
@@ -13,6 +12,10 @@
 
 #ifndef lengthof
 #define lengthof(p)    (sizeof(p)/sizeof(*(p)))
+#endif
+
+#ifndef CONSOLE_DEBUG
+typedef uint32_t time_t;
 #endif
 
 #define sizeOfArray(b, e)    (sizeof(e)*(b))
@@ -31,6 +34,7 @@
 #else
 #ifdef CONSOLE_DEBUG
 #define serialDebugPrintf_P(...) addActualOutput(__VA_ARGS__)
+#define serialDebugPuts_P(...) addActualOutput(__VA_ARGS__)
 #else
 #define serialDebugPrintf_P(...) ((void)0)
 #define serialDebugPuts_P(...) ((void)0)

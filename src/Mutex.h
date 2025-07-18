@@ -44,8 +44,8 @@ public:
      */
     uint8_t reserve()
     {
-        Task* pTask = scheduler.getTask();
-        return pTask ? reserve(pTask->getIndex()) : NULL_TASK;
+        Task* pTask = scheduler.getCurrentTask();
+        return pTask ? reserve(pTask->getTaskId()) : NULL_TASK;
     }
 
     /**
@@ -68,7 +68,7 @@ public:
         return queue.peekHead() == taskId;
     }
 
-    inline bool isOwner(Task* pTask) { return isOwner(pTask->getIndex()); }
+    inline bool isOwner(Task* pTask) { return isOwner(pTask->getTaskId()); }
     
     inline uint8_t getOwner() {
         return queue.peekHead();

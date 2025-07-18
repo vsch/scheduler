@@ -126,16 +126,6 @@ void Res2Lock::makeAvailable(uint8_t available1, uint8_t available2) {
     }
 }
 
-void Res2Lock::useAvailable2(uint8_t available2) {
-    uint8_t wasAvalable2 = nAvailable2;
-
-    if (available2 > nAvailable2) {
-        nAvailable2 = 0;
-    } else {
-        nAvailable2 -= available2;
-    }
-}
-
 #ifdef CONSOLE_DEBUG
 
 #include "tests/FileTestResults_AddResult.h"

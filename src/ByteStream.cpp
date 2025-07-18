@@ -128,8 +128,10 @@ void ByteStream::pgmByteList(const uint8_t *bytes, uint16_t count) {
 }
 
 #ifndef SERIAL_DEBUG
+
 void stream_serialDebugDump(const CByteStream_t *thizz, uint8_t id) {
 }
+
 #else
 
 void stream_serial_debug_dump(const CByteStream_t *thizz, uint8_t id) {
@@ -160,12 +162,12 @@ void ByteStream::getStream(ByteStream *pOther, uint8_t rdWrFlags) {
     pOther->pRdData = pRdData;
 
     pOther->flags = flags;
-    
+
     pCallbackParam = NULL;
     fCallback = NULL;
     nRdSize = 0;
     pRdData = NULL;
-    
+
     ByteQueue::getStream(pOther, rdWrFlags);
 }
 
@@ -221,7 +223,11 @@ void ByteStream::dump(uint8_t indent, uint8_t compact) {
                 }
 
                 if (i == nTail) {
-                    addActualOutput("] ");
+                    if (compact) {
+                        addActualOutput("]");
+                    } else {
+                        addActualOutput("] ");
+                    }
                 } else {
                     addSpace = !hadHead;
                 }
@@ -252,7 +258,7 @@ void ByteStream::dump(uint8_t indent, uint8_t compact) {
             }
             addActualOutput("%s }\n", indentStr);
         }
-        
+
         addActualOutput("%s}\n", indentStr);
     } else {
         addActualOutput("}\n");

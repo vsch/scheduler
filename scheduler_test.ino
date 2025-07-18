@@ -114,7 +114,7 @@ Task *const taskTable[] PROGMEM = {
         &ledFlasher2,
 };
 
-uint16_t delayTable[lengthof(taskTable)];
+time_t delayTable[lengthof(taskTable)];
 Scheduler scheduler = Scheduler(lengthof(taskTable), reinterpret_cast<PGM_P>(taskTable), delayTable);
 
 void setup() {

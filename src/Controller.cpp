@@ -7,6 +7,7 @@
 
 #include "tests/FileTestResults_AddResult.h"
 #include "tests/FileTestResults.h"
+#include "common_defs.h"
 // #else
 // #define addActualOutput(fmt, ...)  ((void)0)
 
@@ -118,7 +119,7 @@ uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
 
     if (reserved == NULL_BYTE) {
         // cannot ever satisfy these requirements
-        serialDebugPrintf_P(PSTR("Ctrl:: never satisfied: R %d > maxR %d || B > maxB %d\n")
+        serialDebugPrintf_P(PSTR("Ctrl:: never satisfied: R %d > maxR %d || B %d > maxB %d\n")
                                                , requests, resourceLock.getMaxAvailable1()
                                                , bytes, resourceLock.getMaxAvailable2());
     } else if (reserved) {

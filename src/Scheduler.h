@@ -4,9 +4,13 @@
 #include "Arduino.h"
 
 #ifndef CONSOLE_DEBUG
+
 #include <avr/pgmspace.h>
+
 #else
+
 #include "type_defs.h"
+
 #endif
 
 #include "TinySwitcher.h"
@@ -26,46 +30,55 @@ extern Scheduler scheduler;
 
 class Task {
     friend class Scheduler;
-    uint8_t index;         // getTask index in scheduler
+    uint8_t taskId;         // getTask index in scheduler
 
 protected:
     virtual void begin() = 0;            // begin getTask
     virtual void loop() = 0;             // loop getTask
 
 public:
-    virtual uint8_t isAsync();
+    virtual uint8_t isAsync() {
+        return false;
+    }
 
 #ifdef SCHEDULER_TASK_IDS
     virtual PGM_P id() = 0;        // printable id
 #endif
 
     inline Task() {
-        index = NULL_TASK;
+        taskId = NULL_TASK;
     }
 
     /**
-     * Suspend this getTask @see Scheduler::suspend()
+     * Suspend this getCurrentTask @see Scheduler::suspend()
      */
     void suspend();
 
     /**
-     * Resume this getTask after given delay in milliseconds
+     * Resume this getCurrentTask after given delay in microseconds
+     *
+     * @param microseconds delay in microseconds to wait before resuming calls to loop()
+     */
+    void resumeMicros(time_t microseconds);
+
+    /**
+     * Resume this getCurrentTask after given delay in milliseconds
      *
      * @param milliseconds delay in milliseconds to wait before resuming calls to loop()
      */
     void resume(uint16_t milliseconds);
 
     /**
-     * return true if this getTask is currently suspended
+     * return true if this getCurrentTask is currently suspended
      */
     bool isSuspended();
 
     /**
-     * Return this task's index in Scheduler getTask table
+     * Return this task's index in Scheduler getCurrentTask table
      * @return
      */
-    inline uint8_t getIndex() const {
-        return index;
+    inline uint8_t getTaskId() const {
+        return taskId;
     }
 };
 
@@ -76,7 +89,9 @@ class AsyncTask : public Task {
 protected:
     AsyncContext *pContext;
 
-    uint8_t isAsync() override;
+    uint8_t isAsync() override {
+        return true;
+    }
 
 public:
     /**
@@ -103,10 +118,19 @@ public:
      * Set the resume milliseconds and yield the task's execution context. If successfully yielded, this
      * function will return after at least the given delay has passed.
      *
-     * If the task is not the current context, it will not yield and return immediately.
-     * Check return value for true if it did not yield and handle it, if needed.
+     * If there is no async context, it will not yield and return immediately.
      *
-     * @param milliseconds delay in milliseconds to addWaitingTask before resuming calls to loop()
+     * @param microseconds delay in microseconds before resuming task
+     */
+    void yieldResumeMicros(time_t microseconds);
+
+    /**
+     * Set the resume milliseconds and yield the task's execution context. If successfully yielded, this
+     * function will return after at least the given delay has passed.
+     *
+     * If the task is not the current context, it will not yield and return immediately.
+     *
+     * @param milliseconds delay in milliseconds before resuming task
      */
     void yieldResume(uint16_t milliseconds);
 
@@ -131,18 +155,26 @@ private:
     static void yieldingLoop(void *arg);
 };
 
+#define TASK_DELAY_SUSPENDED    (0UL)
+#define TASK_DELAY_MAX          (0x8000000UL)    // any delay >= this would be caused by wrap around at 0xffffffff
+
+#define SCHED_FLAGS_IN_LOOP     (0x01)           // scheduler is currently in loop() execution
+
+#define SCHED_MIN_LOOP_DELAY_MICROS (250UL)      // least delay between loop() executions, ie. max resolution of task delay is this.
+
 class Scheduler {
     friend class Task;
     friend class AsyncTask;
 
+    uint8_t flags;
     uint8_t taskCount;              // getTask count
-    uint8_t nextTask;               // id+1 of last getTask that was run when timeSlice ran out
-    uint8_t inLoop;                 // true if now executing loop()
+    time_t *taskTimes;              // task ready timestamp
+    PGM_P tasks;                    // pointer to task table
 
-    uint16_t *delays;
-    PGM_P tasks;
-    uint32_t clockTick;             // clock tick for current delays (in micros)
-    Task *pTask;             // currently executing task
+    // loop() invocation state variables
+    uint8_t nextTask;               // id+1 of last getTask that was run when timeSlice ran out
+    Task *pTask;                    // currently executing task or NULL if not in loop
+    time_t clockTick;               // clock tick for last loop() invocation
 
 #ifdef SERIAL_DEBUG_SCHEDULER
     uint16_t iteration;
@@ -153,30 +185,61 @@ class Scheduler {
 #endif
 
 public:
+
+    inline uint8_t isInLoop() const {
+        return flags & SCHED_FLAGS_IN_LOOP;
+    }
+
+    inline uint8_t canLoop() const {
+        return !isInLoop();
+    }
+
+    /**
+         * Test if the task is suspended
+         * @param taskId of task to test
+         * @return true if task is suspended
+         */
+    uint8_t isTaskSuspended(uint8_t taskId) {
+        return !taskTimes[taskId];
+    }
+
+    /**
+     * Test if the given task delay has expired
+     * @param now       microseconds
+     * @param endTime     task timestamp when it is ready to run.
+     *
+     * CAVEAT: maximum delay to resumeMicros() is 30 bits, because it is
+     *  assumed that anything greater is caused by wrap around, which means
+     *  waiting for micros to roll around. This means that there is a
+     *  maximum of 1,073.741824 seconds delay.
+     *                  
+     * @return true if task is ready to run
+     */
+    static uint8_t isElapsed(time_t now, time_t endTime);
+
     /**
      * Get task given by index
      *
-     * @param index
+     * @param taskId
      * @return
      */
-    Task *getTask(uint8_t index);
+    Task *getTask(uint8_t taskId);
 
     /**
      * Get the currently running task or NULL if none.
      *
      * @return  currently running task or NULL if none.
      */
-    inline Task *getTask() {
+    inline Task *getCurrentTask() {
         return pTask;
     }
-
 
     /**
      * Get the currently running task id or NULL_TASK if none.
      *
-     * @return  currently running task or NULL if none.
+     * @return  currently running task or NULL_TASK if none.
      */
-    uint8_t getTaskId();
+    uint8_t getCurrentTaskId();
 
     /**
      * Construct scheduler instance
@@ -185,8 +248,7 @@ public:
      * @param taskTable     pointer to task table in PROGMEM
      * @param delayTable    pointer to task delay table in RAM
      */
-    Scheduler(uint8_t count, PGM_P taskTable, uint16_t *delayTable);
-
+    Scheduler(uint8_t count, PGM_P taskTable, time_t *delayTable);
 
     /**
      * Startup scheduler and call begin() of all tasks
@@ -199,58 +261,84 @@ public:
      * @param timeSlice     maximum time allotted to single loop() in ms, usually should be
      *                      set to minimum of all tasks' resume calls. 0 means no limit,
      *                      and will execute all ready tasks once. Otherwise, will execute as many tasks as complete within
-     *                      the timeSlice and exit the loop. Next call to loop(), will continue with the next getTask, after
+     *                      the timeSlice and exit the loop. Next call to loop(), will continue with the next getCurrentTask, after
      *                      the last one that ran.
      */
     void loop(uint16_t timeSlice = 0);
+
+    /**
+     * Execute the given task as if in a scheduler loop. Used mainly for testing
+     *
+     * IMPORTANT: pTask is set to the task given by taskId but it is not cleared to NULL.
+     *   Need to call clearCurrentTask() to clear it.
+     *
+     * @param taskId    task id to execute
+     * @return          pointer to executed task or NULL
+     */
+    void executeTask(uint8_t taskId);
+
+    inline void clearCurrentTask() {
+        pTask = NULL;
+    }
 
 #ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
     void dumpMaxStackInfo();
 #endif
 
-    uint8_t canLoop() const;
-
-private:
-    bool reduceDelays(uint16_t milliseconds);
-
 public:
     /**
      * Suspend task. The task's loop() will not be called until a resume() for the Task is called.
      *
-     * @param task    pointer to getTask which to suspend
+     * @param task    pointer to getCurrentTask which to suspend
      *
      */
     void suspend(uint8_t taskId);           // suspend rescheduling
-    inline void suspend(Task *task)
-    {
-        suspend(task->getIndex());
+
+    inline void suspend(Task *task) {
+        suspend(task->getTaskId());
     }
 
     /**
-     * Resume getTask after given number of ms. The task's loop() will be called after given number,
+     * Resume getCurrentTask after given number of ms. The task's loop() will be called after given number,
      * or more, of ms has elapsed.
      *
      * @param taskId            task index
-     * @param milliseconds      milliseconds to wait before resuming getTask
+     * @param microseconds      microseconds to wait before resuming getCurrentTask, from micros()
      *
      */
-    void resume(uint8_t taskId, uint16_t milliseconds);
+    void resumeMicros(uint8_t taskId, time_t microseconds);
 
-    inline void resume(Task *task, uint16_t milliseconds) {
-        resume(task->index, milliseconds);
+    inline void resumeMicros(Task *task, time_t microseconds) {
+        resumeMicros(task->taskId, microseconds);
     }
 
-    inline uint8_t isValidId(uint8_t taskId) {
-        return (taskId < taskCount);
+    /**
+     * Resume getCurrentTask after given number of ms. The task's loop() will be called after given number,
+     * or more, of ms has elapsed.
+     *
+     * @param taskId            task index
+     * @param milliseconds      milliseconds to wait before resuming getCurrentTask
+     *
+     */
+    void resume(uint8_t taskId, uint16_t milliseconds) {
+        resumeMicros(taskId, milliseconds * 1000UL);
+    }
+
+    void resume(Task *task, uint16_t milliseconds) {
+        resume(task->taskId, milliseconds);
+    }
+
+    inline uint8_t isValidTaskId(uint8_t taskId) {
+        return taskId < taskCount;
     }
 
     uint8_t isAsyncTask(uint8_t taskId);
 
     /**
-     * Return true if given getTask is currently suspended
-     * @param task  getTask
+     * Return true if given getCurrentTask is currently suspended
+     * @param task  getCurrentTask
      *
-     * @return true if getTask is suspended
+     * @return true if getCurrentTask is suspended
      */
     bool isSuspended(Task *task);
 
@@ -259,6 +347,22 @@ public:
     void dump(char *buffer, uint32_t sizeofBuffer, uint8_t indent = 0);
 #endif
 };
+
+inline void Task::resumeMicros(time_t microseconds) {
+    scheduler.resumeMicros(this, microseconds);
+}
+
+inline void Task::resume(uint16_t milliseconds) {
+    scheduler.resume(this, milliseconds);
+}
+
+inline void Task::suspend() {
+    scheduler.suspend(this);
+}
+
+inline bool Task::isSuspended() {
+    return scheduler.isSuspended(this);
+}
 
 #ifdef SERIAL_DEBUG
 #else

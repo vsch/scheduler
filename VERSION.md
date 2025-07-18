@@ -2,12 +2,18 @@
 
 [TOC]: #
 
+- [Version 3.0](#version-30)
 - [Version 2.2](#version-22)
 - [Version 2.1](#version-21)
 - [Version 2.0](#version-20)
 - [Version 1.1](#version-11)
 - [Version 1.0](#version-10)
 
+
+## Version 3.0
+
+* Change: microsecond granularity resume functions, simplifies the
+  scheduler loop execution.
 
 ## Version 2.2
 
