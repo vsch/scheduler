@@ -55,17 +55,16 @@ void ResLock::release() {
         owner = NULL_TASK;
 
         // just test for available resources
-        cli();
         makeAvailable(0);
-        sei();
     }
 }
 
 // IMPORTANT: called from interrupt code, so interrupts should be disabled.
 void ResLock::makeAvailable(uint8_t available1) {
+    CLI();
     nAvailable1 += available1;
     if (nAvailable1 > nMaxAvailable1) nAvailable1 = nMaxAvailable1;
-    
+
     serialDebugResourceDetailTracePrintf_P(PSTR("ResLock::make avail: a1 %d - nA1 %d\n")
                                            , available1, nAvailable1);
 
@@ -96,15 +95,16 @@ void ResLock::makeAvailable(uint8_t available1) {
                                                        , taskId
                                                        , nResCount1, nAvailable1);
 
-                // CAVEAT: these tasks are already suspended, there is no need to call Mutex::reserve for the newly enabled 
+                // CAVEAT: these tasks are already suspended, there is no need to call Mutex::reserve for the newly enabled
                 //  tasks because if they are not the first, then they will be suspended, but they are already suspended.
-                //  suspened AsyncTasks should not call their yieldSuspend().  
+                //  suspened AsyncTasks should not call their yieldSuspend().
                 owner = taskId;
                 scheduler.resume(taskId, 0);
                 break;
             }
         }
     }
+    SEI();
 }
 
 #ifdef CONSOLE_DEBUG

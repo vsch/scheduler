@@ -1,11 +1,11 @@
 
-#ifndef ARDUINOPROJECTMODULE_DEBUG_CBYTEBUFFER_H
-#define ARDUINOPROJECTMODULE_DEBUG_CBYTEBUFFER_H
+#ifndef ARDUINOPROJECTMODULE_CBYTEBUFFER_H
+#define ARDUINOPROJECTMODULE_CBYTEBUFFER_H
 
 #include <stdint.h>     //uint8_t type
 #include "common_defs.h"
 
-#define BUFFER_PUT_REVERSE (0x01) 
+#define BUFFER_PUT_REVERSE (0x01)
 
 // Simple buffering for received data with reversal storage
 typedef struct CByteBuffer {
@@ -32,4 +32,4 @@ extern void buffer_put(CByteBuffer_t *thizz, uint8_t data); // write byte
 
 #endif
 
-#endif //ARDUINOPROJECTMODULE_DEBUG_CBYTEBUFFER_H
+#endif //ARDUINOPROJECTMODULE_CBYTEBUFFER_H

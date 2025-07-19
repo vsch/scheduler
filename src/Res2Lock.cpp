@@ -34,11 +34,12 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
                                                        , available2, nAvailable2);
             }
 
-
             // need to wait until they are available
+            CLI();
             taskQueue.addTail(taskId);
             resQueue.addTail(available1);
             resQueue.addTail(available2);
+            SEI();
 
             if (pTask->isAsync()) {
                 reinterpret_cast<AsyncTask *>(pTask)->yieldSuspend();
@@ -63,14 +64,12 @@ void Res2Lock::release() {
         owner = NULL_TASK;
 
         // just test for available resources
-        cli();
         makeAvailable(0,0);
-        sei();
     }
 }
 
-// IMPORTANT: called from interrupt code, so interrupts should be disabled.
 void Res2Lock::makeAvailable(uint8_t available1, uint8_t available2) {
+    CLI();
     nAvailable1 += available1;
     if (nAvailable1 > nMaxAvailable1) nAvailable1 = nMaxAvailable1;
     nAvailable2 += available2;
@@ -115,15 +114,16 @@ void Res2Lock::makeAvailable(uint8_t available1, uint8_t available2) {
                                                        , nResCount1, nAvailable1
                                                        , nResCount2, nAvailable2);
 
-                // CAVEAT: these tasks are already suspended, there is no need to call Mutex::reserve for the newly enabled 
+                // CAVEAT: these tasks are already suspended, there is no need to call Mutex::reserve for the newly enabled
                 //  tasks because if they are not the first, then they will be suspended, but they are already suspended.
-                //  suspened AsyncTasks should not call their yieldSuspend().  
+                //  suspended AsyncTasks should not call their yieldSuspend().
                 owner = taskId;
                 scheduler.resume(taskId, 0);
                 break;
             }
         }
     }
+    SEI();
 }
 
 #ifdef CONSOLE_DEBUG

@@ -55,6 +55,7 @@ CByteStream_t *ciox_init(CIOExpander_t *thizz, uint8_t addressVar, uint8_t extra
     thizz->outputs = 0x00;
     thizz->inputs = 0xff;
     thizz->lastInputs = 0x00;
+    thizz->fStepCallback = NULL;
     return iox_init(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), TILT_CONFIGURATION, extraOutputs | TILT_INVERT_OUT);
 }
 
@@ -74,11 +75,17 @@ const uint8_t phases[] PROGMEM = {
 };
 
 void ciox_update(CIOExpander_t *thizz) {
-    // update if motor is off, assuming no stepping
-    if (!(thizz->outputs & IOX_OUT_MOT_EN)) {
-        // update it rightaway since there may not be any stepping for a while.
+    // update if no stepping going on
+    CLI();
+    bool needUpdate = !(thizz->flags & IOX_FLAGS_STEPPING) && (thizz->lastOutputs != thizz->outputs);
+
+    if (needUpdate) {
+        // update it right away since there may not be any stepping for a while.
+        thizz->lastOutputs = thizz->outputs;
+
         iox_send_byte(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), IOX_REG_OUTPUT_PORT0, thizz->outputs);
     }
+    SEI();
 }
 
 void ciox_stepper_power(CIOExpander_t *thizz, uint8_t enable) {
@@ -100,6 +107,21 @@ void ciox_led_color(CIOExpander_t *thizz, uint8_t ledColor) {
     }
 }
 
+void ciox_step_callback(const CByteStream_t *pStream) {
+    CIOExpander_t *pIox = (CIOExpander_t *)pStream->pCallbackParam;
+
+    if (pIox) {
+        pIox->flags &= ~IOX_FLAGS_STEPPING;
+
+        if (pIox->fStepCallback) {
+            pIox->fStepCallback(pStream, pIox);
+        }
+
+        // if not stepping and have output difference then output right away
+        ciox_update(pIox);
+    }
+}
+
 CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw) {
     uint8_t phase = IOX_FLAGS_TO_STEPPER_PHASE(thizz->flags);
     if (ccw) {
@@ -112,11 +134,19 @@ CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw) {
 
     // enable motor output by default
     thizz->flags &= ~IOX_FLAGS_STEPPER_PHASE;
-    thizz->flags |= IOX_STEPPER_PHASE_TO_FLAGS(phase);
+
+    thizz->flags |= IOX_STEPPER_PHASE_TO_FLAGS(phase) | IOX_FLAGS_STEPPING;
     thizz->outputs &= ~IOX_OUT_MOT_PHASES;
     thizz->outputs |= (motOut & IOX_OUT_MOT_PHASES) | IOX_OUT_MOT_EN;
+
     iox_prep_write(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), IOX_REG_OUTPUT_PORT0);
     stream_put(twiStream, thizz->outputs);
+
+    twiStream->fCallback = ciox_step_callback;
+    twiStream->pCallbackParam = thizz;
+
+    // these diffs have been sent
+    thizz->lastOutputs = thizz->outputs;
     return twi_process(twiStream);
 }
 

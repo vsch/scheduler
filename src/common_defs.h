@@ -21,6 +21,8 @@ typedef uint32_t time_t;
 #define sizeOfArray(b, e)    (sizeof(e)*(b))
 #define sizeOfPlus(t, b, e)    (sizeof(t)+sizeof(e)*(b))
 
+#define CLI()   uint8_t oldSREG = SREG; cli()
+#define SEI()   SREG = oldSREG
 
 #ifdef CONSOLE_DEBUG
 #define NO_DISCARD      [[nodiscard]]

@@ -3,8 +3,8 @@
 #include "CTwiController.h"
 #include "twiint.h"
 
-void cli_complete_request(CByteStream_t *pStream) {
-    twiController.cliEndProcessingRequest((ByteStream *) pStream);
+void twi_complete_request(CByteStream_t *pStream) {
+    twiController.endProcessingRequest((ByteStream *) pStream);
 }
 
 void twi_fresh_stream() {
@@ -61,12 +61,9 @@ uint8_t twi_wait(TwiWaitCallback callback, void *pParam) {
     while (callback(pParam)) {
         diff = micros() - start;
         if (diff >= timeoutMic) {
-            cli();
 #ifdef SERIAL_DEBUG_TWI_TRACER
-            TraceBuffer::cliDumpTrace();
+            TraceBuffer::dumpTrace();
 #endif
-            sei();
-
             serialDebugTwiPrintf_P(PSTR("  TWI: #%d twi_wait timed out %ld.\n"), twiController.getReadStreamId((ByteStream *) pParam), diff / 1000L);
 
 #ifdef SERIAL_DEBUG
@@ -78,9 +75,7 @@ uint8_t twi_wait(TwiWaitCallback callback, void *pParam) {
     serialDebugTwiPrintf_P(PSTR("  TWI: #%d twi_wait done %ld.\n"), twiController.getReadStreamId((ByteStream *) pParam), diff / 1000L);
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-    cli();
-    TraceBuffer::cliDumpTrace();
-    sei();
+    TraceBuffer::dumpTrace();
 #endif
     return 1;
 }
@@ -114,8 +109,8 @@ void twi_set_rd_buffer(uint8_t rdReverse, uint8_t *pRdData, uint8_t nRdSize) {
 }
 
 
-// IMPORTANT: must be called with interrupts disabled
-void TwiController::cliStartProcessingRequest(ByteStream *pStream) {
+void TwiController::startProcessingRequest(ByteStream *pStream) {
+    CLI();
     // output stream content and call endProcessingRequest
     pStream->flags |= STREAM_FLAGS_PROCESSING;
 
@@ -133,4 +128,5 @@ void TwiController::cliStartProcessingRequest(ByteStream *pStream) {
     twiint_start((CByteStream_t *) pStream);
 
 #endif
+    SEI();
 }

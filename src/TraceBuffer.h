@@ -1,7 +1,7 @@
 #ifdef SERIAL_DEBUG_TWI_TRACER
 
-#ifndef ARDUINOPROJECTMODULE_DEBUG_TRACEBUFFER_H
-#define ARDUINOPROJECTMODULE_DEBUG_TRACEBUFFER_H
+#ifndef ARDUINOPROJECTMODULE_TRACEBUFFER_H
+#define ARDUINOPROJECTMODULE_TRACEBUFFER_H
 
 #include "common_defs.h"
 #include "CTraceBuffer.h"
@@ -88,7 +88,7 @@ public:
             while (count--) {
                 *pPos++ = *bytes++;
             }
-            
+
             if (traceByte == TRC_STOP) {
                 nextAfterStop = pPos - this->data;
             }
@@ -120,7 +120,7 @@ public:
             if (traceByte == TRC_STOP || !nCapacity) {
                 nextAfterStop = pPos - this->data;
             }
-#endif            
+#endif
 
             traceByte = 0;
             traceCount = 0;
@@ -180,22 +180,22 @@ public:
 
     static TraceBuffer twiTraceBuffer;
 
-    static void cliDumpTrace();
+    static void dumpTrace();
 
 private:
-    static void cliDumpTrace(TraceBuffer *pBuffer);
+    static void dumpTrace(TraceBuffer *pBuffer);
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern void twi_cli_dump_trace();
+extern void twi_dump_trace();
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif //ARDUINOPROJECTMODULE_DEBUG_TRACEBUFFER_H
+#endif //ARDUINOPROJECTMODULE_TRACEBUFFER_H
 
 #endif //SERIAL_DEBUG_TWI_TRACER

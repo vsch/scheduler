@@ -1,5 +1,5 @@
-#ifndef ARDUINOPROJECTMODULE_DEBUG_CDAC53401_H
-#define ARDUINOPROJECTMODULE_DEBUG_CDAC53401_H
+#ifndef ARDUINOPROJECTMODULE_CDAC53401_H
+#define ARDUINOPROJECTMODULE_CDAC53401_H
 
 #include <stddef.h>     //size_t type, NULL pointer
 #include <stdint.h>     //uint8_t type
@@ -53,11 +53,11 @@ extern CByteStream_t *dac_write(uint8_t addr, uint8_t reg, uint16_t value);
 extern CByteStream_t *dac_write_read(uint8_t addr, uint8_t reg, uint16_t value, uint16_t *pValue);
 /**
  * Write a value to a register then read in the value from the register.
- * 
- * @param addr 
- * @param reg 
+ *
+ * @param addr
+ * @param reg
  * @param value
- * @param pValue 
+ * @param pValue
  * @return 1 if value read, 0 if timed out (50ms) waiting for twi stream to process
  */
 extern CByteStream_t *dac_read(uint8_t addr, uint8_t reg, uint16_t *pValue);
@@ -66,4 +66,4 @@ extern CByteStream_t *dac_read(uint8_t addr, uint8_t reg, uint16_t *pValue);
 };
 #endif
 
-#endif //ARDUINOPROJECTMODULE_DEBUG_CDAC53401_H
+#endif //ARDUINOPROJECTMODULE_CDAC53401_H

@@ -113,6 +113,7 @@ void twiint_start(CByteStream_t *pStream) {
 #ifdef SERIAL_DEBUG_TWI_REQ_TIMING
     if (!pStream->startTime) {
         pStream->startTime = micros();
+        if (!pStream->startTime) pStream->startTime = 1;
     }
 #endif
 
@@ -264,7 +265,7 @@ ISR(TWI_vect) {
                     twi_tracer(TRC_RCV_OVR1);
                     TWCR = (1 << TWINT) | (1 << TWEN) /*| (1 << TWEA)*/ | (1 << TWSTO);
                     twi_tracer_stop();
-                    cli_complete_request(pTwiStream);
+                    twi_complete_request(pTwiStream);
                     break;
                 }
 
@@ -287,7 +288,7 @@ ISR(TWI_vect) {
                 twi_tracer(TRC_RCV_OVR1);
                 TWCR = (1 << TWINT) | (1 << TWEN) /*| (1 << TWEA)*/ | (1 << TWSTO);
                 twi_tracer_stop();
-                cli_complete_request(pTwiStream);
+                twi_complete_request(pTwiStream);
                 break;
             }
 #endif // SERIAL_DEBUG_WI_TRACE_OVERRUNS
@@ -305,7 +306,7 @@ ISR(TWI_vect) {
                     twi_tracer(TRC_RCV_OVR2);
                     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTO);
                     twi_tracer_stop();
-                    cli_complete_request(pTwiStream);
+                    twi_complete_request(pTwiStream);
                     break;
                 }
 #endif //SERIAL_DEBUG_WI_TRACE_OVERRUNS
@@ -372,7 +373,7 @@ ISR(TWI_vect) {
         complete:
             TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
             twi_tracer_stop();
-            cli_complete_request(pTwiStream);
+            twi_complete_request(pTwiStream);
     }
 }
 

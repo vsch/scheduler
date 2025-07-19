@@ -11,8 +11,8 @@
 // Simple queueing both read and write for use in C interrupts and C code, provided from C/C++ code
 // has the same layout as Queue.
 typedef struct CByteQueue {
-    // CAVEAT: nHead is modified in code called from interrupt routine, if size changed from a byte, then code accessing 
-    //      nHead in write buffer will need to be protected with cli()/sei() wrapper
+    // CAVEAT: nHead is modified in code called from interrupt routine, if type is changed to a multi-byte type,
+    //  then code accessing nHead in write buffer will need to be protected with CLI()/SEI() wrapper
     uint8_t nSize;
     uint8_t nHead;
     uint8_t nTail;

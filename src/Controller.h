@@ -110,7 +110,7 @@ public:
     }
 
     void reset() {
-        cli();
+        CLI();
 
         pendingReadStreams.reset();
         completedStreams.reset();
@@ -126,7 +126,6 @@ public:
         }
 
         lastFreeHead = writeBuffer.nHead;
-        sei();
 
 #ifdef RESOURCE_TRACE
         usedStreams = 0;
@@ -134,6 +133,7 @@ public:
         lockedStreams = 0;
         lockedBufferSize = 0;
 #endif
+        SEI();
     }
 
 #ifdef RESOURCE_TRACE
@@ -218,9 +218,9 @@ public:
 #ifdef RESOURCE_TRACE
         usedStreams++;
 #endif
-        cli();
+        CLI();
         resourceLock.useAvailable1(1);
-        sei();
+        SEI();
         ByteStream *pStream = readStreamTable + head;
         return pStream;
     }
@@ -244,19 +244,20 @@ public:
          *
          * @param pStream
          */
-    // IMPORTANT: must be called with interrupts disabled
-    virtual void cliStartProcessingRequest(ByteStream *pStream) = 0;
+    virtual void startProcessingRequest(ByteStream *pStream) = 0;
 
-    // IMPORTANT: must be called with interrupts disabled
-    void cliStartNextRequest() {
+    // IMPORTANT: called from interrupt so no cli/sei needed
+    void startNextRequest() {
+        CLI();
         if (!pendingReadStreams.isEmpty() && !isTracePending()) {
-            uint8_t nexHead = pendingReadStreams.peekHead();
-            ByteStream *pNextStream = getReadStream(nexHead);
+            uint8_t nextHead = pendingReadStreams.peekHead();
+            ByteStream *pNextStream = getReadStream(nextHead);
             if (!(pNextStream->isProcessing())) {
                 pNextStream->flags |= STREAM_FLAGS_PROCESSING;
-                cliStartProcessingRequest(pNextStream);
+                startProcessingRequest(pNextStream);
             }
         }
+        SEI();
     }
 
     /**
@@ -267,10 +268,9 @@ public:
      *
      * @param pStream   stream processed
      */
-    void cliEndProcessingRequest(ByteStream *pStream);
+    void endProcessingRequest(ByteStream *pStream);
 
-    // IMPORTANT: called with interrupts disabled
-    void cliHandleCompletedRequests();
+    void handleCompletedRequests();
 
     void begin() override;
 

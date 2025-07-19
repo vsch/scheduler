@@ -25,18 +25,16 @@ uint8_t twiint_flags;
 
 TraceBuffer TraceBuffer::twiTraceBuffer;
 
-// IMPORTANT: called with interrupts disabled, so it should return with interrupts disabled
-void TraceBuffer::cliDumpTrace() {
-    cliDumpTrace(&twiTraceBuffer);
+void TraceBuffer::dumpTrace() {
+    dumpTrace(&twiTraceBuffer);
 }
 
-// IMPORTANT: called with interrupts disabled, so it should return with interrupts disabled
-void twi_cli_dump_trace() {
-    TraceBuffer::cliDumpTrace();
+void twi_dump_trace() {
+    TraceBuffer::dumpTrace();
 }
 
-// IMPORTANT: called with interrupts disabled, so it should return with interrupts disabled
-void TraceBuffer::cliDumpTrace(TraceBuffer *pBuffer) {
+void TraceBuffer::dumpTrace(TraceBuffer *pBuffer) {
+    CLI();
     if (!(twiint_flags & TWI_FLAGS_TRC_HAD_EMPTY) || !pBuffer->isEmpty()) {
         if (pBuffer->isEmpty()) {
             twiint_flags |= TWI_FLAGS_TRC_HAD_EMPTY;
@@ -80,11 +78,9 @@ void TraceBuffer::cliDumpTrace(TraceBuffer *pBuffer) {
 
         // enable interrupts so twi processing can proceed
         sei();
-
         traceBuffer.dump();
-
-        cli();
     }
+    SEI();
 }
 
 void TraceBuffer::dump() {

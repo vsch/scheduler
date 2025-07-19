@@ -1,6 +1,6 @@
 
-#ifndef ARDUINOPROJECTMODULE_DEBUG_CIOEXPANDER_H
-#define ARDUINOPROJECTMODULE_DEBUG_CIOEXPANDER_H
+#ifndef ARDUINOPROJECTMODULE_CIOEXPANDER_H
+#define ARDUINOPROJECTMODULE_CIOEXPANDER_H
 
 #include <stddef.h>     //size_t type, NULL pointer
 #include <stdint.h>     //uint8_t type
@@ -28,26 +28,35 @@
 #define IOX_I2C_ADDRESS(v)      (XL9535_BASE_ADDRESS | ((v) & 0x07))
 
 #define IOX_FLAGS_ADDRESS       (0x07)
-#define IOX_FLAGS_FIRST_IN      (0x08)
+#define IOX_FLAGS_FIRST_IN      (0x08)   // first in from power up
 #define IOX_FLAGS_STEPPER_PHASE (0x30)
-#define IOX_FLAGS_FREE_2        (0xC0)
+#define IOX_FLAGS_STEPPING      (0x40)   // stepping is active
+#define IOX_FLAGS_FREE_2        (0x80)
 
 #define IOX_STEPPER_PHASE_TO_FLAGS(p) (((p) << 4) & IOX_FLAGS_STEPPER_PHASE)
 #define IOX_FLAGS_TO_STEPPER_PHASE(f) ((((f) & IOX_FLAGS_STEPPER_PHASE) >> 4))
 
 #define IOX_STEPPER_PHASE_MASK (0x03)
 
+struct CIOExpander;
+typedef void (*CIoxCallback_t)(const struct CByteStream *pStream, struct CIOExpander *pIox);
+
 typedef struct CIOExpander {
     uint8_t flags;
     uint8_t outputs;
     uint8_t inputs;
     uint8_t lastInputs;
+    uint8_t lastOutputs;
+    CIoxCallback_t fStepCallback;
 } CIOExpander_t;
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// callback to IOX when step request is complete
+extern void ciox_step_callback(const CByteStream_t *pStream);
 
 extern CByteStream_t *ciox_init(CIOExpander_t *thizz, uint8_t addressVar, uint8_t extraOutputs);
 extern void ciox_stepper_power(CIOExpander_t *thizz, uint8_t enable);
@@ -77,4 +86,4 @@ extern uint8_t iox_in_wait(uint8_t addr, uint16_t *pData);
 };
 #endif
 
-#endif //ARDUINOPROJECTMODULE_DEBUG_CIOEXPANDER_H
+#endif //ARDUINOPROJECTMODULE_CIOEXPANDER_H

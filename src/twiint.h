@@ -10,10 +10,10 @@
  * MIT License
  *
  * Copyright (c) 2018 Sebastian Goessl
- * 
+ *
  * Modified for CByteStream and TwiController handling
  * Author:     Vladimir Schneider
- * 
+ *
  * Copyright (c) 2025 Vladimir Schneider
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -87,10 +87,10 @@ void twiint_flush(void);
 
 /**
  * cancel read operation (if the current stream equals given stream
- * 
+ *
  * NOTE: will disable then enable interrupts
- * 
- * @param pStream 
+ *
+ * @param pStream
  */
 void twint_cancel_rd(CByteStream_t *pStream);
 
@@ -117,10 +117,10 @@ void twiint_start(CByteStream_t *pStream);
 
 /**
  * Implemented by TwiController as a C callable function
- * 
- * @param pStream pointer to stream whose processing was completed 
+ *
+ * @param pStream pointer to stream whose processing was completed
  */
-void cli_complete_request(CByteStream_t *pStream);
+void twi_complete_request(CByteStream_t *pStream);
 
 CByteStream_t *twi_get_write_buffer(uint8_t addr);
 
@@ -146,21 +146,21 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #ifdef SERIAL_DEBUG_TWI_RAW_TRACER
 // no trace codes defined, all are raw data
 #else
-#define TRC_BUS_ERROR    (0x00)   
-#define TRC_START        (0x01)   
-#define TRC_REP_START    (0x02)   
-#define TRC_MT_SLA_ACK   (0x03)   
-#define TRC_MT_DATA_ACK  (0x04)   
-#define TRC_MR_DATA_ACK  (0x05)   
-#define TRC_MR_SLA_ACK   (0x06)   
-#define TRC_MR_DATA_NACK (0x07)   
-#define TRC_MT_ARB_LOST  (0x08)   
-#define TRC_MT_SLA_NACK  (0x09)   
-#define TRC_MT_DATA_NACK (0x0A)   
-#define TRC_MR_SLA_NACK  (0x0B)   
-#define TRC_STOP         (0x0C)   
+#define TRC_BUS_ERROR    (0x00)
+#define TRC_START        (0x01)
+#define TRC_REP_START    (0x02)
+#define TRC_MT_SLA_ACK   (0x03)
+#define TRC_MT_DATA_ACK  (0x04)
+#define TRC_MR_DATA_ACK  (0x05)
+#define TRC_MR_SLA_ACK   (0x06)
+#define TRC_MR_DATA_NACK (0x07)
+#define TRC_MT_ARB_LOST  (0x08)
+#define TRC_MT_SLA_NACK  (0x09)
+#define TRC_MT_DATA_NACK (0x0A)
+#define TRC_MR_SLA_NACK  (0x0B)
+#define TRC_STOP         (0x0C)
 #ifndef SERIAL_DEBUG_WI_TRACE_OVERRUNS
-#define TRC_MAX          (0x0D)   
+#define TRC_MAX          (0x0D)
 #else
 #define TRC_RCV_OVR1     (0x0D)
 #define TRC_RCV_OVR2     (0x0E)
@@ -173,7 +173,7 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define TO_STRING(x) TO_STRING2(x)
 
 // Usage:
-#define STR_TRC_BUS_ERROR    "BUS_ERROR(0x00)"   
+#define STR_TRC_BUS_ERROR    "BUS_ERROR(0x00)"
 #define STR_TRC_START        "START(" TO_STRING(TW_START) ")"
 #define STR_TRC_REP_START    "REP_START(" TO_STRING(TW_REP_START) ")"
 #define STR_TRC_MT_SLA_ACK   "MT_SLA_ACK(" TO_STRING(TW_MT_SLA_ACK) ")"
@@ -192,19 +192,19 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define STR_TRC_RCV_ADDR     "TRC_RCV_ADDR"
 #endif
 #else // SERIAL_DEBUG_TWI_TRACER_CODES
-#define STR_TRC_BUS_ERROR    "BUS_ERROR"   
-#define STR_TRC_START        "START"   
-#define STR_TRC_REP_START    "REP_START"   
-#define STR_TRC_MT_SLA_ACK   "MT_SLA_ACK"   
-#define STR_TRC_MT_DATA_ACK  "MT_DATA_ACK"   
-#define STR_TRC_MR_DATA_ACK  "MR_DATA_ACK"   
-#define STR_TRC_MR_SLA_ACK   "MR_SLA_ACK"   
-#define STR_TRC_MR_DATA_NACK "MR_DATA_NACK"   
-#define STR_TRC_MT_ARB_LOST  "MT_ARB_LOST"   
-#define STR_TRC_MT_SLA_NACK  "MT_SLA_NACK"   
-#define STR_TRC_MT_DATA_NACK "MT_DATA_NACK"   
-#define STR_TRC_MR_SLA_NACK  "MR_SLA_NACK"   
-#define STR_TRC_STOP         "STOP"   
+#define STR_TRC_BUS_ERROR    "BUS_ERROR"
+#define STR_TRC_START        "START"
+#define STR_TRC_REP_START    "REP_START"
+#define STR_TRC_MT_SLA_ACK   "MT_SLA_ACK"
+#define STR_TRC_MT_DATA_ACK  "MT_DATA_ACK"
+#define STR_TRC_MR_DATA_ACK  "MR_DATA_ACK"
+#define STR_TRC_MR_SLA_ACK   "MR_SLA_ACK"
+#define STR_TRC_MR_DATA_NACK "MR_DATA_NACK"
+#define STR_TRC_MT_ARB_LOST  "MT_ARB_LOST"
+#define STR_TRC_MT_SLA_NACK  "MT_SLA_NACK"
+#define STR_TRC_MT_DATA_NACK "MT_DATA_NACK"
+#define STR_TRC_MR_SLA_NACK  "MR_SLA_NACK"
+#define STR_TRC_STOP         "STOP"
 #ifdef SERIAL_DEBUG_WI_TRACE_OVERRUNS
 #define STR_TRC_RCV_OVR1     "RCV_OVERRUN1"
 #define STR_TRC_RCV_OVR2     "RCV_OVERRUN2"
@@ -288,6 +288,6 @@ extern PGM_P const trcStrings[] PROGMEM;
 // #endif
 //
 #define TWBR_VALUE TWI_TWBR_VALUE(F_CPU, TWI_FREQUENCY, TWI_PRESCALER)
-#define TWI_ACTUAL_FREQUENCY TWI_COMPUTED_FREQUENCY(F_CPU, TWI_PRESCALER, TWBR_VALUE)      
+#define TWI_ACTUAL_FREQUENCY TWI_COMPUTED_FREQUENCY(F_CPU, TWI_PRESCALER, TWBR_VALUE)
 
 #endif /* TWIINT_H_ */

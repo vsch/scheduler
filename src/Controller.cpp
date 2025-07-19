@@ -103,14 +103,13 @@ void Controller::dumpResourceTrace(ResourceUse *resourceUse, uint32_t *pLastDump
 #endif // RESOURCE_TRACE
 
 uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
-    cli();
-
+    CLI();
     if (freeReadStreams.getCount() != resourceLock.getAvailable1() || writeBuffer.getCapacity() != resourceLock.getAvailable2()) {
         serialDebugPrintf_P(PSTR("Ctrl:: reserve mismatch ctrl: %d, %d lock: %d %d \n"), freeReadStreams.getCount(), writeBuffer.getCapacity(), resourceLock.getAvailable1(), resourceLock.getAvailable2());
     }
 
     uint8_t reserved = resourceLock.reserve(requests, bytes);
-    sei();
+    SEI();
 
 #ifdef RESOURCE_TRACE
     lockedStreams = requests;
@@ -143,21 +142,20 @@ void Controller::begin() {
 }
 
 void Controller::loop() {
-    cli();
-    cliHandleCompletedRequests();
+    handleCompletedRequests();
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
-    TraceBuffer::cliDumpTrace();
+    TraceBuffer::dumpTrace();
 #endif
 
-    cliStartNextRequest();
-    sei();
+    startNextRequest();
 
     resume(1);
 }
 
 // IMPORTANT: called from interrupt code
-void Controller::cliEndProcessingRequest(ByteStream *pStream) {
+void Controller::endProcessingRequest(ByteStream *pStream) {
+    CLI();
     pStream->flags &= ~(STREAM_FLAGS_PENDING | STREAM_FLAGS_PROCESSING);
     pStream->triggerCallback();
 
@@ -180,18 +178,24 @@ void Controller::cliEndProcessingRequest(ByteStream *pStream) {
         // don't start next request if trace processing is pending
         if (isRequestAutoStart()) {
             // start processing next request
-            cliStartNextRequest();
+            startNextRequest();
         }
 
         // restart loop
         resume(0);
     }
+    SEI();
 }
 
-// IMPORTANT: interrupts disabled when called
-void Controller::cliHandleCompletedRequests() {
-    while (!completedStreams.isEmpty()) {
+void Controller::handleCompletedRequests() {
+    CLI();
+    for (;;) {
+        cli();
+        if (completedStreams.isEmpty()) break;
+
         const uint8_t id = completedStreams.removeHead();
+        SEI();
+
         ByteStream *completedStream = getReadStream(id);
 
         // put its handled info back to writeBuffer and it back in the free queue
@@ -207,9 +211,9 @@ void Controller::cliHandleCompletedRequests() {
 #endif
 
         freeReadStreams.addTail(id);
-
         resourceLock.makeAvailable(1, 0);
     }
+    SEI();
 }
 
 ByteStream *Controller::getWriteStream() {
@@ -242,10 +246,9 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream) {
 
     // incorporate tail into buffer if not own buffered stream
     uint8_t isSharedBuffer = pWriteStream->pData == writeBuffer.pData;
-    uint8_t startProcessing = 0;
 
     // NOTE: protect from mods in interrupts mid-way through this code
-    cli();
+    CLI();
     resourceLock.useAvailable1(1);
 
     if (isSharedBuffer) {
@@ -274,12 +277,12 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream) {
     if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
         // first one, then no-one to start it up but here
         serialDebugTwiDataPrintf_P(PSTR("AutoStart req %d\n"), head);
-        cliStartProcessingRequest(pStream);
+        startProcessingRequest(pStream);
     } else {
         // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
         // and new request processing started if needed
     }
-    sei();
+    SEI();
 
 
     // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
