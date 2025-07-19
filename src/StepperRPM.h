@@ -1,12 +1,11 @@
-
-#ifndef ARDUINOPROJECTMODULE_STEPPERCTRL_H
-#define ARDUINOPROJECTMODULE_STEPPERCTRL_H
+#ifndef ARDUINOPROJECTMODULE_STEPPERRPM_H
+#define ARDUINOPROJECTMODULE_STEPPERRPM_H
 
 #include <stdint.h>
 #include <Arduino.h>
 #include "CByteStream.h"
 
-class StepperCtrl {
+class StepperRPM {
     uint16_t stepsPerRevolution;
     uint8_t rpmX10;
 
@@ -18,7 +17,7 @@ class StepperCtrl {
     time_t rampStartMicros;
 
 public:
-    StepperCtrl() {
+    StepperRPM() {
         rpmX10 = 5;
         endRPMx10 = startRPMx10 = 0;
         rampMs = 0;
@@ -82,4 +81,4 @@ public:
 
 };
 
-#endif //ARDUINOPROJECTMODULE_STEPPERCTRL_H
+#endif //ARDUINOPROJECTMODULE_STEPPERRPM_H

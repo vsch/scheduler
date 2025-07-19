@@ -1,6 +1,6 @@
 #ifdef INCLUDE_STP_MODULE
 
-#include "StepperCtrl.h"
+#include "StepperRPM.h"
 
 
 
