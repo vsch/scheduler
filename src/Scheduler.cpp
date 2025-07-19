@@ -63,8 +63,8 @@ void Scheduler::dumpDelays(PGM_P msg) {
 void Scheduler::loopMicros(time_t timeSlice) {
     time_t tick = micros();
 
-#if defined(SCHED_MIN_LOOP_DELAY_MICROS) && SCHED_MIN_LOOP_DELAY_MICROS
-    if (!isElapsed(tick, clockTick + SCHED_MIN_LOOP_DELAY_MICROS)) {
+#if defined(SCHED_MIN_LOOP_TIMESLICE_MICROS) && SCHED_MIN_LOOP_TIMESLICE_MICROS
+    if (!isElapsed(tick, clockTick + SCHED_MIN_LOOP_TIMESLICE_MICROS)) {
         // this is to avoid needlessly scanning the delay table too frequently
         return;
     }
@@ -104,7 +104,7 @@ void Scheduler::loopMicros(time_t timeSlice) {
         time_t end = micros();
 
         if (timeSlice) {
-            if (isElapsed(tick, timeSliceLimit)) {
+            if (timeSliceLimit && isElapsed(tick, timeSliceLimit)) {
 #ifdef SERIAL_DEBUG_SCHEDULER
                 debugSchedulerPrintf_P(PSTR("Scheduler[%u] time slice ended %lu limit %u last getTask %S[%d] took %lu\n"),
                                        iteration, (uint32_t) (end - tick), timeSlice, pLastTask->id(), pLastTask->taskId, (uint32_t) (end - start)
@@ -120,7 +120,6 @@ void Scheduler::loopMicros(time_t timeSlice) {
 
         debugSchedulerPrintf_P(PSTR("Scheduler[%d] getCurrentTask %S[%d] done in %lu\n"),
                                iteration, pLastTask->id(), pLastTask->taskId, (uint32_t) (end - start));
-
     }
 
     if (lastId != (uint8_t) -1) {
@@ -181,18 +180,48 @@ uint8_t Scheduler::getCurrentTaskId() {
     return pTask ? pTask->taskId : NULL_TASK;
 }
 
-uint8_t Scheduler::isElapsed(time_t now, time_t endTime) {
-    if (endTime != TASK_DELAY_SUSPENDED) {
-        if (endTime <= now) {
-            time_t diff = now - endTime;
-            if (diff < TASK_DELAY_MAX) {
-                // timed out
-                return 1;
-            }
-            // not timed out, or wait for wrap around
-        }
+/**
+ * Get elapsed micro seconds between start and end micros(). If |diff| > 0x7fffffff, then micros()
+ * rolled over and difference will be start - end. Only valid if |actual difference| <= 0x7fffffff.
+ *
+ * @param startTime     start time micros()
+ * @param endTime       end time micros()
+ * @return              difference between end and start time, taking possible roll over into account
+ *                      result will be in range [-0x80000000, 0x7ffffff]
+ */
+int32_t elapsed_micros(time_t startTime, time_t endTime) {
+    uint32_t diff = endTime - startTime;
+
+    if (diff & 0x80000000) {
+        // assume rollover occurred
+        diff = -diff;
     }
-    return 0;
+
+    return (int32_t) diff;
+}
+
+/**
+ * Test if endTime has elapsed past now. ie. difference is -ve
+ *
+ * @param now           now micros()
+ * @param endTime       end time micros()
+ * @return micros between start and end, taking possibility of micros() rolling over to 0.
+ */
+uint8_t is_elapsed(time_t now, time_t endTime) {
+    uint32_t diff = now - endTime;
+    uint8_t nowGtEndTime = 1;
+
+    if (now < endTime) {
+        diff = -diff;
+        nowGtEndTime = 0;
+    }
+
+    if (diff & 0x80000000) {
+        // rolled over
+        return !nowGtEndTime;
+    } else {
+        return nowGtEndTime;
+    }
 }
 
 AsyncTask::AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() {

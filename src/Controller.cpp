@@ -156,6 +156,13 @@ void Controller::loop() {
 // IMPORTANT: called from interrupt code
 void Controller::endProcessingRequest(ByteStream *pStream) {
     CLI();
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+    if (!pStream->startTime) {
+        pStream->startTime = twiint_request_start_time;
+        if (!pStream->startTime) pStream->startTime = 1;
+    }
+#endif
+
     pStream->flags &= ~(STREAM_FLAGS_PENDING | STREAM_FLAGS_PROCESSING);
     pStream->triggerCallback();
 
@@ -222,6 +229,12 @@ ByteStream *Controller::getWriteStream() {
     if (!(writeStream.flags & STREAM_FLAGS_UNPROCESSED)) {
         writeStream.flags = STREAM_FLAGS_UNPROCESSED;
         writeBuffer.getStream(&writeStream, STREAM_FLAGS_WR);
+#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
+        writeStream.startTime = 0;
+#endif
+        writeStream.addr = 0;
+        writeStream.pCallbackParam = NULL;
+        writeStream.fCallback = NULL;
     }
     return &writeStream;
 }

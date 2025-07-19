@@ -160,9 +160,12 @@ private:
 
 #define SCHED_FLAGS_IN_LOOP     (0x01)           // scheduler is currently in loop() execution
 
-#ifndef SCHED_MIN_LOOP_DELAY_MICROS
-#define SCHED_MIN_LOOP_DELAY_MICROS (250UL)      // least delay between loop() executions, ie. max resolution of task delay is this.
+#ifndef SCHED_MIN_LOOP_TIMESLICE_MICROS
+#define SCHED_MIN_LOOP_TIMESLICE_MICROS (250UL)      // least delay between loop() executions, ie. max resolution of task delay is this.
 #endif
+
+extern "C" uint8_t is_elapsed(time_t now, time_t endTime);
+extern "C" int32_t elapsed_micros(time_t startTime, time_t endTime);
 
 class Scheduler {
     friend class Task;
@@ -217,7 +220,9 @@ public:
      *
      * @return true if task is ready to run
      */
-    static uint8_t isElapsed(time_t now, time_t endTime);
+    inline static uint8_t isElapsed(time_t now, time_t endTime) {
+        return is_elapsed(now, endTime);
+    }
 
     /**
      * Get task given by index

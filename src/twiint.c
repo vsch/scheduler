@@ -54,6 +54,7 @@ CByteStream_t *pTwiStream;
 CByteBuffer_t rdBuffer;
 uint16_t twiint_errors;
 uint8_t twiint_flags;
+time_t twiint_request_start_time;
 
 #ifdef CONSOLE_DEBUG
 
@@ -110,13 +111,7 @@ void twiint_start(CByteStream_t *pStream) {
         twiint_flags |= TWI_FLAGS_HAVE_READ;
     }
 
-#ifdef SERIAL_DEBUG_TWI_REQ_TIMING
-    if (!pStream->startTime) {
-        pStream->startTime = micros();
-        if (!pStream->startTime) pStream->startTime = 1;
-    }
-#endif
-
+    twiint_request_start_time = micros();
     TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA);
 }
 

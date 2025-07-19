@@ -65,6 +65,7 @@ extern "C" {
  */
 extern uint16_t twiint_errors;
 extern uint8_t twiint_flags;
+extern time_t twiint_request_start_time;
 
 /**
  * Initializes the TWI hardware for master mode operating at TWI_FREQUENCY.

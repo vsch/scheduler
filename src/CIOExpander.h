@@ -28,10 +28,10 @@
 #define IOX_I2C_ADDRESS(v)      (XL9535_BASE_ADDRESS | ((v) & 0x07))
 
 #define IOX_FLAGS_ADDRESS       (0x07)
-#define IOX_FLAGS_FIRST_IN      (0x08)   // first in from power up
+#define IOX_FLAGS_VALID_INPUTS  (0x08)   // got input complete
 #define IOX_FLAGS_STEPPER_PHASE (0x30)
 #define IOX_FLAGS_STEPPING      (0x40)   // stepping is active
-#define IOX_FLAGS_FREE_2        (0x80)
+#define IOX_FLAGS_LATEST_INPUTS (0x80)   // latest input request is complete
 
 #define IOX_STEPPER_PHASE_TO_FLAGS(p) (((p) << 4) & IOX_FLAGS_STEPPER_PHASE)
 #define IOX_FLAGS_TO_STEPPER_PHASE(f) ((((f) & IOX_FLAGS_STEPPER_PHASE) >> 4))
@@ -47,6 +47,8 @@ typedef struct CIOExpander {
     uint8_t inputs;
     uint8_t lastInputs;
     uint8_t lastOutputs;
+
+    time_t stepStartTick;           // micros of start of step
     CIoxCallback_t fStepCallback;
 } CIOExpander_t;
 
@@ -54,9 +56,6 @@ typedef struct CIOExpander {
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// callback to IOX when step request is complete
-extern void ciox_step_callback(const CByteStream_t *pStream);
 
 extern CByteStream_t *ciox_init(CIOExpander_t *thizz, uint8_t addressVar, uint8_t extraOutputs);
 extern void ciox_stepper_power(CIOExpander_t *thizz, uint8_t enable);
