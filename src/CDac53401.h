@@ -7,11 +7,11 @@
 #include "CDac53401_cmd.h"
 
 // DAC computed values
-#define VOUT_A      (-134.9)
-#define VOUT_B      (1616.9)
+#define VOUT_A      (-134.912959381045)
+#define VOUT_B      (1616.85686653772)
 #define VM_TO_DAC_DATA_RAW(v)   ((int32_t)(VOUT_A * (double)(v) + VOUT_B + 0.5))
 #define VM_TO_DAC_DATA(v)       (VM_TO_DAC_DATA_RAW(v) > 1023 ? 1023 : VM_TO_DAC_DATA_RAW(v) < 0 ? 0: (uint16_t)VM_TO_DAC_DATA_RAW(v))
-#define DAC_DATA_TO_VM(d)       ((double)(d)-VOUT_B)/VOUT_A)
+#define DAC_DATA_TO_VM(d)       (((double)(d)-VOUT_B)/VOUT_A)
 #define DAC_DATA_TO_VM_MV(d)    ((uint16_t)(DAC_DATA_TO_VM(d)*1000+.5))
 #define VM_MIN                  (DAC_DATA_TO_VM_MV(1023))
 #define VM_MAZ                  (DAC_DATA_TO_VM_MV(0))
@@ -42,9 +42,9 @@ extern "C" {
 #endif
 
 // count must be multiple of 3, only full 3 bytes are sent, if last entry is short it is ignored
-extern CByteStream_t * dac_send_byte_list(const uint8_t *bytes, uint16_t count);
+extern CByteStream_t *dac_send_byte_list(uint8_t addr, const uint8_t *bytes, uint16_t count);
 
-extern void dac_init();
+extern CByteStream_t * dac_init(uint8_t addr);
 extern CByteStream_t *dac_power_up(uint8_t addr);
 extern CByteStream_t *dac_power_down(uint8_t addr, uint8_t flags);
 extern CByteStream_t *dac_output(uint8_t addr, uint16_t value);

@@ -3,6 +3,7 @@
 #include "CIOExpander.h"
 #include "CTwiController.h"
 #include "twiint.h"
+#include "CApmStepper.h"
 
 void iox_prep_write(uint8_t addr, uint8_t reg) {
     twi_get_write_buffer(TWI_ADDRESS_W(addr));
@@ -60,21 +61,6 @@ CByteStream_t *ciox_init(CIOExpander_t *thizz, uint8_t addressVar, uint8_t extra
     return iox_init(IOX_I2C_ADDRESS(thizz->flags & IOX_FLAGS_ADDRESS), TILT_CONFIGURATION, extraOutputs | TILT_INVERT_OUT);
 }
 
-/*
- *      A1 A2 B1 B2
- * Step C0 C1 C2 C3
- *    1  1  0  1  0
- *    2  0  1  1  0
- *    3  0  1  0  1
- *    4  1  0  0  1
- */
-const uint8_t phases[] PROGMEM = {
-        IOX_OUT_MOT_A1 | IOX_OUT_MOT_B1, // 1  0  1  0
-        IOX_OUT_MOT_A2 | IOX_OUT_MOT_B1, // 0  1  1  0
-        IOX_OUT_MOT_A2 | IOX_OUT_MOT_B2, // 0  1  0  1
-        IOX_OUT_MOT_A1 | IOX_OUT_MOT_B2, // 1  0  0  1
-};
-
 void ciox_update(CIOExpander_t *thizz) {
     // update if no stepping going on
     CLI();
@@ -124,15 +110,30 @@ void ciox_step_callback(const CByteStream_t *pStream) {
     }
 }
 
-CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccw) {
+/*
+ *      A1 A2 B1 B2
+ * Step C0 C1 C2 C3
+ *    1  1  0  1  0
+ *    2  0  1  1  0
+ *    3  0  1  0  1
+ *    4  1  0  0  1
+ */
+const uint8_t ciox_stepper_phases[] PROGMEM = {
+        IOX_OUT_MOT_A1 | IOX_OUT_MOT_B1, // 1  0  1  0
+        IOX_OUT_MOT_A2 | IOX_OUT_MOT_B1, // 0  1  1  0
+        IOX_OUT_MOT_A2 | IOX_OUT_MOT_B2, // 0  1  0  1
+        IOX_OUT_MOT_A1 | IOX_OUT_MOT_B2, // 1  0  0  1
+};
+
+CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccwDir) {
     uint8_t phase = IOX_FLAGS_TO_STEPPER_PHASE(thizz->flags);
-    if (ccw) {
+    if (ccwDir) {
         phase--;
     } else {
         phase++;
     }
     phase &= IOX_STEPPER_PHASE_MASK;
-    uint8_t motOut = pgm_read_byte(phases + phase);
+    uint8_t motOut = pgm_read_byte(ciox_stepper_phases + phase);
 
     // enable motor output by default
     thizz->flags &= ~IOX_FLAGS_STEPPER_PHASE;
@@ -158,6 +159,14 @@ CByteStream_t *ciox_step_cw(CIOExpander_t *thizz) {
 
 CByteStream_t *ciox_step_ccw(CIOExpander_t *thizz) {
     return ciox_step(thizz, 1);
+}
+
+time_t ciox_rpm_to_step_micros(uint8_t reduction, uint8_t rpm) {
+    return raw_rpm_to_step_micros(reduction, rpm) - 300;
+}
+
+uint16_t ciox_step_micros_to_rpmX10(uint8_t reduction, uint32_t stepMicros) {
+    return raw_step_micros_to_rpmX10(reduction, stepMicros + 300);
 }
 
 // callback to IOX when in request is complete

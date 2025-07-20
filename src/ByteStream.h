@@ -169,9 +169,6 @@ public:
 #else
 #ifdef CONSOLE_DEBUG
 #define serialDebugPrintf_P(...) addActualOutput(__VA_ARGS__)
-#else
-#define serialDebugPrintf_P(...) ((void)0)
-#define serialDebugPuts_P(...) ((void)0)
 #endif
 #endif
 

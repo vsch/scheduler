@@ -5,24 +5,25 @@
 #include "CTwiController.h"
 #include "twiint.h"
 
-void dac_init() {
+CByteStream_t * dac_init(uint8_t addr) {
     static const DacWriteEntry_t PROGMEM init1[] = {
             {REG_TRIGGER,        WR_TRIGGER_DEVICE_CONFIG_RESET(1)},
-            {REG_GENERAL_CONFIG, WR_DAC_POWER(DAC_POWER_UP) | WR_GENERAL_CONFIG_REF_EN(DAC_VREF_VDD) /*| WR_GENERAL_CONFIG_DAC_SPAN(DAC_VREF_GAIN_1_5X)*/ },
+            // {REG_GENERAL_CONFIG, WR_DAC_POWER(DAC_POWER_UP) | WR_GENERAL_CONFIG_REF_EN(DAC_VREF_VDD) /*| WR_GENERAL_CONFIG_DAC_SPAN(DAC_VREF_GAIN_1_5X)*/ },
+            {REG_GENERAL_CONFIG, WR_DAC_POWER(DAC_POWER_UP) | WR_GENERAL_CONFIG_REF_EN(DAC_VREF_EN) | WR_GENERAL_CONFIG_DAC_SPAN(DAC_SPAN_VREF_GAIN_4X) },
             {REG_DATA,           WR_DATA_DAC(DATA_DAC_MAX)}, // output max so VM voltage is min
     };
 
-    CByteStream_t *pStream = dac_send_byte_list(init1, sizeof(init1));
-    twi_wait_sent(pStream);
+    CByteStream_t *pStream = dac_send_byte_list(addr, init1, sizeof(init1));
+    return pStream;
 }
 
-CByteStream_t *dac_send_byte_list(const uint8_t *bytes, uint16_t count) {
+CByteStream_t *dac_send_byte_list(uint8_t addr, const uint8_t *bytes, uint16_t count) {
     CByteStream_t *pStream = NULL;
 
     while (count >= 3) {
         uint8_t reg = pgm_read_byte(bytes++);
         uint16_t val = pgm_read_word(bytes++);
-        pStream = dac_write(DAC53401_ADDRESS, reg, val);
+        pStream = dac_write(addr, reg, val);
         bytes++;
         count -= 3;
     }
