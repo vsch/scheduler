@@ -75,14 +75,6 @@ void ciox_update(CIOExpander_t *thizz) {
     SEI();
 }
 
-void ciox_stepper_power(CIOExpander_t *thizz, uint8_t enable) {
-    if (enable) enable = IOX_OUT_MOT_EN;
-    if ((thizz->outputs & IOX_OUT_MOT_EN) != enable) {
-        thizz->outputs ^= IOX_OUT_MOT_EN;
-        ciox_update(thizz);
-    }
-}
-
 void ciox_led_color(CIOExpander_t *thizz, uint8_t ledColor) {
     ledColor = (ledColor) ? (ledColor & IOX_OUT_LED) ? (ledColor & IOX_OUT_LED) : TILT_LED_COLOR_WHITE : TILT_LED_COLOR_BLACK;
     ledColor ^= TILT_INVERT_OUT;
@@ -94,9 +86,19 @@ void ciox_led_color(CIOExpander_t *thizz, uint8_t ledColor) {
     }
 }
 
+#ifdef INCLUDE_STP_MODULE
+
+void ciox_stepper_power(CIOExpander_t *thizz, uint8_t enable) {
+    if (enable) enable = IOX_OUT_MOT_EN;
+    if ((thizz->outputs & IOX_OUT_MOT_EN) != enable) {
+        thizz->outputs ^= IOX_OUT_MOT_EN;
+        ciox_update(thizz);
+    }
+}
+
 // callback to IOX when step request is complete
 void ciox_step_callback(const CByteStream_t *pStream) {
-    CIOExpander_t *pIox = (CIOExpander_t *)pStream->pCallbackParam;
+    CIOExpander_t *pIox = (CIOExpander_t *) pStream->pCallbackParam;
 
     if (pIox) {
         pIox->flags &= ~IOX_FLAGS_STEPPING;
@@ -169,9 +171,11 @@ uint16_t ciox_step_micros_to_rpmX10(uint8_t reduction, uint32_t stepMicros) {
     return raw_step_micros_to_rpmX10(reduction, stepMicros + 300);
 }
 
+#endif // INCLUDE_STP_MODULE
+
 // callback to IOX when in request is complete
 void ciox_in_callback(const CByteStream_t *pStream) {
-    CIOExpander_t *pIox = (CIOExpander_t *)pStream->pCallbackParam;
+    CIOExpander_t *pIox = (CIOExpander_t *) pStream->pCallbackParam;
 
     if (pIox) {
         pIox->flags |= IOX_FLAGS_VALID_INPUTS | IOX_FLAGS_LATEST_INPUTS;

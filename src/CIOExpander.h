@@ -57,16 +57,18 @@ typedef struct CIOExpander {
 extern "C" {
 #endif
 
-extern const uint8_t ciox_stepper_phases[];
 extern CByteStream_t *ciox_init(CIOExpander_t *thizz, uint8_t addressVar, uint8_t extraOutputs);
-extern void ciox_stepper_power(CIOExpander_t *thizz, uint8_t enable);
 extern void ciox_led_color(CIOExpander_t *thizz, uint8_t ledColor);
+
+#ifdef INCLUDE_STP_MODULE
+extern void ciox_stepper_power(CIOExpander_t *thizz, uint8_t enable);
 extern CByteStream_t *ciox_step(CIOExpander_t *thizz, uint8_t ccwDir);
 extern CByteStream_t *ciox_step_cw(CIOExpander_t *thizz);
 extern CByteStream_t *ciox_step_ccw(CIOExpander_t *thizz);
 extern CByteStream_t *ciox_in(CIOExpander_t *thizz);
 extern time_t ciox_rpm_to_step_micros(uint8_t reduction, uint8_t rpm);
 extern uint16_t ciox_step_micros_to_rpmX10(uint8_t reduction, uint32_t stepMicros);
+#endif // INCLUDE_STP_MODULE
 
 extern CByteStream_t *iox_init(uint8_t addr, uint16_t rw_config, uint16_t data);
 extern CByteStream_t *iox_send_word(uint8_t addr, uint8_t reg, uint16_t data);
