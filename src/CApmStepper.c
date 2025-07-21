@@ -114,7 +114,9 @@ uint16_t capm_step_micros_to_rpmX10(uint8_t reduction, uint32_t stepMicros) {
 
 #ifdef INCLUDE_DAC_MODULE
 // micros per step for 28BYJ-48 motor, 32 steps/rev with 1:64 reduction, resulting in output of 2048 steps/rev
-//4 rpm - 4.5v, 9 rpm - 5v, 13 rmp 5.5 v, 15 rmp 6 v, 16 rmp 6.5 v, 17 rmp 7 v, 18 rmp 7.3 v, 20 rmp 7.5 v
+//minimal torque 4 rpm - 4.5v, 9 rpm - 5v, 13 rmp 5.5 v, 15 rmp 6 v, 16 rmp 6.5 v, 17 rmp 7 v, 18 rmp 7.3 v, 20 rmp 7.5 v
+
+// boost lookup voltage
 #define VM_ADD (0)
 const uint16_t rpmVDac[] PROGMEM = {
         // minimalist
