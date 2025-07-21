@@ -49,10 +49,10 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
                 return 1;
             }
         } else {
-            serialDebugPrintf_P(PSTR("Res2Lock:: invalid task id %d\n"), taskId);
+            resourceTracePrintf_P(PSTR("Res2Lock:: invalid task id %d\n"), taskId);
         }
     } else {
-        serialDebugPrintf_P(PSTR("Res2Lock:: never satisfied: a1:%d > maxA1:%d || a2:%d > maxA2:%d\n")
+        resourceTracePrintf_P(PSTR("Res2Lock:: never satisfied: a1:%d > maxA1:%d || a2:%d > maxA2:%d\n")
                             , available1, nMaxAvailable1
                             , available2, nMaxAvailable2);
     }
@@ -86,11 +86,11 @@ void Res2Lock::makeAvailable(uint8_t available1, uint8_t available2) {
             uint8_t nResCount2 = resQueue.peekHead(1);
 
             if (nResCount1 == NULL_BYTE) {
-                serialDebugPrintf_P(PSTR("Res2Lock:: res peek() %d\n"), nResCount1);
+                serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: res peek() %d\n"), nResCount1);
             }
 
             if (nResCount2 == NULL_BYTE) {
-                serialDebugPrintf_P(PSTR("Res2Lock:: res peek(1) %d\n"), nResCount2);
+                serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: res peek(1) %d\n"), nResCount2);
             }
 
             if (nAvailable1 < nResCount1 || nAvailable2 < nResCount2) {

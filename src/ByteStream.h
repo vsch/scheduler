@@ -61,7 +61,7 @@ public:
         if (fCallback) fCallback((const CByteStream_t *)this);
     }
 
-#ifdef SERIAL_DEBUG
+#ifdef SERIAL_DEBUG_DUMP
     void serialDebugDump(uint8_t id);
 #else
     inline void serialDebugDump(uint8_t id) { }

@@ -41,10 +41,10 @@ uint8_t ResLock::reserve(uint8_t taskId, uint8_t available1) {
                 return 1;
             }
         } else {
-            serialDebugPrintf_P(PSTR("ResLock:: invalid task id %d\n"), taskId);
+            resourceTracePrintf_P(PSTR("ResLock:: invalid task id %d\n"), taskId);
         }
     } else {
-        serialDebugPrintf_P(PSTR("ResLock:: never satisfied: a1:%d > maxA1:%d\n")
+        resourceTracePrintf_P(PSTR("ResLock:: never satisfied: a1:%d > maxA1:%d\n")
                             , available1, nMaxAvailable1);
     }
     return NULL_BYTE;
@@ -74,7 +74,7 @@ void ResLock::makeAvailable(uint8_t available1) {
             uint8_t nResCount1 = resQueue.peekHead();
 
             if (nResCount1 == NULL_BYTE) {
-                serialDebugPrintf_P(PSTR("ResLock:: res peek() %d\n"), nResCount1);
+                serialDebugResourceDetailTracePrintf_P(PSTR("ResLock:: res peek() %d\n"), nResCount1);
             }
 
             if (nAvailable1 < nResCount1) {

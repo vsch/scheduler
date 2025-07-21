@@ -209,13 +209,13 @@ void ByteQueue::getStream(ByteStream *pOther, uint8_t flags) {
     pOther->nHead = nHead;
     pOther->nTail = nTail;
     pOther->pData = pData;
-    
+
     // only change the rd/wr flags
     pOther->flags &= ~STREAM_FLAGS_RD_WR_APPEND;
     pOther->flags |= flags & (STREAM_FLAGS_RD_WR_APPEND);
-    
+
     if ((flags & STREAM_FLAGS_RD_WR_APPEND) == STREAM_FLAGS_WR) {
-        // reset to empty at tail if it is a write only stream    
+        // reset to empty at tail if it is a write only stream
         pOther->nHead = pOther->nTail;
     }
 }
@@ -294,21 +294,21 @@ uint8_t queue_put(CByteQueue_t *thizz, uint8_t data) {
     return ((ByteQueue *) thizz)->addTail(data);
 }
 
-#ifdef SERIAL_DEBUG
+#ifdef SERIAL_DEBUG_DUMP
 
 const char strQueue[] PROGMEM = "Queue";
 
 void ByteQueue::serialDebugDump(PGM_P name) {
     uint8_t iMax = getSize();
-    static const char strPrefix[] PROGMEM = " ["; 
-    static const char strEmpty[] PROGMEM = " []"; 
-    static const char strSuffix[] PROGMEM = " ]"; 
-    static const char strNull[] PROGMEM = ""; 
-    serialDebugPrintf_P(PSTR("%S: @0x%2.2X {"), name ? name : strQueue, pData);
+    static const char strPrefix[] PROGMEM = " [";
+    static const char strEmpty[] PROGMEM = " []";
+    static const char strSuffix[] PROGMEM = " ]";
+    static const char strNull[] PROGMEM = "";
+    serialDebugDumpPrintf_P(PSTR("%S: @0x%2.2X {"), name ? name : strQueue, pData);
     for (uint8_t i = 0; i < iMax; i++) {
         uint8_t byte = pData[i];
         PGM_P prefix = strNull;
-        
+
         if (i == nHead && i == nTail) {
             prefix = strEmpty;
         } else if (i == nHead) {
@@ -316,20 +316,20 @@ void ByteQueue::serialDebugDump(PGM_P name) {
         } else if (i == nTail) {
             prefix = strSuffix;
         }
-        serialDebugPrintf_P(PSTR("%S %2.2x"), prefix, byte);
+        serialDebugDumpPrintf_P(PSTR("%S %2.2x"), prefix, byte);
     }
-    serialDebugPrintf_P(PSTR(" }\n"));
+    serialDebugDumpPrintf_P(PSTR(" }\n"));
 }
 
 #endif
 
 ///**
 // * Copy data from another queue
-// * 
-// * CAUTION: if the source queue is longer, head and tail are not adjusted for destination size, intended to copy 
+// *
+// * CAUTION: if the source queue is longer, head and tail are not adjusted for destination size, intended to copy
 // *          queues of same data size
-// * 
-// * @param pQueue 
+// *
+// * @param pQueue
 // */
 //void ByteQueue::copyFrom(const ByteQueue *pQueue) {
 //    uint8_t len = nSize;

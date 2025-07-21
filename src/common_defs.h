@@ -48,6 +48,19 @@ typedef uint32_t time_t;
 #endif
 #endif
 
+#ifdef SERIAL_DEBUG_DUMP
+#define serialDebugDumpPrintf_P(...) printf_P(__VA_ARGS__)
+#define serialDebugDumpPuts_P(...) puts_P(__VA_ARGS__)
+#else
+#ifdef CONSOLE_DEBUG
+#define serialDebugDumpPrintf_P(...) addActualOutput(__VA_ARGS__)
+#define serialDebugDumpPuts_P(...) addActualOutput(__VA_ARGS__)
+#else
+#define serialDebugDumpPrintf_P(...) ((void)0)
+#define serialDebugDumpPuts_P(...) ((void)0)
+#endif
+#endif
+
 #ifdef SERIAL_DEBUG_TWI_DATA
 #define serialDebugTwiDataPrintf_P(...) printf_P(__VA_ARGS__)
 #define serialDebugTwiDataPuts_P(...) puts_P(__VA_ARGS__)

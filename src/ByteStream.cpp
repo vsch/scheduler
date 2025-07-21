@@ -145,7 +145,7 @@ void ByteStream::pgmByteList(const uint8_t *bytes, uint16_t count) {
     }
 }
 
-#ifndef SERIAL_DEBUG
+#ifndef SERIAL_DEBUG_DUMP
 
 void stream_serialDebugDump(const CByteStream_t *thizz, uint8_t id) {
 }
@@ -159,19 +159,19 @@ void stream_serial_debug_dump(const CByteStream_t *thizz, uint8_t id) {
 void ByteStream::serialDebugDump(uint8_t id) {
     uint8_t iMax = getCount();
 #ifdef SERIAL_DEBUG_TWI_REQ_TIMING
-    serialDebugPrintf_P(PSTR("Stream: @0x%2.2x %8.8lx %c #%d {"), addr >> 1, startTime, addr & 0x01 ? 'R' : 'W', id);
+    serialDebugDumpPrintf_P(PSTR("Stream: @0x%2.2x %8.8lx %c #%d {"), addr >> 1, startTime, addr & 0x01 ? 'R' : 'W', id);
 #else
-    serialDebugPrintf_P(PSTR("Stream: @0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
+    serialDebugDumpPrintf_P(PSTR("Stream: @0x%2.2x %c #%d {"), addr >> 1, addr & 0x01 ? 'R' : 'W', id);
 #endif
 
     if (nRdSize && pRdData) {
-        serialDebugPrintf_P(PSTR("  rcvBuffer: @0x%2.2X { flags: 0x%1.1X nSize: %d } "), pRdData, flags & STREAM_FLAGS_BUFF_REVERSE, nSize);
+        serialDebugDumpPrintf_P(PSTR("  rcvBuffer: @0x%2.2X { flags: 0x%1.1X nSize: %d } "), pRdData, flags & STREAM_FLAGS_BUFF_REVERSE, nSize);
     }
     for (uint8_t i = 0; i < iMax; i++) {
         uint8_t byte = peekHead(i);
-        serialDebugPrintf_P(PSTR(" %2.2x"), byte);
+        serialDebugDumpPrintf_P(PSTR(" %2.2x"), byte);
     }
-    serialDebugPrintf_P(PSTR(" }\n"));
+    serialDebugDumpPrintf_P(PSTR(" }\n"));
 }
 
 #endif
