@@ -10,7 +10,7 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
         if (pTask) {
             if (isFree()) {
                 if (isAvailable(available1, available2)) {
-                    serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: satisfied #%d: a1:%d <= nA1:%d && a2:%d <= nA2:%d\n")
+                    serialDebugResourceTracePrintf_P(PSTR("Res2Lock:: satisfied #%d: a1:%d <= nA1:%d && a2:%d <= nA2:%d\n")
                                                            , taskId
                                                            , available1, nAvailable1
                                                            , available2, nAvailable2);
@@ -30,12 +30,12 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
 
             // make it wait either for resources or its turn
             if (!isAvailable(available1, available2)) {
-                serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: suspend #%d: a1:%d > nA1:%d || a2:%d > nA2:%d\n")
+                serialDebugResourceTracePrintf_P(PSTR("Res2Lock:: suspend #%d: a1:%d > nA1:%d || a2:%d > nA2:%d\n")
                                                        , taskId
                                                        , available1, nAvailable1
                                                        , available2, nAvailable2);
             } else {
-                serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: suspend waiting task #%d: a1 %d - nA1 %d, a2:%d - nA2 %d\n")
+                serialDebugResourceTracePrintf_P(PSTR("Res2Lock:: suspend waiting task #%d: a1 %d - nA1 %d, a2:%d - nA2 %d\n")
                                                        , taskId
                                                        , available1, nAvailable1
                                                        , available2, nAvailable2);
@@ -56,10 +56,10 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
                 return 1;
             }
         } else {
-            resourceTracePrintf_P(PSTR("Res2Lock:: invalid task id %d\n"), taskId);
+            serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: invalid task id %d\n"), taskId);
         }
     } else {
-        resourceTracePrintf_P(PSTR("Res2Lock:: never satisfied: a1:%d > maxA1:%d || a2:%d > maxA2:%d\n")
+        serialDebugResourceDetailTracePrintf_P(PSTR("Res2Lock:: never satisfied: a1:%d > maxA1:%d || a2:%d > maxA2:%d\n")
                             , available1, nMaxAvailable1
                             , available2, nMaxAvailable2);
     }
@@ -67,6 +67,7 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
 }
 
 void Res2Lock::release() {
+    serialDebugResourceTracePrintf_P(PSTR("Res2Lock:: release owner id %d\n"), owner);
     if (owner != NULL_TASK) {
         owner = NULL_TASK;
 

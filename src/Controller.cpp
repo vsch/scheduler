@@ -87,7 +87,7 @@ void Controller::dumpResourceTrace(ResourceUse *resourceUse, uint32_t *pLastDump
                               , resourceUse->maxUsedBufferSize
                               , lockedBufferSize);
 #else
-        resourceTracePrintf_P(PSTR("%S::resources act(locked) streams:%d(%d), bytes:%d(%d)\n")
+        resourceTracePrintf_P(PSTR("%S::reso act(locked) str:%d(%d), b:%d(%d)\n")
                               , resourceUse->id ? resourceUse->id : PSTR("Ctrl")
                               , resourceUse->maxUsedStreams
                               , lockedStreams
@@ -105,7 +105,7 @@ void Controller::dumpResourceTrace(ResourceUse *resourceUse, uint32_t *pLastDump
 uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
     CLI();
     if (freeReadStreams.getCount() != resourceLock.getAvailable1() || writeBuffer.getCapacity() != resourceLock.getAvailable2()) {
-        resourceTracePrintf_P(PSTR("Ctrl:: reserve mismatch ctrl: %d, %d lock: %d %d \n"), freeReadStreams.getCount(), writeBuffer.getCapacity(), resourceLock.getAvailable1(), resourceLock.getAvailable2());
+        resourceTracePrintf_P(PSTR("Ctrl:: mismatch %d, %d lock: %d %d \n"), freeReadStreams.getCount(), writeBuffer.getCapacity(), resourceLock.getAvailable1(), resourceLock.getAvailable2());
     }
 
     uint8_t reserved = resourceLock.reserve(requests, bytes);
@@ -118,7 +118,7 @@ uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
 
     if (reserved == NULL_BYTE) {
         // cannot ever satisfy these requirements
-        resourceTracePrintf_P(PSTR("Ctrl:: never satisfied: R %d > maxR %d || B %d > maxB %d\n")
+        serialDebugResourceDetailTracePrintf_P(PSTR("Ctrl:: never: R %d > maxR %d || B %d > maxB %d\n")
                                                , requests, resourceLock.getMaxAvailable1()
                                                , bytes, resourceLock.getMaxAvailable2());
     } else if (reserved) {
