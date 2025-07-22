@@ -167,6 +167,10 @@ private:
 extern "C" uint8_t is_elapsed(time_t now, time_t endTime);
 extern "C" int32_t elapsed_micros(time_t startTime, time_t endTime);
 
+// inline time_t to_micros(uint16_t millis) {
+//     return millis * 1000UL;
+// }
+
 class Scheduler {
     friend class Task;
     friend class AsyncTask;
@@ -318,6 +322,7 @@ public:
      *
      */
     void resumeMicros(uint8_t taskId, time_t microseconds);
+    time_t getResumeMicros(uint8_t taskId);
 
     inline void resumeMicros(Task *task, time_t microseconds) {
         resumeMicros(task->taskId, microseconds);

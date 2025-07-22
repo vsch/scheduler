@@ -91,7 +91,7 @@ void Scheduler::loopMicros(time_t timeSlice) {
 
         time_t start = micros();
 
-        if (!isElapsed(start, taskTimes[id])) continue;
+        if (taskTimes[id] == TASK_DELAY_SUSPENDED || !isElapsed(start, taskTimes[id])) continue;
 
         // the task is ready
         executeTask(id);
@@ -174,6 +174,13 @@ void Scheduler::resumeMicros(uint8_t taskId, time_t microseconds) {
         if (endTime == TASK_DELAY_SUSPENDED) endTime++;
         taskTimes[taskId] = endTime;
     }
+}
+
+time_t Scheduler::getResumeMicros(uint8_t taskId) {
+    if (taskId < taskCount) {
+        return taskTimes[taskId];
+    }
+    return micros();
 }
 
 uint8_t Scheduler::getCurrentTaskId() {

@@ -35,6 +35,8 @@ typedef uint32_t time_t;
 #define NO_DISCARD
 #endif
 
+#define TO_MICROS(ms)   ((ms) * 1000UL)
+
 #ifdef SERIAL_DEBUG
 #define serialDebugPrintf_P(...) printf_P(__VA_ARGS__)
 #define serialDebugPuts_P(...) puts_P(__VA_ARGS__)

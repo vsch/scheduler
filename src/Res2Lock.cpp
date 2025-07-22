@@ -17,6 +17,13 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
 
                     // make it the owner of TWI resourceLock
                     owner = taskId;
+#ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
+                    if (pTask->isAsync()) {
+                        // we need to suspend to get stack size used
+                        reinterpret_cast<AsyncTask *>(pTask)->yieldResumeMicros(0);
+
+                    }
+#endif
                     return 0;
                 }
             }
