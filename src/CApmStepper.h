@@ -44,7 +44,7 @@ extern time_t capm_rpm_to_step_micros(uint8_t reduction, uint8_t rpm);
 extern uint16_t capm_step_micros_to_rpmX10(uint8_t reduction, uint32_t stepMicros);
 
 #ifdef INCLUDE_DAC_MODULE
-extern uint16_t capm_rpm_to_vdac(uint8_t rpm);
+extern uint16_t capm_rpm_to_vdac(uint8_t rpm, int16_t vDacDelta);
 #endif
 
 #ifdef __cplusplus

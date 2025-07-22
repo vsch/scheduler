@@ -9,8 +9,9 @@
 // DAC computed values
 #define VOUT_A      (-134.912959381045)
 #define VOUT_B      (1616.85686653772)
+#define DAC_DATA_MAX            (1024)
 #define VM_TO_DAC_DATA_RAW(v)   ((int32_t)(VOUT_A * (double)(v) + VOUT_B + 0.5))
-#define VM_TO_DAC_DATA(v)       (VM_TO_DAC_DATA_RAW(v) > 1023 ? 1023 : VM_TO_DAC_DATA_RAW(v) < 0 ? 0: (uint16_t)VM_TO_DAC_DATA_RAW(v))
+#define VM_TO_DAC_DATA(v)       (VM_TO_DAC_DATA_RAW(v) >= DAC_DATA_MAX ? DAC_DATA_MAX-1 : VM_TO_DAC_DATA_RAW(v) < 0 ? 0: (uint16_t)VM_TO_DAC_DATA_RAW(v))
 #define DAC_DATA_TO_VM(d)       (((double)(d)-VOUT_B)/VOUT_A)
 #define DAC_DATA_TO_VM_MV(d)    ((uint16_t)(DAC_DATA_TO_VM(d)*1000+.5))
 #define VM_MIN                  (DAC_DATA_TO_VM_MV(1023))
@@ -26,6 +27,8 @@
 #define DAC_POWER_DN_10K2       (WR_DAC_POWER(DAC_PDN_10K_2))
 #define DAC_POWER(f)            (RD_DAC_POWER(f))
 
+#define DAC_DATA_1V_DELTA       ((VM_TO_DAC_DATA(5) - VM_TO_DAC_DATA(10)) / 5)
+#define DAC_CONSTRAIN_DATA(d)   ((d) < 0 ? 0 : (d) >= DAC_DATA_MAX ? DAC_DATA_MAX-1 : (d))
 
 // define 3 bytes for entry: register, MSB value, LSZB value
 // this one is if the bytes are sent as defined

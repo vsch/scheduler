@@ -118,7 +118,7 @@ uint16_t capm_step_micros_to_rpmX10(uint8_t reduction, uint32_t stepMicros) {
 
 // boost lookup voltage
 #define VM_ADD (0)
-const uint16_t rpmVDac[] PROGMEM = {
+const int16_t rpmVDac[] PROGMEM = {
         // minimalist
         VM_TO_DAC_DATA(4.0 + VM_ADD), // 1
         VM_TO_DAC_DATA(4.0 + VM_ADD), // 2
@@ -142,15 +142,17 @@ const uint16_t rpmVDac[] PROGMEM = {
         VM_TO_DAC_DATA(7.6 + VM_ADD), // 20
 };
 
-uint16_t capm_rpm_to_vdac(uint8_t rpm) {
+uint16_t capm_rpm_to_vdac(uint8_t rpm, int16_t vDacDelta) {
     if (rpm > lengthof(rpmVDac)) {
         rpm = lengthof(rpmVDac);
     } else if (!rpm) {
         rpm = 1;
     }
 
-    uint16_t vDac = pgm_read_word(rpmVDac + rpm - 1);
-    return vDac;
+    int16_t vDac = pgm_read_word(rpmVDac + rpm - 1) - vDacDelta;
+    if (vDac < 0) vDac = 0;
+    if (vDac >= DAC_DATA_MAX) vDac = DAC_DATA_MAX-1;
+    return (uint16_t)vDac;
 }
 
 #endif //INCLUDE_DAC_MODULE
