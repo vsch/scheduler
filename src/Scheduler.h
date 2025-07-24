@@ -33,6 +33,10 @@ class Task {
     uint8_t taskId;         // getTask index in scheduler
 
 protected:
+#ifdef SCHED_TASK_ACTIVE
+    time_t activeTaskMicros;     // active micros, up to the last task switch, does not include time from scheduler.clockTick to micros()
+#endif
+
     virtual void begin() = 0;            // begin getTask
     virtual void loop() = 0;             // loop getTask
 
@@ -47,11 +51,32 @@ public:
 
     inline Task() {
         taskId = NULL_TASK;
+#ifdef SCHED_TASK_ACTIVE
+        activeTaskMicros = 0;
+#endif
     }
 
     /**
-     * Suspend this getCurrentTask @see Scheduler::suspend()
-     */
+    * Return this task's index in Scheduler getCurrentTask table
+    * @return
+    */
+    inline uint8_t getTaskId() const {
+        return taskId;
+    }
+
+    NO_DISCARD inline time_t getActiveMicros() const {
+#ifdef SCHED_TASK_ACTIVE
+        return activeTaskMicros;
+#else
+        return micros();
+#endif
+    }
+
+    NO_DISCARD time_t getCurrentActiveMicros() const;
+
+    /**
+    * Suspend this getCurrentTask @see Scheduler::suspend()
+    */
     void suspend();
 
     /**
@@ -73,13 +98,6 @@ public:
      */
     bool isSuspended();
 
-    /**
-     * Return this task's index in Scheduler getCurrentTask table
-     * @return
-     */
-    inline uint8_t getTaskId() const {
-        return taskId;
-    }
 };
 
 // this task can call blocking wait functions of the scheduler
@@ -183,7 +201,9 @@ class Scheduler {
     // loop() invocation state variables
     uint8_t nextTask;               // id+1 of last getTask that was run when timeSlice ran out
     Task *pTask;                    // currently executing task or NULL if not in loop
-    time_t clockTick;               // clock tick for last loop() invocation
+    time_t startLoopMicros;               // clock tick for last scheduler.loop() invocation
+    time_t startTaskMicros;             // micros for last task invocation
+
 
 #ifdef SERIAL_DEBUG_SCHEDULER
     uint16_t iteration;
@@ -201,6 +221,24 @@ public:
 
     inline uint8_t canLoop() const {
         return !isInLoop();
+    }
+
+    inline time_t getStartLoopMicros() const {
+        return startLoopMicros;
+    }
+
+    inline time_t getStartTaskMicros() const {
+        return startTaskMicros;
+    }
+
+    /**
+     * Get micros task is currently active, (now - startTaskMicros)
+     *
+     * @param now micros representing call to micros(), made after startTaskMicros
+     * @return    micros task was active till now
+     */
+    time_t getCurrentActiveMicros(time_t now) const {
+        return now - startTaskMicros;
     }
 
     /**

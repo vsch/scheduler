@@ -66,6 +66,7 @@ extern "C" {
 extern uint16_t twiint_errors;
 extern uint8_t twiint_flags;
 extern time_t twiint_request_start_time;
+extern time_t twiint_int_start_time;
 
 /**
  * Initializes the TWI hardware for master mode operating at TWI_FREQUENCY.
@@ -132,8 +133,10 @@ CByteStream_t *twi_get_write_buffer(uint8_t addr);
 #define TWI_FLAGS_HAVE_READ           (0x01)
 #define TWI_FLAGS_TRC_PENDING         (0x02)          // trace pending, do not initiate new twi requests
 #define TWI_FLAGS_TRC_HAD_EMPTY       (0x04)          // only dump empty if had non-empty before
+#define TWI_FLAGS_TRC_PAUSE           (0x08)          // pause trace dumps
+#define TWI_FLAGS_INT_TIMESTAMP       (0x10)          // time stamp twiint_int_time
 
-#define TWI_WAIT_TIMEOUT        (50)
+#define TWI_WAIT_TIMEOUT_MS           (100)
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
 #include "CTraceBuffer.h"

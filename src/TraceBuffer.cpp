@@ -35,51 +35,58 @@ void twi_dump_trace() {
 
 void TraceBuffer::dumpTrace(TraceBuffer *pBuffer) {
     CLI();
-    if (!(twiint_flags & TWI_FLAGS_TRC_HAD_EMPTY) || !pBuffer->isEmpty()) {
-        if (pBuffer->isEmpty()) {
-            twiint_flags |= TWI_FLAGS_TRC_HAD_EMPTY;
-        } else {
-            twiint_flags &= ~TWI_FLAGS_TRC_HAD_EMPTY;
-        }
 
-        // set trace pending and wait for TWI to be idle so we don't mess up the twi interrupt timing
-        twiint_flags |= TWI_FLAGS_TRC_PENDING;
+    if (twiint_flags & TWI_FLAGS_TRC_PAUSE) {
+        pBuffer->reset();
+    } else {
+        // DEBUG: may need to enable empty buffer printing
+        if (/*!(twiint_flags & TWI_FLAGS_TRC_HAD_EMPTY) ||*/ !pBuffer->isEmpty()) {
+            if (pBuffer->isEmpty()) {
+                twiint_flags |= TWI_FLAGS_TRC_HAD_EMPTY;
+            } else {
+                twiint_flags &= ~TWI_FLAGS_TRC_HAD_EMPTY;
+            }
+
+            // set trace pending and wait for TWI to be idle so we don't mess up the twi interrupt timing
+            twiint_flags |= TWI_FLAGS_TRC_PENDING;
 
 #ifndef CONSOLE_DEBUG
-        serialDebugPrintf_P(PSTR("Waiting for TWI TRACER. "));
-        uint32_t start = micros();
-        uint32_t timeoutMic = TWI_WAIT_TIMEOUT * 2 * 1000L;
-        uint8_t timedOut = 0;
+            //serialDebugPrintf_P(PSTR("Waiting for TWI TRACER. "));
+            uint32_t start = micros();
+            uint32_t timeoutMic = TWI_WAIT_TIMEOUT_MS * 1000L;
+            uint8_t timedOut = 0;
 
-        sei();
-        while (twiint_busy()) {
-            uint32_t diff = micros() - start;
-            if (diff >= timeoutMic) {
-                timedOut = 1;
-                break;
+            sei();
+            while (twiint_busy()) {
+                uint32_t diff = micros() - start;
+                if (diff >= timeoutMic) {
+                    timedOut = 1;
+                    break;
+                }
             }
-        }
-        cli();
+            cli();
 
 #ifdef SERIAL_DEBUG
-        if (timedOut) serialDebugPrintf_P(PSTR("timed out %d ms. "), TWI_WAIT_TIMEOUT * 2);
-        // if (timedOut) while (1);
-        serialDebugPrintf_P(PSTR("done.\n"));
+            if (timedOut) serialDebugPrintf_P(PSTR("TWI tracer timed out %d ms. "), TWI_WAIT_TIMEOUT_MS);
+            // if (timedOut) while (1);
+            //serialDebugPrintf_P(PSTR("done.\n"));
 #endif
 #endif //CONSOLE_DEBUG
 
-        TraceBuffer traceBuffer;
+            TraceBuffer traceBuffer;
 
-        // make a copy and clear the trace queue
-        traceBuffer.copyFrom(pBuffer);
-        pBuffer->reset();
+            // make a copy and clear the trace queue
+            traceBuffer.copyFrom(pBuffer);
+            pBuffer->reset();
 
-        twiint_flags &= ~TWI_FLAGS_TRC_PENDING;
+            twiint_flags &= ~TWI_FLAGS_TRC_PENDING;
 
-        // enable interrupts so twi processing can proceed
-        sei();
-        traceBuffer.dump();
+            // enable interrupts so twi processing can proceed
+            sei();
+            traceBuffer.dump();
+        }
     }
+
     SEI();
 }
 

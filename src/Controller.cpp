@@ -286,20 +286,21 @@ ByteStream *Controller::processStream(ByteStream *pWriteStream) {
     // queue it for processing
     pStream->flags |= STREAM_FLAGS_PENDING;
     pendingReadStreams.addTail(head);
+    uint8_t count = pendingReadStreams.getCount();
 
-    if (isRequestAutoStart() && pendingReadStreams.getCount() == 1) {
+    // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
+    pWriteStream->nHead = pWriteStream->nTail;
+    SEI();
+
+    if (isRequestAutoStart() && count == 1) {
         // first one, then no-one to start it up but here
-        serialDebugTwiDataPrintf_P(PSTR("AutoStart req %d\n"), head);
         startProcessingRequest(pStream);
+        serialDebugTwiDataPrintf_P(PSTR("AutoStart req %d\n"), head);
     } else {
         // otherwise checking will be done in endProcessingRequest or in loop() for completed previous requests
         // and new request processing started if needed
     }
-    SEI();
 
-
-    // need to reset the write stream for stuff moved to read stream, ie prepare it for more requests
-    pWriteStream->nHead = pWriteStream->nTail;
 
     // make sure loop task is enabled start our loop task to monitor its completion
     this->resume(1);

@@ -101,6 +101,7 @@ public:
             freeReadStreams.addTail(i);
         }
         lastFreeHead = writeBuffer.nHead;
+
 #ifdef RESOURCE_TRACE
         usedStreams = 0;
         usedBufferSize = 0;
@@ -253,7 +254,6 @@ public:
             uint8_t nextHead = pendingReadStreams.peekHead();
             ByteStream *pNextStream = getReadStream(nextHead);
             if (!(pNextStream->isProcessing())) {
-                pNextStream->flags |= STREAM_FLAGS_PROCESSING;
                 startProcessingRequest(pNextStream);
             }
         }

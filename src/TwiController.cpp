@@ -56,7 +56,7 @@ uint8_t twi_wait_sent(CByteStream_t *pStream) {
 uint8_t twi_wait(TwiWaitCallback callback, void *pParam) {
     uint32_t start = micros();
     uint32_t diff = 0;
-    uint32_t timeoutMic = TWI_WAIT_TIMEOUT * 1000L;
+    uint32_t timeoutMic = TWI_WAIT_TIMEOUT_MS * 1000L;
 
     while (callback(pParam)) {
         diff = micros() - start;
@@ -112,7 +112,6 @@ void twi_set_rd_buffer(uint8_t rdReverse, uint8_t *pRdData, uint8_t nRdSize) {
 void TwiController::startProcessingRequest(ByteStream *pStream) {
     CLI();
     // output stream content and call endProcessingRequest
-    pStream->flags |= STREAM_FLAGS_PROCESSING;
 
 #ifndef CONSOLE_DEBUG
 
@@ -123,10 +122,11 @@ void TwiController::startProcessingRequest(ByteStream *pStream) {
 #endif
     this->resume(0);
 
-#ifndef CONSOLE_DEBUG
-
-    twiint_start((CByteStream_t *) pStream);
-
-#endif
     SEI();
+
+#ifndef CONSOLE_DEBUG
+    twiint_start((CByteStream_t *) pStream);
+#else
+    pStream->flags |= STREAM_FLAGS_PROCESSING;
+#endif
 }

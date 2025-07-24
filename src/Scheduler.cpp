@@ -6,7 +6,7 @@ Scheduler::Scheduler(uint8_t count, const char *taskTable, time_t *delayTable) {
     tasks = taskTable;
     taskTimes = delayTable;
     flags = 0;
-    clockTick = 0;
+    startLoopMicros = 0;
     nextTask = 0;
     pTask = NULL;
 #ifdef SERIAL_DEBUG_SCHEDULER
@@ -36,7 +36,7 @@ void Scheduler::begin() {
     }
 #endif
 
-    clockTick = micros();
+    startLoopMicros = micros();
     for (uint8_t i = 0; i < taskCount; i++) {
         pTask = getTask(i);
         pTask->taskId = i;
@@ -64,14 +64,14 @@ void Scheduler::loopMicros(time_t timeSlice) {
     time_t tick = micros();
 
 #if defined(SCHED_MIN_LOOP_TIMESLICE_MICROS) && SCHED_MIN_LOOP_TIMESLICE_MICROS
-    if (!isElapsed(tick, clockTick + SCHED_MIN_LOOP_TIMESLICE_MICROS)) {
+    if (!isElapsed(tick, startLoopMicros + SCHED_MIN_LOOP_TIMESLICE_MICROS)) {
         // this is to avoid needlessly scanning the delay table too frequently
         return;
     }
 #endif
 
     flags |= SCHED_FLAGS_IN_LOOP;
-    clockTick = tick;
+    startLoopMicros = tick;
 
     serialDebugSchedulerDumpDelays("Scheduler loop ");
 
@@ -81,7 +81,7 @@ void Scheduler::loopMicros(time_t timeSlice) {
 
     // offset task index by nextTask so we can interrupt at a getTask
     // and continue with the same getTask next time slice
-    uint8_t lastId;
+    uint8_t lastId = -1;
     time_t timeSliceLimit = timeSlice + tick;
 
     for (uint8_t i = 0; i < taskCount; i++) {
@@ -89,37 +89,36 @@ void Scheduler::loopMicros(time_t timeSlice) {
         if (id >= taskCount) id -= taskCount;
         lastId = id;
 
-        time_t start = micros();
+        startTaskMicros = micros();
+        time_t start = startTaskMicros;
 
-        if (taskTimes[id] == TASK_DELAY_SUSPENDED || !isElapsed(start, taskTimes[id])) continue;
+        if (taskTimes[id] == TASK_DELAY_SUSPENDED || !isElapsed(startTaskMicros, taskTimes[id])) continue;
 
         // the task is ready
         executeTask(id);
 
-#ifdef SERIAL_DEBUG_SCHEDULER
         Task *pLastTask = pTask;
-#endif
         pTask = NULL;
 
         time_t end = micros();
 
-        if (timeSlice) {
-            if (timeSliceLimit && isElapsed(tick, timeSliceLimit)) {
-#ifdef SERIAL_DEBUG_SCHEDULER
-                debugSchedulerPrintf_P(PSTR("Scheduler[%u] time slice ended %lu limit %u last getTask %S[%d] took %lu\n"),
-                                       iteration, (uint32_t) (end - tick), timeSlice, pLastTask->id(), pLastTask->taskId, (uint32_t) (end - start)
-                );
+#ifdef SCHED_TASK_ACTIVE
+        pLastTask->activeTaskMicros += end - startTaskMicros;
+        startTaskMicros = 0;
 #endif
-                // next time continue checking after the current getTask
-                nextTask = id + 1;
-                if (nextTask >= taskCount) nextTask = 0;
-                lastId = -1;
-                break;
-            }
+
+        if (timeSlice && isElapsed(tick, timeSliceLimit)) {
+#ifdef SERIAL_DEBUG_SCHEDULER
+            debugSchedulerPrintf_P(PSTR("Scheduler[%u] time slice ended %lu limit %u last getTask %S[%d] took %lu\n"), iteration, (uint32_t) (end - tick), timeSlice, pLastTask->id(), pLastTask->taskId, (uint32_t) (end - start));
+#endif
+            // next time continue checking after the current getTask
+            nextTask = id + 1;
+            if (nextTask >= taskCount) nextTask = 0;
+            lastId = -1;
+            break;
         }
 
-        debugSchedulerPrintf_P(PSTR("Scheduler[%d] getCurrentTask %S[%d] done in %lu\n"),
-                               iteration, pLastTask->id(), pLastTask->taskId, (uint32_t) (end - start));
+        debugSchedulerPrintf_P(PSTR("Scheduler[%d] %S[%d] done in %lu\n"), iteration, pLastTask->id(), pLastTask->taskId, (uint32_t) (end - start));
     }
 
     if (lastId != (uint8_t) -1) {
@@ -229,6 +228,14 @@ uint8_t is_elapsed(time_t now, time_t endTime) {
     } else {
         return nowGtEndTime;
     }
+}
+
+time_t Task::getCurrentActiveMicros() const {
+#ifdef SCHED_TASK_ACTIVE
+    return activeTaskMicros + (micros() - scheduler.startTaskMicros);
+#else
+    return micros();
+#endif
 }
 
 AsyncTask::AsyncTask(uint8_t *pStack, uint8_t stackMax) : Task() {

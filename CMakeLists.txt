@@ -58,7 +58,6 @@ set(${PROJECT_NAME}_HDRS
 #add_compile_definitions(SERIAL_DEBUG_SCHEDULER)
 #add_compile_definitions(SERIAL_DEBUG_SCHEDULER_ERRORS)
 #add_compile_definitions(SERIAL_DEBUG_SCHEDULER_DELAYS)
-#add_compile_definitions(SERIAL_DEBUG_SCHEDULER_RUN)
 
 # Disable optimizations and enable debug symbols for debugging
 if (DEBUG_BUILD)
