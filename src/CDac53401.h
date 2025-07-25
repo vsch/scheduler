@@ -14,6 +14,10 @@
 #define VM_TO_DAC_DATA(v)       (VM_TO_DAC_DATA_RAW(v) >= DAC_DATA_MAX ? DAC_DATA_MAX-1 : VM_TO_DAC_DATA_RAW(v) < 0 ? 0: (uint16_t)VM_TO_DAC_DATA_RAW(v))
 #define DAC_DATA_TO_VM(d)       (((double)(d)-VOUT_B)/VOUT_A)
 #define DAC_DATA_TO_VM_MV(d)    ((uint16_t)(DAC_DATA_TO_VM(d)*1000+.5))
+
+#define DAC_DATA_TO_VM_MV_ONLY(d)   ((uint16_t)(DAC_DATA_TO_VM(d)*1000+.5) % 1000)
+#define DAC_DATA_TO_VM_V_ONLY(d)    ((uint16_t)(DAC_DATA_TO_VM(d)*1000+.5) / 1000)
+
 #define VM_MIN                  (DAC_DATA_TO_VM_MV(1023))
 #define VM_MAZ                  (DAC_DATA_TO_VM_MV(0))
 #define DAC_VREF                (1.21f)
