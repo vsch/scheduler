@@ -10,7 +10,7 @@ class Mutex
 {
     friend class Controller;
 
-protected:    
+protected:
     ByteQueue queue;
 
 public:
@@ -39,8 +39,8 @@ public:
      * Get resource if available or suspend calling task until it is available.
      * If the resource is not available, suspend the task and if possible yield.
      *
-     * @return 0 if successfully yielded and resource reserved. 1 if not avaialble and could not yield to wait
-     *           for it
+     * @return 0 if successfully yielded and resource reserved. 1 if not available and could not yield to wait
+     *           for it, in case of non-async tasks.
      */
     uint8_t reserve()
     {
@@ -54,22 +54,12 @@ public:
      */
     uint8_t release();
 
-    /**
-     * Transfer ownership of the resource to the given task if the mutex is owned by the task at the
-     * head of the queue, ie. currently active task.
-     *
-     * @param fromTaskId
-     * @param toTaskId new owner of resource
-     * @return 0 if done, NULL_TASK if current task is not the owner
-     */
-    uint8_t transfer(uint8_t fromTaskId, uint8_t toTaskId);
-    
     inline bool isOwner(uint8_t taskId) {
         return queue.peekHead() == taskId;
     }
 
     inline bool isOwner(Task* pTask) { return isOwner(pTask->getTaskId()); }
-    
+
     inline uint8_t getOwner() {
         return queue.peekHead();
     }

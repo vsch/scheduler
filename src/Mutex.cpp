@@ -47,18 +47,6 @@ uint8_t Mutex::release() {
     return queue.peekHead();
 }
 
-uint8_t Mutex::transfer(uint8_t fromTaskId, uint8_t toTaskId) {
-    if (isOwner(fromTaskId)) {
-        queue.removeHead();
-        queue.addHead(toTaskId);
-
-        // wake it up if necessary
-        scheduler.resume(toTaskId, 0);
-        return 0;
-    }
-    return NULL_TASK;
-}
-
 #ifdef CONSOLE_DEBUG
 
 #include "tests/FileTestResults_AddResult.h"
