@@ -15,12 +15,15 @@
 #define DAC_DATA_TO_VM(d)       (((double)(d)-VOUT_B)/VOUT_A)
 #define DAC_DATA_TO_VM_MV(d)    ((uint16_t)(DAC_DATA_TO_VM(d)*1000+.5))
 
-#define DAC_DATA_TO_VM_MV_ONLY(d)   ((uint16_t)(DAC_DATA_TO_VM(d)*1000+.5) % 1000)
-#define DAC_DATA_TO_VM_V_ONLY(d)    ((uint16_t)(DAC_DATA_TO_VM(d)*1000+.5) / 1000)
+#define DAC_DATA_TO_VM_MV_ONLY(d)   ((uint16_t)(DAC_DATA_TO_VM(d)*1000 +.5) % 1000)
+#define DAC_DATA_TO_VM_V_ONLY(d)    ((uint16_t)(DAC_DATA_TO_VM(d)*1000 +.5) / 1000)
 
 #define VM_MIN                  (DAC_DATA_TO_VM_MV(1023))
 #define VM_MAZ                  (DAC_DATA_TO_VM_MV(0))
 #define DAC_VREF                (1.21f)
+
+#define DAC_DATA_TO_VDAC_MV(d,vr)      ((uint16_t)((vr)*(d)*1000/DAC_DATA_MAX))
+#define DAC_DATA_TO_VDAC_VREFX4_MV(d)  (DAC_DATA_TO_VDAC_MV(d, DAC_VREF*4))
 
 #define WR_DAC_POWER(v)          WR_GENERAL_CONFIG_DAC_PDN(v)
 #define RD_DAC_POWER(v)          RD_GENERAL_CONFIG_DAC_PDN(v)

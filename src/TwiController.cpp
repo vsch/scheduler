@@ -72,7 +72,10 @@ uint8_t twi_wait(TwiWaitCallback callback, void *pParam) {
             return 0;
         }
     }
-    serialDebugTwiPrintf_P(PSTR("  TWI: #%d twi_wait done %ld.\n"), twiController.getReadStreamId((ByteStream *) pParam), diff / 1000L);
+
+    if (diff) {
+        serialDebugTwiPrintf_P(PSTR("  TWI: #%d twi_wait done %ld.\n"), twiController.getReadStreamId((ByteStream *) pParam), diff / 1000L);
+    }
 
 #ifdef SERIAL_DEBUG_TWI_TRACER
     TraceBuffer::dumpTrace();

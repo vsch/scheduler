@@ -98,6 +98,8 @@ public:
      */
     bool isSuspended();
 
+    time_t getResumeMicros();
+
 };
 
 // this task can call blocking wait functions of the scheduler
@@ -417,6 +419,11 @@ inline void Task::suspend() {
 inline bool Task::isSuspended() {
     return scheduler.isSuspended(this);
 }
+
+inline time_t Task::getResumeMicros() {
+    return scheduler.getResumeMicros(taskId);
+}
+
 
 #ifdef SERIAL_DEBUG
 #else

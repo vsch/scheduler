@@ -15,9 +15,9 @@ Scheduler::Scheduler(uint8_t count, const char *taskTable, time_t *delayTable) {
 }
 
 Task *Scheduler::getTask(uint8_t taskId) {
+#ifdef SERIAL_DEBUG_SCHEDULER_VALIDATE
     if (taskId >= taskCount) return NULL;
-
-    (void) tasks;
+#endif
     return (Task *) (pgm_read_ptr(tasks + sizeof(Task *) * taskId));
 }
 
@@ -164,7 +164,9 @@ void Scheduler::suspend(uint8_t taskId) {
 }
 
 void Scheduler::resumeMicros(uint8_t taskId, time_t microseconds) {
+#ifdef SERIAL_DEBUG_SCHEDULER_VALIDATE
     if (taskId < taskCount) {
+#endif
         if (microseconds >= TASK_DELAY_MAX) {
             microseconds = TASK_DELAY_MAX - 1;
         }
@@ -172,14 +174,20 @@ void Scheduler::resumeMicros(uint8_t taskId, time_t microseconds) {
         time_t endTime = (time_t) (microseconds + micros());
         if (endTime == TASK_DELAY_SUSPENDED) endTime++;
         taskTimes[taskId] = endTime;
+#ifdef SERIAL_DEBUG_SCHEDULER_VALIDATE
     }
+#endif
 }
 
 time_t Scheduler::getResumeMicros(uint8_t taskId) {
+#ifdef SERIAL_DEBUG_SCHEDULER_VALIDATE
     if (taskId < taskCount) {
         return taskTimes[taskId];
     }
     return micros();
+#else
+    return taskTimes[taskId];
+#endif
 }
 
 uint8_t Scheduler::getCurrentTaskId() {
