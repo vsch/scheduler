@@ -23,6 +23,8 @@
 #define defineSchedulerTaskId(id)
 #endif
 
+#define TASK_DBG_FLAGS_NO_SCHED (0x01) // don't debug trace task execution
+
 class Scheduler;
 
 // this must be declared in the main sketch
@@ -31,6 +33,9 @@ extern Scheduler scheduler;
 class Task {
     friend class Scheduler;
     uint8_t taskId;         // getTask index in scheduler
+#ifdef DEBUG_MODE
+    uint8_t flags;
+#endif
 
 protected:
 #ifdef SCHED_TASK_ACTIVE
@@ -51,10 +56,34 @@ public:
 
     inline Task() {
         taskId = NULL_TASK;
+#ifdef DEBUG_MODE
+        flags = 0;
+#endif
 #ifdef SCHED_TASK_ACTIVE
         activeTaskMicros = 0;
 #endif
     }
+
+#ifdef DEBUG_MODE
+    inline void setFlags(uint8_t flags) {
+        this->flags |= flags;
+    }
+
+    inline void clearFlags(uint8_t flags) {
+        this->flags &= ~flags;
+    }
+
+    inline uint8_t getFlags() const {
+        return flags;
+    }
+#else
+    inline void setFlags(uint8_t flags) { }
+
+    inline void clearFlags(uint8_t flags) { }
+
+    inline uint8_t getFlags() const { return 0; }
+#endif
+
 
     /**
     * Return this task's index in Scheduler getCurrentTask table
@@ -330,7 +359,7 @@ public:
      * @param taskId    task id to execute
      * @return          pointer to executed task or NULL
      */
-    void executeTask(uint8_t taskId);
+    void executeTask();
 
     inline void clearCurrentTask() {
         pTask = NULL;

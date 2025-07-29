@@ -189,7 +189,7 @@ void Controller::endProcessingRequest(ByteStream *pStream) {
         }
 
         // restart loop
-        resume(0);
+        resume(500);
     }
     SEI();
 }
