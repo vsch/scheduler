@@ -16,7 +16,7 @@
 #include "TinySwitcher.h"
 #include "common_defs.h"
 
-#if defined(SERIAL_DEBUG_SCHEDULER) || defined(SERIAL_DEBUG_SCHEDULER_ERRORS) || defined(SERIAL_DEBUG_SCHEDULER_DELAYS) || defined(SERIAL_DEBUG_SCHEDULER_MAX_STACKS) || defined(CONSOLE_DEBUG)
+#if defined(SERIAL_DEBUG_SCHEDULER) || defined(SERIAL_DEBUG_SCHEDULER_ERRORS) || defined(SERIAL_DEBUG_SCHEDULER_DELAYS) || defined(SERIAL_DEBUG_SCHEDULER_MAX_STACKS) || defined(CONSOLE_DEBUG) || defined(SERIAL_DEBUG_SCHEDULER_CLI)
 #define SCHEDULER_TASK_IDS
 #define defineSchedulerTaskId(str)  virtual PGM_P id() override { return PSTR(str); }
 #else
@@ -486,6 +486,14 @@ inline time_t Task::getResumeMicros() {
 #else
 #define debugSchedulerPrintf_P(...) ((void)0)
 #define debugSchedulerPuts_P(...) ((void)0)
+#endif
+
+#ifdef SERIAL_DEBUG_SCHEDULER_CLI
+#define serialDebugSchedulerCliPrintf_P(...) printf_P(__VA_ARGS__)
+#define serialDebugSchedulerCliPuts_P(...) puts_P(__VA_ARGS__)
+#else
+#define serialDebugSchedulerCliPrintf_P(...) ((void)0)
+#define serialDebugSchedulerCliPuts_P(...) ((void)0)
 #endif
 
 #ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS

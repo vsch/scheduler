@@ -71,6 +71,14 @@ typedef uint32_t time_t;
 #define serialDebugTwiDataPuts_P(...) ((void)0)
 #endif
 
+#ifdef SERIAL_DEBUG_DAC_MUTEX
+#define serialDebugDacMutexPrintf_P(...) printf_P(__VA_ARGS__)
+#define serialDebugDacMutexPuts_P(...) puts_P(__VA_ARGS__)
+#else
+#define serialDebugDacMutexPrintf_P(...) ((void)0)
+#define serialDebugDacMutexPuts_P(...) ((void)0)
+#endif
+
 #ifdef SERIAL_DEBUG_DETAIL_TWI_STATS
 #define serialDebugGfxTwiStatsPrintf_P(...) printf_P(__VA_ARGS__)
 #define serialDebugGfxTwiStatsPuts_P(...) puts_P(__VA_ARGS__)

@@ -50,18 +50,19 @@ void Scheduler::begin() {
 #ifdef SERIAL_DEBUG_SCHEDULER_DELAYS
 
 void Scheduler::dumpDelays(PGM_P msg) {
-    serialDebugPuts_P(msg);
+    uint32_t now = micros();
+    serialDebugPrintf_P(PSTR("%S %ld\n"), msg, now);
 
     for (uint8_t i = 0; i < taskCount; i++) {
         Task *pTask = getTask(i);
-        serialDebugPrintf_P(PSTR("%S [%d] { %d }\n"), pTask->id(), pTask->taskId, taskTimes[i]);
+        serialDebugPrintf_P(PSTR("%S [%d] @ %ld in %ld\n"), pTask->id(), pTask->taskId, taskTimes[i], elapsed_micros(now, taskTimes[i]));
     }
 }
 
 #endif
 
 void Scheduler::loopMicros(time_t timeSlice) {
-    time_t tick = micros();
+    const time_t tick = micros();
 
 #if defined(SCHED_MIN_LOOP_TIMESLICE_MICROS) && SCHED_MIN_LOOP_TIMESLICE_MICROS
     if (!isElapsed(tick, startLoopMicros + SCHED_MIN_LOOP_TIMESLICE_MICROS)) {
@@ -101,7 +102,16 @@ void Scheduler::loopMicros(time_t timeSlice) {
         if (!(pTask->getFlags() & TASK_DBG_FLAGS_NO_SCHED)) {
             hadTask |= 1;
         }
+
+        // KLUDGE: somewhere in gfx or mixed with twi controller interrupts are disabled
+        sei();
+#ifdef SERIAL_DEBUG_SCHEDULER_CLI
+        uint8_t oldSREG = SREG;
+#endif
         executeTask();
+#ifdef SERIAL_DEBUG_SCHEDULER_CLI
+        uint8_t newSREG = SREG;
+#endif
 
         Task *pLastTask = pTask;
         pTask = NULL;
@@ -119,6 +129,7 @@ void Scheduler::loopMicros(time_t timeSlice) {
                 debugSchedulerPrintf_P(PSTR("Scheduler[%u] time slice ended %lu limit %u last getTask %S[%d] took %lu\n"), iteration, (uint32_t) (end - tick), timeSlice, pLastTask->id(), pLastTask->taskId, (uint32_t) (end - start));
             }
 #endif
+
             // next time continue checking after the current getTask
             nextTask = id + 1;
             if (nextTask >= taskCount) nextTask = 0;
@@ -127,7 +138,17 @@ void Scheduler::loopMicros(time_t timeSlice) {
         }
 
         if (hadTask) {
-            debugSchedulerPrintf_P(PSTR("Scheduler[%d] %S[%d] done in %lu\n"), iteration, pLastTask->id(), pLastTask->taskId, (uint32_t) (end - start));
+            debugSchedulerPrintf_P(PSTR("Scheduler[%d] %S[%d] done in %lu\n"), iteration, pLastTask->id(), pLastTask->taskId, elapsed_micros(start, end));
+
+#ifdef SERIAL_DEBUG_SCHEDULER_CLI
+            if ((oldSREG & 0x80) && !(newSREG & 0x80)) {
+                serialDebugSchedulerCliPrintf_P(PSTR("Sched: task %S, interrupts disabled\n"), pLastTask->id());
+            } else if ((newSREG & 0x80) && !(SREG & 0x80)) {
+                serialDebugSchedulerCliPrintf_P(PSTR("Sched: in loopMicros() after task %S, interrupts disabled\n"), pLastTask->id());
+            }
+#endif
+            // KLUDGE: somewhere in gfx or mixed with twi controller interrupts are disabled
+            sei();
         }
     }
 
@@ -139,7 +160,7 @@ void Scheduler::loopMicros(time_t timeSlice) {
 #ifdef SERIAL_DEBUG_SCHEDULER
     if (hadTask) {
         uint32_t time = micros();
-        debugSchedulerPrintf_P(PSTR("Scheduler end run %ld\n"), time - tick);
+        debugSchedulerPrintf_P(PSTR("Scheduler end run %ld\n"), elapsed_micros(tick, time));
     }
 #endif
 
@@ -176,13 +197,13 @@ void Scheduler::resumeMicros(uint8_t taskId, time_t microseconds) {
 #ifdef SERIAL_DEBUG_SCHEDULER_VALIDATE
     if (taskId < taskCount) {
 #endif
-        if (microseconds >= TASK_DELAY_MAX) {
-            microseconds = TASK_DELAY_MAX - 1;
-        }
+    if (microseconds >= TASK_DELAY_MAX) {
+        microseconds = TASK_DELAY_MAX - 1;
+    }
 
-        time_t endTime = (time_t) (microseconds + micros());
-        if (endTime == TASK_DELAY_SUSPENDED) endTime++;
-        taskTimes[taskId] = endTime;
+    time_t endTime = (time_t) (microseconds + micros());
+    if (endTime == TASK_DELAY_SUSPENDED) endTime++;
+    taskTimes[taskId] = endTime;
 #ifdef SERIAL_DEBUG_SCHEDULER_VALIDATE
     }
 #endif
@@ -321,6 +342,7 @@ void AsyncTask::yieldingLoop(void *arg) {
 }
 
 #ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
+
 void Scheduler::dumpMaxStackInfo() {
     // TODO: implement
 }
