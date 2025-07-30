@@ -2,6 +2,7 @@
 #include "Controller.h"
 #include "twiint.h"
 #include "debug_config.h"
+#include "common_defs.h"
 
 #ifdef CONSOLE_DEBUG
 
@@ -105,11 +106,12 @@ void Controller::dumpResourceTrace(ResourceUse *resourceUse, uint32_t *pLastDump
 uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
     CLI();
     if (freeReadStreams.getCount() != resourceLock.getAvailable1() || writeBuffer.getCapacity() != resourceLock.getAvailable2()) {
-        resourceTracePrintf_P(PSTR("Ctrl:: mismatch %d, %d lock: %d %d \n"), freeReadStreams.getCount(), writeBuffer.getCapacity(), resourceLock.getAvailable1(), resourceLock.getAvailable2());
+        serialDebugPrintf_P(PSTR("Ctrl:: mismatch %d, %d lock: %d %d \n"), freeReadStreams.getCount(), writeBuffer.getCapacity(), resourceLock.getAvailable1(), resourceLock.getAvailable2());
     }
 
-    uint8_t reserved = resourceLock.reserve(requests, bytes);
+    // CAVEAT: resourceLock.reserve, can result in async task switch causing SEI() not to be executed.
     SEI();
+    uint8_t reserved = resourceLock.reserve(requests, bytes);
 
 #ifdef RESOURCE_TRACE
     lockedStreams = requests;
@@ -118,9 +120,7 @@ uint8_t Controller::reserveResources(uint8_t requests, uint8_t bytes) {
 
     if (reserved == NULL_BYTE) {
         // cannot ever satisfy these requirements
-        serialDebugResourceDetailTracePrintf_P(PSTR("Ctrl:: never: R %d > maxR %d || B %d > maxB %d\n")
-                                               , requests, resourceLock.getMaxAvailable1()
-                                               , bytes, resourceLock.getMaxAvailable2());
+        serialDebugPrintf_P(PSTR("Ctrl:: never: R %d > maxR %d || B %d > maxB %d\n"), requests, resourceLock.getMaxAvailable1(), bytes, resourceLock.getMaxAvailable2());
     } else if (reserved) {
         serialDebugResourceDetailTracePrintf_P(PSTR("Ctrl:: suspend lock %d, %d avail %d %d \n"), requests, bytes, resourceLock.getAvailable1(), resourceLock.getAvailable2());
     }
@@ -155,7 +155,6 @@ void Controller::loop() {
 
 // IMPORTANT: called from interrupt code
 void Controller::endProcessingRequest(ByteStream *pStream) {
-    CLI();
 #ifdef SERIAL_DEBUG_TWI_REQ_TIMING
     if (!pStream->startTime) {
         pStream->startTime = twiint_request_start_time;
@@ -191,13 +190,12 @@ void Controller::endProcessingRequest(ByteStream *pStream) {
         // restart loop
         resume(500);
     }
-    SEI();
 }
 
 void Controller::handleCompletedRequests() {
     CLI();
     for (;;) {
-        cli();
+        CLI_ONLY();
         if (completedStreams.isEmpty()) break;
 
         const uint8_t id = completedStreams.removeHead();

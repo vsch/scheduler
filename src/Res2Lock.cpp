@@ -19,9 +19,8 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
                     owner = taskId;
 #ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
                     if (pTask->isAsync()) {
-                        // we need to suspend to get stack size used
-                        reinterpret_cast<AsyncTask *>(pTask)->yieldResumeMicros(0);
-
+                        // we need to suspend the task to get stack size used
+                        reinterpret_cast<AsyncTask *>(pTask)->fakeYield();
                     }
 #endif
                     return 0;
@@ -69,9 +68,8 @@ uint8_t Res2Lock::reserve(uint8_t taskId, uint8_t available1, uint8_t available2
 void Res2Lock::release() {
     serialDebugResourceTracePrintf_P(PSTR("Res2Lock:: release owner id %d\n"), owner);
     if (owner != NULL_TASK) {
-        owner = NULL_TASK;
-
         // just test for available resources
+        owner = NULL_TASK;
         makeAvailable(0,0);
     }
 }

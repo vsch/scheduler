@@ -22,8 +22,17 @@ typedef uint32_t time_t;
 #define sizeOfPlus(t, b, e)    (sizeof(t)+sizeof(e)*(b))
 
 #ifndef CONSOLE_DEBUG
+#ifdef SERIAL_DEBUG_SCHEDULER_CLI
+extern const char *pCliFile;
+extern uint16_t nCliLine;
+extern uint16_t nSeiLine;
+#define CLI()   uint8_t oldSREG = SREG; pCliFile = PSTR(__FILE__); nCliLine = __LINE__; cli()
+#define CLI_ONLY()   pCliFile = PSTR(__FILE__); nCliLine = __LINE__; cli()
+#define SEI()   SREG = oldSREG; nSeiLine = __LINE__
+#else
 #define CLI()   uint8_t oldSREG = SREG; cli()
 #define SEI()   SREG = oldSREG
+#endif
 #else
 #define CLI()   ((void)0)
 #define SEI()   ((void)0)

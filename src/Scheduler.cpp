@@ -103,8 +103,6 @@ void Scheduler::loopMicros(time_t timeSlice) {
             hadTask |= 1;
         }
 
-        // KLUDGE: somewhere in gfx or mixed with twi controller interrupts are disabled
-        sei();
 #ifdef SERIAL_DEBUG_SCHEDULER_CLI
         uint8_t oldSREG = SREG;
 #endif
@@ -142,14 +140,15 @@ void Scheduler::loopMicros(time_t timeSlice) {
 
 #ifdef SERIAL_DEBUG_SCHEDULER_CLI
             if ((oldSREG & 0x80) && !(newSREG & 0x80)) {
-                serialDebugSchedulerCliPrintf_P(PSTR("Sched: task %S, interrupts disabled\n"), pLastTask->id());
-            } else if ((newSREG & 0x80) && !(SREG & 0x80)) {
-                serialDebugSchedulerCliPrintf_P(PSTR("Sched: in loopMicros() after task %S, interrupts disabled\n"), pLastTask->id());
+                serialDebugSchedulerCliPrintf_P(PSTR("Sched: task %S, interrupts disabled, last %S:%d:%d\n"), pLastTask->id(), pCliFile, nCliLine, nSeiLine);
             }
 #endif
-            // KLUDGE: somewhere in gfx or mixed with twi controller interrupts are disabled
-            sei();
         }
+
+#ifdef SERIAL_DEBUG_SCHEDULER_CLI
+        // KLUDGE: if interrupts are disabled in a task, enable them here
+        sei();
+#endif
     }
 
     if (lastId != (uint8_t) -1) {
@@ -170,7 +169,19 @@ void Scheduler::loopMicros(time_t timeSlice) {
 void Scheduler::executeTask() {
     if (pTask->isAsync()) {
         AsyncTask *pAsyncTask = reinterpret_cast<AsyncTask *>(pTask);
+        pAsyncTask->clearFlags(TASK_DBG_FLAGS_FAKE_YIELD);
         resumeContext(pAsyncTask->pContext);
+#ifdef SERIAL_DEBUG_SCHEDULER_CLI
+        if (pAsyncTask->getFlags() & TASK_DBG_FLAGS_FAKE_YIELD) {
+            resumeContext(pAsyncTask->pContext);
+        }
+#endif
+#ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
+        if (pAsyncTask->maxStackUsed() > pAsyncTask->pContext->stackMax) {
+            serialDebugPrintf_P(PSTR("Sched: task %S stack %d > max %d\n"), pAsyncTask->id(), pAsyncTask->maxStackUsed(), pAsyncTask->pContext->stackMax);
+            for (;;);
+        }
+#endif
     } else {
         // just a Task
         pTask->loop();
@@ -307,6 +318,12 @@ void AsyncTask::yieldSuspend() {
 void AsyncTask::yieldResumeMicros(time_t microseconds) {
     resumeMicros(microseconds);
     yieldContext();
+}
+
+void AsyncTask::fakeYield() {
+    setFlags(TASK_DBG_FLAGS_FAKE_YIELD);
+    yieldContext();
+    clearFlags(TASK_DBG_FLAGS_FAKE_YIELD);
 }
 
 /**

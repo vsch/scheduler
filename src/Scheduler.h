@@ -16,14 +16,17 @@
 #include "TinySwitcher.h"
 #include "common_defs.h"
 
-#if defined(SERIAL_DEBUG_SCHEDULER) || defined(SERIAL_DEBUG_SCHEDULER_ERRORS) || defined(SERIAL_DEBUG_SCHEDULER_DELAYS) || defined(SERIAL_DEBUG_SCHEDULER_MAX_STACKS) || defined(CONSOLE_DEBUG) || defined(SERIAL_DEBUG_SCHEDULER_CLI)
+#if defined(SERIAL_DEBUG_SCHEDULER) || defined(SERIAL_DEBUG_SCHEDULER_ERRORS) \
+ || defined(SERIAL_DEBUG_SCHEDULER_DELAYS) || defined(SERIAL_DEBUG_SCHEDULER_MAX_STACKS) \
+ || defined(CONSOLE_DEBUG) || defined(SERIAL_DEBUG_SCHEDULER_CLI)
 #define SCHEDULER_TASK_IDS
 #define defineSchedulerTaskId(str)  virtual PGM_P id() override { return PSTR(str); }
 #else
 #define defineSchedulerTaskId(id)
 #endif
 
-#define TASK_DBG_FLAGS_NO_SCHED (0x01) // don't debug trace task execution
+#define TASK_DBG_FLAGS_NO_SCHED     (0x01) // don't debug trace task execution
+#define TASK_DBG_FLAGS_FAKE_YIELD   (0x02) // resume context right after yieldContext (used to simulate context switch for max stack determination)
 
 class Scheduler;
 
@@ -65,6 +68,7 @@ public:
     }
 
 #ifdef DEBUG_MODE
+
     inline void setFlags(uint8_t flags) {
         this->flags |= flags;
     }
@@ -76,6 +80,7 @@ public:
     inline uint8_t getFlags() const {
         return flags;
     }
+
 #else
     inline void setFlags(uint8_t flags) { }
 
@@ -83,7 +88,6 @@ public:
 
     inline uint8_t getFlags() const { return 0; }
 #endif
-
 
     /**
     * Return this task's index in Scheduler getCurrentTask table
@@ -128,7 +132,6 @@ public:
     bool isSuspended();
 
     time_t getResumeMicros();
-
 };
 
 // this task can call blocking wait functions of the scheduler
@@ -172,6 +175,13 @@ public:
      * @param microseconds delay in microseconds before resuming task
      */
     void yieldResumeMicros(time_t microseconds);
+
+#ifdef SERIAL_DEBUG_SCHEDULER_CLI
+    /**
+     * Cause a yieldContext followed immediately by resume context
+     */
+    void fakeYield();
+#endif
 
     /**
      * Set the resume milliseconds and yield the task's execution context. If successfully yielded, this
@@ -452,7 +462,6 @@ inline bool Task::isSuspended() {
 inline time_t Task::getResumeMicros() {
     return scheduler.getResumeMicros(taskId);
 }
-
 
 #ifdef SERIAL_DEBUG
 #else
