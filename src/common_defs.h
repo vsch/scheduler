@@ -31,6 +31,7 @@ extern uint16_t nSeiLine;
 #define SEI()   SREG = oldSREG; nSeiLine = __LINE__
 #else
 #define CLI()   uint8_t oldSREG = SREG; cli()
+#define CLI_ONLY()   cli()
 #define SEI()   SREG = oldSREG
 #endif
 #else

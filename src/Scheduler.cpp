@@ -177,8 +177,8 @@ void Scheduler::executeTask() {
         }
 #endif
 #ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
-        if (pAsyncTask->maxStackUsed() > pAsyncTask->pContext->stackMax) {
-            serialDebugPrintf_P(PSTR("Sched: task %S stack %d > max %d\n"), pAsyncTask->id(), pAsyncTask->maxStackUsed(), pAsyncTask->pContext->stackMax);
+        if (pAsyncTask->maxStackUsed() > pAsyncTask->maxStack()) {
+            serialDebugPrintf_P(PSTR("Sched: task %S stack %d > max %d\n"), pAsyncTask->id(), pAsyncTask->maxStackUsed(), pAsyncTask->maxStack());
             for (;;);
         }
 #endif
@@ -320,11 +320,13 @@ void AsyncTask::yieldResumeMicros(time_t microseconds) {
     yieldContext();
 }
 
+#ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
 void AsyncTask::fakeYield() {
     setFlags(TASK_DBG_FLAGS_FAKE_YIELD);
     yieldContext();
     clearFlags(TASK_DBG_FLAGS_FAKE_YIELD);
 }
+#endif
 
 /**
  * Set the resume milliseconds and yield the task's execution context. If successfully yielded, this
@@ -352,6 +354,10 @@ uint8_t AsyncTask::hasYielded() const {
 
 uint8_t AsyncTask::maxStackUsed() const {
     return pContext->stackMaxUsed;
+}
+
+uint8_t AsyncTask::maxStack() const {
+    return pContext->stackMax;
 }
 
 void AsyncTask::yieldingLoop(void *arg) {

@@ -187,8 +187,8 @@ void Controller::endProcessingRequest(ByteStream *pStream) {
             startNextRequest();
         }
 
-        // restart loop
-        resume(500);
+        // CAVEAT: this delay will cause tasks waiting for twi resources to be delayed by at least this delay
+        resume(20);
     }
 }
 

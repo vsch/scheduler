@@ -176,7 +176,7 @@ public:
      */
     void yieldResumeMicros(time_t microseconds);
 
-#ifdef SERIAL_DEBUG_SCHEDULER_CLI
+#ifdef SERIAL_DEBUG_SCHEDULER_MAX_STACKS
     /**
      * Cause a yieldContext followed immediately by resume context
      */
@@ -209,6 +209,12 @@ public:
      * @return maximum bytes of stack buffer used up to now during all previous resumptions.
      */
     uint8_t maxStackUsed() const;
+
+    /**
+     * Get the maximum declared stack buffer
+     * @return
+     */
+    uint8_t maxStack() const;
 
 private:
     static void yieldingLoop(void *arg);
