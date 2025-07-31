@@ -17,6 +17,15 @@ CByteStream_t * dac_init(uint8_t addr) {
     return pStream;
 }
 
+CByteStream_t *dac_power_up(uint8_t addr) {
+    return dac_write(addr, REG_GENERAL_CONFIG, WR_DAC_POWER(DAC_POWER_UP) | WR_GENERAL_CONFIG_REF_EN(DAC_VREF_EN) | WR_GENERAL_CONFIG_DAC_SPAN(DAC_SPAN_VREF_GAIN_4X));
+
+}
+
+CByteStream_t *dac_power_down(uint8_t addr) {
+    return dac_write(addr, REG_GENERAL_CONFIG, WR_DAC_POWER(DAC_POWER_DN_HI_Z) | WR_GENERAL_CONFIG_REF_EN(DAC_VREF_EN) | WR_GENERAL_CONFIG_DAC_SPAN(DAC_SPAN_VREF_GAIN_4X));
+}
+
 CByteStream_t *dac_send_byte_list(uint8_t addr, const uint8_t *bytes, uint16_t count) {
     CByteStream_t *pStream = NULL;
 
@@ -58,12 +67,6 @@ CByteStream_t *dac_read(uint8_t addr, uint8_t reg, uint16_t *pValue) {
     twi_set_rd_buffer(1, pValue, sizeof(*pValue));
 
     return twi_process_stream();
-}
-
-CByteStream_t *dac_power_up(uint8_t addr) {
-}
-
-CByteStream_t *dac_power_down(uint8_t addr, uint8_t flags) {
 }
 
 CByteStream_t *dac_output(uint8_t addr, uint16_t value) {

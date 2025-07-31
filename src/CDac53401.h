@@ -56,7 +56,7 @@ extern CByteStream_t *dac_send_byte_list(uint8_t addr, const uint8_t *bytes, uin
 
 extern CByteStream_t * dac_init(uint8_t addr);
 extern CByteStream_t *dac_power_up(uint8_t addr);
-extern CByteStream_t *dac_power_down(uint8_t addr, uint8_t flags);
+extern CByteStream_t *dac_power_down(uint8_t addr);
 extern CByteStream_t *dac_output(uint8_t addr, uint16_t value);
 extern CByteStream_t *dac_write(uint8_t addr, uint8_t reg, uint16_t value);
 
