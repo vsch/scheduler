@@ -12,6 +12,31 @@ This eliminates the need to convert the code to a state machine with one
 entry and one exit, by using yield functions to relinquish the CPU, the
 state is preserved on the stack and variables of the running code.
 
+Version 3.0 adds a lot of helper classes to deal with sharing I2C
+communication between different tasks. Also added are driver classes for
+Arduino Project Module peripherals: non-blocking stepper driver which
+can achieve, DAC53401DSGT 10 bit I2C DAC, XL9535QF24 I2C 16 line I/O
+Expander, with non-blocking stepper which uses 4 lines of the I/O
+expander to drive a stepper driver chip. Contention for TWI resources
+between OLED display library and I/O Expander stepper driver, can result
+in some stepper step time to be extended by up to 5ms, which can cause
+the stepper motor motion to be not smooth.
+
+Version 3.0 was used to create a Dough Roller controller for a
+KitchenAid dough roller attachment, modified by adding a 28BYJ-48
+stepper motor, to control the thickness control cam roller. Previously
+implemented version of the software, which used the blocking Arduino
+Stepper code and blocking ssd1306_gfx display driver could only achieve
+10 RPM rotation speed. While stepper motor was active, no display
+updates were performed. With non-blocking implementation, stepper
+performs comfortably at 20 RPM, and display update is not affected.
+
+The change of the scheduler to use micro-second resolution of task
+delays, allows all timing for stepper motor and generated sound duration
+to use the scheduler `resume()` or `resumeMicros()` delay mechanism with
+fairly stable timing extension.
+
+
 [TOC]: #
 
 - [Overview](#overview)
@@ -21,11 +46,12 @@ state is preserved on the stack and variables of the running code.
 
 ## Overview
 
-Tasks can use scheduler to `suspend()`, `resume(uin16_t milliseconds)`
-after suspension or to schedule next execution after delay. If
-`milliseconds` is given as `0` then the current task will be rescheduled
-to run in the next scheduler loop invocation and after all ready tasks
-in the current invocation have been run.
+Tasks can use scheduler to `suspend()`, `resume(uin16_t milliseconds)`,
+`resumeMicros(uin32_t microseconds)` after suspension or to schedule
+next execution after delay. If `milliseconds` / `microseconds` is given as
+`0` then the current task will be rescheduled to run in the next
+scheduler loop invocation and after all ready tasks in the current
+invocation have been run.
 
 In version 2 of the library a `AsyncTask` type was added which can
 use yielding methods from within its `loop()` to release the CPU to
@@ -40,10 +66,11 @@ requires converting the function to a state machine which sets the
 delay, next state and return immediately then on the next invocation
 resumes at the new state.
 
-Each task can set a delay time of up to 65534 ms (0xfffe), with 65535
-(0xffff) reserved to mark a task as suspended, trying to use 65535 with
-the `resume()` function will result in 65534 ms delay time. Use
-`suspend()` explicitly to suspend a task.
+Internally, task's resume time is stored in the scheduler's delay table
+as `uint32`. However, to handle rollover of the `micro()` value, valid
+resume delay is limited to 0x7fffffff. Any any difference between task
+resume time and `micros()` greater than this is treated as `micros()`
+rollover, not an actual delay.
 
 A task can initialize its state in the `begin()` method and use
 `resume()` method of its super class `Task` to schedule the start of its
@@ -55,14 +82,15 @@ microseconds truncation error when using `millis()` to reduce task
 delays.
 
 The scheduler has two public methods `begin()` for initialization and
-`loop(uint16 timeSliceMilliseconds = 0)` for executing the task loop.
+`loop(uint32_t timeSliceMilliseconds = 0)`, or `loopMicros(uint32_t
+timeSliceMicroseconds = 0)` for executing the task loop.
 
 The `begin()` method will initialize the scheduler and invoke all tasks'
 `begin()` methods.
 
 The `loop()` method will execute all ready tasks once or until current
 run time has exceeded the given `timeSliceMilliseconds`. Passing default
-of `0` means no time limit, execute all ready tasks once and return.
+of `0` means no time limit, execute all ready tasks at once and return.
 
 The scheduler constructor takes a table of pointers to tasks in
 `PROGMEM` and a task delay table in RAM. No dynamic memory allocation is
@@ -85,6 +113,9 @@ the stack when the task is resumed.
   return until task is resumed via `resume()` call.
 * `uint8_t yieldResume(uint16_t milliseconds)` - Will set the task to
   resume in `milliseconds` and yield. Function will return when the
+  timeout has elapsedTime.
+* `uint8_t yieldResumeMicros(uint32_t microseconds)` - Will set the task
+  to resume in `microseconds` and yield. Function will return when the
   timeout has elapsedTime.
 * `void yield()` - sets resume delay to `0` and yields. Useful for
   breaking up long tasks to allow other functions to be performed.
@@ -118,7 +149,7 @@ variable space definitions in the function, will be plenty.
 This works because the data on the stack is not position dependent.
 Except, in the case where a pointer to a local variable is also stored
 on the stack. In this case the code will break if the resumed stack is
-in a slightly different position, but that would be a very rare use
+in at a different offset in memory, but that would be a very rare use
 case.
 
 ## Example
